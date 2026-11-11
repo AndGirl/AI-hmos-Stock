@@ -1,0 +1,11 @@
+{
+  "name": "commons_data",
+  "version": "1.0.0",
+  "description": "公共能力层 · 数据能力（契约 / 订阅 / 缓存）",
+  "main": "Index.ets",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "commons_basic": "file:../basic"
+  }
+}

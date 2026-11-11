@@ -1,0 +1,23 @@
+{
+  "color": [
+    { "name": "color_bg_page", "value": "#FFFFFF" },
+    { "name": "color_bg_surface", "value": "#F7F8FA" },
+    { "name": "color_text_primary", "value": "#1A1A1A" },
+    { "name": "color_text_secondary", "value": "#8A8A8E" },
+    { "name": "color_text_on_accent", "value": "#FFFFFF" },
+    { "name": "color_price_up", "value": "#E8342A" },
+    { "name": "color_price_down", "value": "#00A870" },
+    { "name": "color_price_flat", "value": "#6B6B70" },
+    { "name": "color_accent", "value": "#E8342A" },
+    { "name": "color_divider", "value": "#EDEDED" },
+    { "name": "color_tag_fin", "value": "#7C4DFF" },
+    { "name": "color_tag_star", "value": "#FF7A00" },
+    { "name": "color_disabled_bg", "value": "#F2F2F2" },
+    { "name": "color_disabled_text", "value": "#B0B0B5" },
+    { "name": "color_banner_bg", "value": "#FFF4E5" },
+    { "name": "color_chart_line", "value": "#E8342A" },
+    { "name": "color_chart_avg", "value": "#F5A623" },
+    { "name": "color_bar_shadow", "value": "#14000000" },
+    { "name": "color_transparent", "value": "#00000000" }
+  ]
+}

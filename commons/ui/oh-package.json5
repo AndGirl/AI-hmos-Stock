@@ -1,0 +1,11 @@
+{
+  "name": "commons_ui",
+  "version": "1.0.0",
+  "description": "公共能力层 · 设计系统（token / 通用组件）",
+  "main": "Index.ets",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "commons_basic": "file:../basic"
+  }
+}

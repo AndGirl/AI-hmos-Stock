@@ -42,13 +42,76 @@
   modules: [
     {
       name: 'entry',
-      srcPath: './entry',
+      srcPath: './products/entry',
       targets: [
         {
           name: 'default',
           applyToProducts: [
             'default',
           ],
+        },
+      ],
+    },
+    {
+      name: 'watchlist',
+      srcPath: './features/watchlist',
+      targets: [
+        {
+          name: 'default',
+        },
+      ],
+    },
+    {
+      name: 'detail',
+      srcPath: './features/detail',
+      targets: [
+        {
+          name: 'default',
+        },
+      ],
+    },
+    {
+      name: 'trade',
+      srcPath: './features/trade',
+      targets: [
+        {
+          name: 'default',
+        },
+      ],
+    },
+    {
+      name: 'pk',
+      srcPath: './features/pk',
+      targets: [
+        {
+          name: 'default',
+        },
+      ],
+    },
+    {
+      name: 'commons_ui',
+      srcPath: './commons/ui',
+      targets: [
+        {
+          name: 'default',
+        },
+      ],
+    },
+    {
+      name: 'commons_basic',
+      srcPath: './commons/basic',
+      targets: [
+        {
+          name: 'default',
+        },
+      ],
+    },
+    {
+      name: 'commons_data',
+      srcPath: './commons/data',
+      targets: [
+        {
+          name: 'default',
         },
       ],
     },

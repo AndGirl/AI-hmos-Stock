@@ -1,0 +1,13 @@
+{
+  "name": "trade",
+  "version": "1.0.0",
+  "description": "基础特性层 · 买入委托",
+  "main": "Index.ets",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "commons_data": "file:../../commons/data",
+    "commons_ui": "file:../../commons/ui",
+    "commons_basic": "file:../../commons/basic"
+  }
+}

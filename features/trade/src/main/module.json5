@@ -1,0 +1,10 @@
+{
+  "module": {
+    "name": "trade",
+    "type": "har",
+    "deviceTypes": [
+      "phone",
+      "tablet"
+    ]
+  }
+}

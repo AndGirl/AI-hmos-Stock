@@ -1,0 +1,17 @@
+{
+  "float": [
+    { "name": "row_height_base", "value": "56" },
+    { "name": "header_height_base", "value": "40" },
+    { "name": "touch_min", "value": "44" },
+    { "name": "pill_radius", "value": "22" },
+    { "name": "fade_width", "value": "20" },
+    { "name": "gap_2", "value": "2" },
+    { "name": "gap_4", "value": "4" },
+    { "name": "gap_8", "value": "8" },
+    { "name": "gap_12", "value": "12" },
+    { "name": "gap_16", "value": "16" },
+    { "name": "gap_24", "value": "24" },
+    { "name": "tab_bar_radius", "value": "30" },
+    { "name": "opacity_offline", "value": "0.55" }
+  ]
+}

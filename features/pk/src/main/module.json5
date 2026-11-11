@@ -1,0 +1,10 @@
+{
+  "module": {
+    "name": "pk",
+    "type": "har",
+    "deviceTypes": [
+      "phone",
+      "tablet"
+    ]
+  }
+}

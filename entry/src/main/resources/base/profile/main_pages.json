@@ -1,7 +1,0 @@
-{
-  "src": [
-    "pages/Index",
-    "pages/ChartProbe",
-    "pages/V2Probe"
-  ]
-}

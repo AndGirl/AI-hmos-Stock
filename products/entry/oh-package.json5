@@ -1,0 +1,19 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "小杨股票 · 产品定制层（Entry HAP）",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "watchlist": "file:../../features/watchlist",
+    "detail": "file:../../features/detail",
+    "trade": "file:../../features/trade",
+    "pk": "file:../../features/pk",
+    "commons_ui": "file:../../commons/ui",
+    "commons_basic": "file:../../commons/basic",
+    "commons_data": "file:../../commons/data"
+  },
+  "devDependencies": {},
+  "dynamicDependencies": {}
+}

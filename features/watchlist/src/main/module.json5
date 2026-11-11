@@ -1,0 +1,10 @@
+{
+  "module": {
+    "name": "watchlist",
+    "type": "har",
+    "deviceTypes": [
+      "phone",
+      "tablet"
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "string": [
+    { "name": "coming_soon_add_watchlist", "value": "添加自选下阶段开放" },
+    { "name": "coming_soon_card_view", "value": "卡片视图下阶段开放" },
+    { "name": "coming_soon_home", "value": "首页下阶段开放" },
+    { "name": "coming_soon_news", "value": "最新资讯下阶段开放" },
+    { "name": "coming_soon_market", "value": "行情下阶段开放" },
+    { "name": "placeholder_home_title", "value": "首页" },
+    { "name": "placeholder_news_title", "value": "最新资讯" },
+    { "name": "placeholder_market_title", "value": "行情" },
+    { "name": "tab_home", "value": "首页" },
+    { "name": "tab_news", "value": "最新资讯" },
+    { "name": "tab_watchlist", "value": "自选" },
+    { "name": "tab_market", "value": "行情" },
+    { "name": "watchlist_title", "value": "自选股" },
+    { "name": "empty_watchlist_desc", "value": "暂无自选，可添加后查看" },
+    { "name": "action_add_watchlist", "value": "添加自选" },
+    { "name": "retry", "value": "重试" },
+    { "name": "loading", "value": "加载中" }
+  ]
+}

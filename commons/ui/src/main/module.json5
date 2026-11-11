@@ -1,0 +1,10 @@
+{
+  "module": {
+    "name": "commons_ui",
+    "type": "har",
+    "deviceTypes": [
+      "phone",
+      "tablet"
+    ]
+  }
+}

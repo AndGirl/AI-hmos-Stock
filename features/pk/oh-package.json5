@@ -1,0 +1,14 @@
+{
+  "name": "pk",
+  "version": "1.0.0",
+  "description": "基础特性层 · 多窗比价",
+  "main": "Index.ets",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "detail": "file:../detail",
+    "commons_data": "file:../../commons/data",
+    "commons_ui": "file:../../commons/ui",
+    "commons_basic": "file:../../commons/basic"
+  }
+}

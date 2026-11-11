@@ -1,0 +1,10 @@
+{
+  "module": {
+    "name": "commons_basic",
+    "type": "har",
+    "deviceTypes": [
+      "phone",
+      "tablet"
+    ]
+  }
+}

@@ -6,6 +6,7 @@
 **/build
 /.hvigor
 /.preview
+**/BuildProfile.ets
 *.hap
 *.hsp
 *.app
