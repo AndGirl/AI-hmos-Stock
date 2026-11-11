@@ -19,6 +19,7 @@ export struct TabShell {
   private tabsController: TabsController = new TabsController();
 
   build() {
+    // 顶部 GlobalBanner 挂点（M5）：连接状态唯一 banner 由 ConnectionHub 驱动，页面不得自绘。
     Stack({ alignContent: Alignment.Bottom }) {
       Tabs({ barPosition: BarPosition.End, index: this.currentIndex, controller: this.tabsController }) {
         TabContent() {

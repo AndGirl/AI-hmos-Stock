@@ -1,6 +1,6 @@
 import { AppColor, AppDim } from '../theme/TokenRegistry';
 
-/** 页面级状态视图的三种形态（M0 只落地空态与加载态，失败态在 M1/M2 复用）。 */
+/** 页面级状态视图的三种形态：加载 / 空 / 失败（骨架 Skeleton 在 M1 单独实现）。 */
 export enum StateMode {
   LOADING = 0,
   EMPTY = 1,
@@ -8,8 +8,10 @@ export enum StateMode {
 }
 
 /**
- * 通用状态视图：图标位 + 说明 + 可选单一操作。
- * 规则：空态除说明外最多一个操作入口，不放置第二个按钮（基线 §4.1 规则 6）。
+ * 通用状态视图：加载指示 / 图标位 + 说明 + 可选单一操作。
+ * 规则：
+ * - 空态除说明外最多一个操作入口，不放置第二个按钮（基线 §4.1 规则 6）；
+ * - 失败态操作即「重试」，retrying 为 true 时按钮内显示 loading 并禁用。
  */
 @ComponentV2
 export struct StateView {
@@ -17,6 +19,7 @@ export struct StateView {
   @Param stateDesc: ResourceStr = '';
   @Param showAction: boolean = false;
   @Param actionLabel: ResourceStr = '';
+  @Param retrying: boolean = false;
   @Event onAction: () => void = () => {
   };
 
@@ -27,6 +30,11 @@ export struct StateView {
           .width(32)
           .height(32)
           .color(AppColor.accent)
+
+        Text($r('app.string.loading'))
+          .fontSize(13)
+          .fontColor(AppColor.textSecondary)
+          .margin({ top: AppDim.gap8 })
       } else {
         Image($r('app.media.ic_placeholder'))
           .width(64)
@@ -42,19 +50,33 @@ export struct StateView {
           .margin({ left: AppDim.gap24, right: AppDim.gap24 })
 
         if (this.showAction) {
-          Button(this.actionLabel)
-            .height(AppDim.touchMin)
-            .padding({ left: AppDim.gap24, right: AppDim.gap24 })
-            .fontSize(14)
-            .fontColor(AppColor.textSecondary)
-            .backgroundColor(AppColor.transparent)
-            .borderWidth(1)
-            .borderColor(AppColor.divider)
-            .borderRadius(AppDim.pillRadius)
-            .margin({ top: AppDim.gap24 })
-            .onClick(() => {
-              this.onAction();
-            })
+          Button() {
+            Row() {
+              if (this.retrying) {
+                LoadingProgress()
+                  .width(16)
+                  .height(16)
+                  .color(AppColor.textSecondary)
+                  .margin({ right: AppDim.gap8 })
+              }
+
+              Text(this.actionLabel)
+                .fontSize(14)
+                .fontColor(AppColor.textSecondary)
+            }
+            .justifyContent(FlexAlign.Center)
+          }
+          .height(AppDim.touchMin)
+          .padding({ left: AppDim.gap24, right: AppDim.gap24 })
+          .backgroundColor(AppColor.transparent)
+          .borderWidth(1)
+          .borderColor(AppColor.divider)
+          .borderRadius(AppDim.pillRadius)
+          .margin({ top: AppDim.gap24 })
+          .enabled(!this.retrying)
+          .onClick(() => {
+            this.onAction();
+          })
         }
       }
     }
