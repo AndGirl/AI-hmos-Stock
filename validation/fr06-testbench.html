@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FR-06 详情页验证台</title>
+<style>
+  :root{
+    --bg:#f3f4f6; --card:#fff; --ink:#15171c; --ink2:#5b6270; --ink3:#8d95a3;
+    --line:#e6e8ec; --line2:#eef0f3;
+    --up:#e8402a; --down:#12a150; --flat:#7a828f;
+    --blue:#2b6cff; --bluebg:#eaf0ff;
+    --green:#2f8a52; --greenbg:#f2f8f3;
+    --red:#c2452f; --redbg:#fdf0ed;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:13px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .bench{max-width:1240px;margin:0 auto;padding:36px 24px 64px}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .kicker{font:600 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--ink3)}
+  h1{font-size:26px;margin:8px 0 6px;letter-spacing:-.01em}
+  h1 em{font-style:normal;color:var(--blue)}
+  .sub{font-size:12px;color:var(--ink2);margin:0;max-width:700px}
+  .note{font-size:11px;color:var(--ink3);background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+
+  .stagewrap{display:flex;flex-direction:column;align-items:center;margin-top:22px}
+  .devlabel{width:100%;max-width:100%;font:10.5px ui-monospace,Menlo,monospace;color:var(--ink3);margin-bottom:8px;display:flex;justify-content:space-between;gap:12px}
+  .qcard{width:387px;max-width:100%;background:#0b0d12;border-radius:26px;padding:6px;box-shadow:0 16px 40px rgba(16,22,36,.16)}
+  .screen{background:#fff;border-radius:21px;overflow:hidden;height:620px;display:flex}
+
+  /* ---------- page 形态 ---------- */
+  .dpage{flex:1;min-width:0;display:flex;flex-direction:column;background:#fff;height:100%}
+  .dwrap{max-width:860px;width:100%;margin:0 auto;display:flex;flex-direction:column;flex:1;min-height:0}
+  .dnav{flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px 8px}
+  .dbk{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;font-size:16px;color:var(--ink2);cursor:pointer;flex:none;line-height:1}
+  .dtitle{flex:1;text-align:center;min-width:0;line-height:1.3}
+  .dtitle b{font-size:calc(14px * var(--k));font-weight:650}
+  .dtitle span{font-size:calc(9.5px * var(--k));color:var(--ink3);margin-left:4px}
+  .dsub{font-size:calc(9px * var(--k));color:var(--ink3);margin-top:1px}
+  .dmk{font-style:normal;background:#eaf0ff;color:#2b6cff;border-radius:3px;font-size:calc(8px * var(--k));padding:0 3px;margin-right:3px}
+  .dsp{width:28px;flex:none}
+
+  .banner{flex:none;margin:0 14px;background:#fff4e8;border:1px solid #ffe0bd;color:#a5611a;border-radius:7px;font-size:10px;padding:5px 9px;text-align:center}
+
+  .dscroll{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column}
+  .dim{opacity:.55}
+  .dprice{padding:2px 16px 0;font-size:calc(28px * var(--k));font-weight:700;line-height:1.15;letter-spacing:-.02em;color:var(--up);font-variant-numeric:tabular-nums}
+  .dprice.dn{color:var(--down)}
+  .dprice.flat{color:var(--flat)}
+  .dprice em{font-style:normal;font-size:calc(11px * var(--k));margin-left:5px}
+  .dmetrics{display:grid;gap:0 16px;padding:6px 16px 4px}
+  .mcell2{display:flex;justify-content:space-between;align-items:baseline;gap:6px;min-width:0;border-bottom:1px solid var(--line2);padding:calc(3px * var(--k)) 0;font-size:calc(9.5px * var(--k));color:var(--ink3)}
+  .mcell2 b{font-size:calc(10px * var(--k));color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .mcell2.up b{color:var(--up)} .mcell2.down b{color:var(--down)} .mcell2.flat b{color:var(--flat)}
+  .expand{display:flex;align-items:center;justify-content:center;width:44px;height:28px;margin:0 auto 2px;padding:0;border:0;background:transparent;color:#b3b9c4;cursor:pointer;border-radius:6px}
+  .expand:hover{color:#6b7381;background:#f6f7f9}
+  .expand svg{transition:transform .2s ease}
+  .expand.up svg{transform:rotate(180deg)}
+
+  .news{flex:none;display:flex;align-items:center;gap:8px;background:#f7f8fa;margin:4px 16px 0;border-radius:6px;padding:6px 9px;font-size:calc(9.5px * var(--k))}
+  .news b{white-space:nowrap}
+  .news span{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .news button{margin-left:auto;border:0;background:transparent;color:#aeb4bf;font-size:12px;cursor:pointer;line-height:1;padding:2px}
+
+  .dtabs{flex:none;display:flex;gap:var(--tabgap,14px);padding:9px 16px 2px;font-size:calc(10px * var(--k));color:var(--ink2);overflow-x:auto;scrollbar-width:none}
+  .dtabs::-webkit-scrollbar{display:none}
+  .dtabs span{position:relative;padding:0 10px 5px;cursor:pointer;white-space:nowrap}
+  .dtabs span.on{color:var(--ink);font-weight:700}
+  .dtabs span.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--up);border-radius:2px}
+
+  .dchart{position:relative;flex:none;height:calc(150px * var(--k));padding:4px 12px 0;min-height:110px}
+  .chartbox{width:100%;height:100%;background:#fafbfc;border-radius:6px}
+  .chartbox svg{width:100%;height:100%;display:block}
+  .engineTag{position:absolute;right:14px;top:6px;font-size:8px;color:#b6bcc7;background:#fafbfc;padding:0 3px;border-radius:3px}
+
+  .dbook{flex:none;margin-top:6px;padding:0 16px;display:flex;flex-direction:column;gap:1px}
+  .chartrow{display:flex;align-items:stretch;gap:8px;padding:4px 12px 0;height:calc(212px * var(--k));flex:none}
+  .chartrow .dchart{flex:1;min-width:0;height:100%;padding:0;min-height:0}
+  .chartrow .dbook{width:30%;max-width:170px;min-width:96px;margin:0;padding:0;overflow:hidden;justify-content:flex-start;gap:0}
+  .bsec{font-size:calc(8.5px * var(--k));color:#c0655a;background:#fdf0ee;border-radius:3px;text-align:center;padding:2px 0;margin-bottom:2px}
+  .bsec.tick{background:#f4f5f7;color:#7a828f;margin-top:4px}
+  .brow2{display:flex;justify-content:space-between;font-size:calc(8px * var(--k));line-height:1.5;color:var(--ink2);padding:0 2px;font-variant-numeric:tabular-nums}
+  .trow2{display:flex;justify-content:space-between;font-size:calc(8px * var(--k));line-height:1.4;color:var(--ink3);padding:0 2px;font-variant-numeric:tabular-nums}
+  .trow2 b{font-weight:600}
+  .trow2 b.up{color:var(--up)} .trow2 b.down{color:var(--down)} .trow2 b.flat{color:var(--flat)}
+  .brow2 b{font-weight:600} .brow2 i{font-style:normal;color:var(--ink3)}
+  .brow2 b.up{color:var(--up)} .brow2 b.down{color:var(--down)} .brow2 b.flat{color:var(--flat)}
+  .bgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+  .ratio{height:6px;border-radius:3px;background:var(--down);overflow:hidden;margin:4px 0 2px}
+  .ratio i{display:block;height:100%;background:var(--up)}
+  .dtrades{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;margin-top:1px}
+  .dtrades::-webkit-scrollbar{display:none}
+
+  .dctabs2{flex:none;display:flex;gap:14px;padding:9px 16px 4px;border-top:1px solid var(--line2);margin-top:8px;font-size:calc(10px * var(--k));color:var(--ink2)}
+  .dctabs2 span{position:relative;padding-bottom:4px;cursor:pointer;white-space:nowrap}
+  .dctabs2 span.on{color:var(--ink);font-weight:700}
+  .dctabs2 span.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--up)}
+  .dempty2{flex:1;min-height:36px;display:flex;align-items:center;justify-content:center;margin:4px 16px 10px;background:#fafbfc;border-radius:6px;color:var(--ink3);font-size:9.5px}
+
+  .dbar2{flex:none;border-top:1px solid var(--line2);background:#fff;padding:8px 0 10px}
+  .dbar-inner{max-width:860px;margin:0 auto;display:flex;align-items:center;gap:8px;padding:0 14px}
+  .act2{width:56px;flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:calc(8.5px * var(--k));color:var(--ink2);cursor:pointer}
+  .act2 svg{width:22px;height:22px;color:#3a4150;display:block}
+  .act2:hover{color:var(--ink)}
+  .act2:hover svg{color:var(--ink)}
+  .buy2{flex:1;margin-left:6px;height:calc(44px * var(--k));border-radius:calc(22px * var(--k));background:var(--up);color:#fff;font-size:calc(14px * var(--k));font-weight:600;display:grid;place-items:center;cursor:pointer;letter-spacing:.02em}
+  .buy2.disabled{background:#d6dae1;color:#fff;cursor:not-allowed}
+
+  /* ---------- pane 形态 ---------- */
+  .split{flex:1;display:flex;min-width:0}
+  .slist{flex:1;min-width:0;border-right:1px solid var(--line);padding:10px 10px 10px 14px;display:flex;flex-direction:column;gap:2px}
+  .slist .sh{font-size:11px;font-weight:650;margin-bottom:6px;color:var(--ink)}
+  .srow{display:flex;justify-content:space-between;align-items:center;height:34px;padding:0 6px;border-radius:6px;font-size:9.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+  .srow.sel{background:#f3f6ff;box-shadow:inset 2px 0 0 var(--blue)}
+  .srow b{font-size:10px;color:var(--ink);font-weight:600}
+  .pane{width:42%;flex:none;display:flex;flex-direction:column;min-width:0;background:#fff;position:relative}
+  .pmenu{position:absolute;right:10px;top:34px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 24px rgba(16,22,36,.14);padding:4px;z-index:5;min-width:124px}
+  .pmenu div{padding:8px 10px;font-size:11px;color:var(--ink2);border-radius:6px;cursor:pointer}
+  .pmenu div:hover{background:#f6f7f9;color:var(--ink)}
+  .phead{display:flex;align-items:flex-start;gap:6px;padding:8px 10px 0}
+  .phead .dtitle{flex:1}
+  .pmore{width:24px;height:24px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink2);font-size:13px;line-height:1;flex:none}
+  .pbody{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column}
+  .pbody .dprice{font-size:calc(22px * var(--k));padding:0 10px}
+  .pbody .dprice em{font-size:calc(9px * var(--k))}
+  .pbody .dmetrics{grid-template-columns:1fr 1fr !important;padding:4px 10px}
+  .pbody .chartrow{height:calc(220px * var(--k));padding:0 10px}
+  .pbody .chartrow .dchart{padding:0}
+  .pbody .chartrow .dbook{width:32%;max-width:132px;min-width:92px}
+  .pchart{height:calc(150px * var(--k));padding:0 10px;flex:none}
+  .pchart .dchart{height:100%;padding:0}
+  .dbook.narrow{width:auto;margin-top:6px;padding:0 10px;overflow:visible;gap:0}
+  .dbook.narrow .bgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+  .dbook.narrow .ratio{margin:6px 0 2px}
+  .dbook.narrow .dtrades{flex:none;max-height:calc(120px * var(--k));overflow-y:auto;margin-top:0}
+
+  /* ---------- 状态页 ---------- */
+  .skel2{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+  .skel2 i{display:block;background:#eef0f4;border-radius:6px;height:12px}
+  .skel2 i:nth-child(1){width:38%;height:14px}
+  .skel2 i:nth-child(2){width:52%;height:22px}
+  .skel2 i:nth-child(3){width:100%;height:70px}
+  .skel2 i:nth-child(4){width:100%;height:80px}
+  .err2{padding:60px 20px;text-align:center}
+  .err2 .ic{width:44px;height:44px;border-radius:50%;background:var(--redbg);color:var(--red);display:grid;place-items:center;margin:0 auto 12px;font-size:20px}
+  .err2 h3{margin:0 0 6px;font-size:14px}
+  .err2 p{margin:0;font-size:11px;color:var(--ink2)}
+
+  .meta2{width:387px;max-width:100%;margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .meta2 div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:10px;color:var(--ink3);text-align:center}
+  .meta2 b{display:block;font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums;margin-top:2px}
+  .hint{grid-column:1/4;font-size:10px;color:var(--ink3);background:#fff;border:1px dashed var(--line);border-radius:10px;padding:7px 10px;text-align:left}
+
+  .lower{display:grid;grid-template-columns:520px 1fr;gap:24px;margin-top:20px;align-items:start}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .crow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line2);flex-wrap:wrap}
+  .crow:last-child{border-bottom:0}
+  .crow>span{width:44px;flex:none;font-size:11px;color:var(--ink3)}
+  .seg{display:flex;gap:5px;flex-wrap:wrap}
+  .seg button{border:1px solid var(--line);background:#fff;border-radius:7px;font:inherit;font-size:11px;color:var(--ink2);padding:4px 9px;cursor:pointer}
+  .seg button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .ops{display:flex;gap:6px;flex-wrap:wrap}
+  .ops button{border:1px solid var(--line);background:#fff;border-radius:7px;font:inherit;font-size:11px;color:var(--ink2);padding:4px 9px;cursor:pointer}
+
+  .side{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .side h3{margin:0 0 10px;font-size:12px;color:var(--ink2);display:flex;justify-content:space-between;align-items:center}
+  .side h3 span{font-size:10px;color:var(--ink3);font-weight:400}
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:11px}
+  .kv div{display:flex;justify-content:space-between;gap:8px;color:var(--ink3);border-bottom:1px dashed var(--line2);padding:2px 0}
+  .kv b{color:var(--ink);font-weight:600}
+
+  .tests{display:flex;flex-direction:column;gap:6px}
+  .cas{display:grid;grid-template-columns:34px 1fr 44px;gap:8px;align-items:center;padding:7px 8px;border:1px solid var(--line2);border-radius:8px;cursor:pointer;font-size:11px}
+  .cas:hover{background:#fafbfc;border-color:var(--line)}
+  .cas .cid{font:600 9.5px ui-monospace,Menlo,monospace;color:var(--ink3)}
+  .cas .cn{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cas .stt{font-size:9.5px;text-align:right;color:var(--ink3)}
+  .cas.pass{border-color:#d7ebdd;background:var(--greenbg)}
+  .cas.pass .stt{color:var(--green)}
+  .cas.fail{border-color:#f2cfc7;background:var(--redbg)}
+  .cas.fail .stt{color:var(--red)}
+  .cas.run{border-color:#cfdcff;background:var(--bluebg)}
+  .cas.run .stt{color:var(--blue)}
+  .msg{grid-column:2/4;font-size:10px;color:var(--red);line-height:1.5;word-break:break-all}
+  .runbar{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .runbar button{flex:1;height:32px;border-radius:8px;border:1px solid var(--line);background:#fff;font:inherit;font-size:11.5px;cursor:pointer;color:var(--ink2)}
+  .runbar button.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+  .runbar span{font-size:10.5px;color:var(--ink3);white-space:nowrap}
+
+  .log{max-height:140px;overflow:auto;font:10px/1.6 ui-monospace,Menlo,monospace;color:var(--ink3)}
+  .log div{border-bottom:1px dashed var(--line2);padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  @media (max-width:980px){
+    .lower{grid-template-columns:1fr}
+    .bench{padding:30px 18px 56px}
+  }
+</style>
+</head>
+<body>
+<div class="bench">
+
+  <div class="top">
+    <div>
+      <div class="kicker">FR-06 · 个股详情 · 整页验证台</div>
+      <h1>详情页：<em>区块齐全、状态正确、多端不塌</em></h1>
+      <p class="sub">把 06.1–06.13 串成一张页验证：八区块、两种壳、四种设备、六种状态、三档字号。21 条用例覆盖壳差异、周期 Tab、指标展开、盘口布局、内容 Tab、动作栏、断线与字号。</p>
+    </div>
+    <div class="note">验证用，不计入需求文档</div>
+  </div>
+
+  <div class="stagewrap">
+    <div class="devlabel" id="devbar"><span id="devLabel">详情页 · sm / 直板机 375 · page 壳</span><span id="scaleLabel">字号 1.0×</span></div>
+    <div class="qcard" id="qcard">
+      <div class="screen" id="screen"></div>
+    </div>
+    <div class="meta2" id="meta2">
+      <div>区块<b id="mSecs">8</b></div>
+      <div>周期 Tab<b id="mTabs">5</b></div>
+      <div>指标<b id="mMetric">6</b></div>
+      <div class="hint">page 壳：返回 + 资讯 + 内容 Tab + 动作栏；pane 壳：无返回、无资讯、无内容 Tab，动作收「⋯」，图表与五档并排、不显示成交明细。周期 Tab 共 8 个（含年K），List + ForEach 横向滑动；点击任一周期图表同步刷新。</div>
+    </div>
+  </div>
+
+  <div class="lower">
+    <div class="card ctrl">
+      <div class="crow"><span>设备</span>
+        <div class="seg" id="segDevice">
+          <button data-device="sm" class="on">直板机 375</button>
+          <button data-device="md">折叠展开 720</button>
+          <button data-device="lg">阔折叠 990</button>
+          <button data-device="xl">平板 1180</button>
+        </div>
+      </div>
+      <div class="crow"><span>形态</span>
+        <div class="seg" id="segMode">
+          <button data-mode="page" class="on">page 独立页</button><button data-mode="pane">pane 右栏</button>
+        </div>
+      </div>
+      <div class="crow"><span>状态</span>
+        <div class="seg" id="segData">
+          <button data-data="normal" class="on">正常</button><button data-data="suspended">停牌</button>
+          <button data-data="new">新股</button><button data-data="loss">亏损</button>
+          <button data-page="loading">加载</button><button data-page="404">404</button>
+        </div>
+      </div>
+      <div class="crow"><span>连接</span>
+        <div class="seg" id="segConn">
+          <button data-conn="online" class="on">在线</button><button data-conn="offline">断线</button>
+        </div>
+      </div>
+      <div class="crow"><span>字号</span>
+        <div class="seg" id="segScale">
+          <button data-scale="1" class="on">1.0×</button><button data-scale="1.3">1.3×</button><button data-scale="1.45">1.45×</button>
+        </div>
+      </div>
+      <div class="crow"><span>操作</span>
+        <div class="ops"><button id="btnReset">重置</button></div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="card">
+        <h3>状态快照</h3>
+        <div class="kv" id="snapshot"></div>
+      </div>
+
+      <div class="card">
+        <h3>用例 <span id="summary"></span></h3>
+        <div class="tests" id="tests"></div>
+        <div class="runbar">
+          <button class="pri" id="runAll">运行全部</button>
+          <button id="runReset">重置</button>
+          <span id="runState"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>日志</h3>
+        <div class="log" id="log"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" async
+  onload="window.__echartsLoaded=true; if(window.__remountChart) window.__remountChart();"></script>
+<script>
+/* ================= 数据 ================= */
+const DEVICES = {
+  sm: { label: '直板机', w: 375, cols: 2, metrics: 6, tabs: 5 },
+  md: { label: '折叠展开', w: 720, cols: 3, metrics: 9, tabs: 5 },
+  lg: { label: '阔折叠', w: 990, cols: 3, metrics: 9, tabs: 6 },
+  xl: { label: '平板', w: 1180, cols: 4, metrics: 12, tabs: 7 }
+};
+const POOL = [
+  { k: 'open', label: '今开' }, { k: 'prev', label: '昨收' }, { k: 'turnover', label: '换手率' },
+  { k: 'high', label: '最高' }, { k: 'low', label: '最低' }, { k: 'pe', label: '市盈率' },
+  { k: 'volume', label: '成交量' }, { k: 'amount', label: '成交额' }, { k: 'cap', label: '总市值' },
+  { k: 'pb', label: '市净率' }, { k: 'amp', label: '振幅' }, { k: 'ratio', label: '量比' }
+];
+const BASE = {
+  name: '某某地产', code: '60**19', market: '深',
+  price: 24.32, prev: 24.16, open: 19.86, high: 20.33, low: 19.72,
+  turnover: 0.39, pe: 95.32, pb: 8.41, volume: 4570, amount: 9105000,
+  cap: 2610000000, amp: 3.07, ratio: 1.24
+};
+const ASKS = [24.55, 24.51, 24.47, 24.42, 24.38];
+const BIDS = [24.30, 24.26, 24.22, 24.18, 24.14];
+
+const S = {
+  device: 'sm', mode: 'page', data: 'normal', conn: 'online', page: 'ok',
+  scale: 1, period: 'timeline', newsOpen: true, ctab: 'discuss', mExpanded: false, pmenu: false
+};
+
+const $ = s => document.querySelector(s);
+const logEl = $('#log');
+const logs = [];
+function log(msg){
+  const t = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  logs.unshift(t + '  ' + msg);
+  if (logs.length > 50) logs.pop();
+  logEl.innerHTML = logs.map(l => '<div>' + esc(l) + '</div>').join('');
+}
+
+/* ================= 数据形态 ================= */
+function metrics(){
+  const d = {};
+  if (S.data === 'suspended') {
+    return { open: null, prev: null, turnover: null, high: null, low: null, pe: null,
+             volume: null, amount: null, cap: BASE.cap, pb: BASE.pb, amp: null, ratio: null };
+  }
+  if (S.data === 'new') {
+    return { open: null, prev: null, turnover: null, high: null, low: null, pe: 45.20,
+             volume: 12000, amount: 50000000, cap: 8000000000, pb: 6.20, amp: null, ratio: null };
+  }
+  if (S.data === 'loss') {
+    return { open: 8.12, prev: 8.20, turnover: 1.05, high: 8.18, low: 7.96, pe: -12.40,
+             volume: 88200, amount: 70200000, cap: 5600000000, pb: 1.32, amp: 2.68, ratio: 0.86 };
+  }
+  return { open: BASE.open, prev: BASE.prev, turnover: BASE.turnover, high: BASE.high, low: BASE.low,
+           pe: BASE.pe, volume: BASE.volume, amount: BASE.amount, cap: BASE.cap, pb: BASE.pb,
+           amp: BASE.amp, ratio: BASE.ratio };
+}
+function quote(){
+  if (S.data === 'suspended') return { price: null, chg: null, pct: null, cls: 'flat' };
+  if (S.data === 'new') return { price: 33.50, chg: null, pct: null, cls: 'flat' };
+  if (S.data === 'loss') {
+    const chg = 8.12 - 8.20, pct = chg / 8.20 * 100;
+    return { price: 8.12, chg: chg, pct: pct, cls: 'dn' };
+  }
+  const chg = BASE.price - BASE.prev, pct = chg / BASE.prev * 100;
+  return { price: BASE.price, chg, pct, cls: '' };
+}
+
+/* ================= 格式化 ================= */
+function handFmt(n){
+  if (n >= 1e8) return (n / 1e8).toFixed(2) + '亿手';
+  if (n >= 1e4) return (n / 1e4).toFixed(2) + '万手';
+  return n + '手';
+}
+function moneyFmt(n){
+  if (n >= 1e12) return (n / 1e12).toFixed(2) + '万亿';
+  if (n >= 1e8) return (n / 1e8).toFixed(2) + '亿';
+  if (n >= 1e4) return (n / 1e4).toFixed(2) + '万';
+  return String(n);
+}
+function fmt(k, v){
+  if (v == null || isNaN(v)) return '--';
+  if (k === 'pe') return v < 0 ? '亏损' : v.toFixed(2);
+  if (k === 'turnover' || k === 'amp') return v.toFixed(2) + '%';
+  if (k === 'volume') return handFmt(v);
+  if (k === 'amount' || k === 'cap') return moneyFmt(v);
+  return v.toFixed(2);
+}
+function metricCls(k, v, prev){
+  if (v == null) return 'flat';
+  if (k !== 'open' && k !== 'high' && k !== 'low') return '';
+  if (prev == null) return 'flat';
+  if (v > prev) return 'up';
+  if (v < prev) return 'down';
+  return 'flat';
+}
+
+/* ================= 渲染片段 ================= */
+/* 周期 Tab：对应 ArkUI List({ space }) + ForEach(PERIODS) 的横向滑动实现 */
+const PERIODS = [
+  { k: 'timeline', l: '分时' }, { k: 'five', l: '五日' }, { k: 'day', l: '日K' },
+  { k: 'week', l: '周K' }, { k: 'month', l: '月K' }, { k: 'quarter', l: '季K' },
+  { k: 'half', l: '半年K' }, { k: 'year', l: '年K' }
+];
+function periodList(){ return PERIODS; }
+function periodTabsHTML(){
+  return PERIODS.map(p =>
+    '<span class="' + (S.period === p.k ? 'on' : '') + '" data-period="' + p.k + '">' + p.l + '</span>'
+  ).join('');
+}
+/* ---------- 图表：三方库优先（ECharts），离线回退到内置渲染 ---------- */
+const CHART = { inst: null, seq: 0 };
+function hasEcharts(){ return typeof echarts !== 'undefined'; }
+function pad2(n){ return String(n).padStart(2, '0'); }
+
+function rng(seed){
+  let s = seed % 233280;
+  return function(){ s = (s * 9301 + 49297) % 233280; return s / 233280; };
+}
+function chartSeries(p){
+  const r = rng({ timeline: 11, five: 22, day: 33, week: 44, month: 55, quarter: 66, half: 77, year: 88 }[p] || 33);
+  if (p === 'timeline' || p === 'five') {
+    const n = p === 'timeline' ? 120 : 240;
+    let v = 20; const data = [];
+    for (let i = 0; i < n; i++) { v += (r() - 0.5) * 0.14; data.push(+v.toFixed(2)); }
+    return { type: 'line', data: data, labels: data.map((_, i) => i % Math.ceil(n / 4) === 0 ? '点' + (i + 1) : '') };
+  }
+  const conf = { day: [30, 1], week: [26, 7], month: [24, 30], quarter: [16, 91], half: [12, 182], year: [20, 365] }[p] || [30, 1];
+  const n = conf[0], step = conf[1];
+  let base = 18; const data = [], labels = [];
+  const end = new Date(2026, 9, 19).getTime();
+  for (let i = 0; i < n; i++) {
+    const o = +base.toFixed(2);
+    const c = +(o + (r() - 0.5) * 1.8).toFixed(2);
+    const hi = +(Math.max(o, c) + r() * 0.7).toFixed(2);
+    const lo = +(Math.min(o, c) - r() * 0.7).toFixed(2);
+    data.push([o, c, lo, hi]);
+    const d = new Date(end - (n - 1 - i) * step * 86400000);
+    labels.push((d.getFullYear() % 100) + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()));
+    base = c;
+  }
+  return { type: 'candle', data: data, labels: labels };
+}
+
+function chartOption(p){
+  const s = chartSeries(p);
+  const base = {
+    animation: false,
+    grid: { left: 8, right: 10, top: 10, bottom: s.type === 'candle' ? 20 : 8 },
+    xAxis: {
+      type: 'category', data: s.labels, axisLine: { show: false }, axisTick: { show: false },
+      axisLabel: s.type === 'candle'
+        ? { fontSize: 8, color: '#9aa1ad', interval: Math.max(0, Math.ceil(s.labels.length / 4) - 1), hideOverlap: true }
+        : { show: false }
+    },
+    yAxis: {
+      scale: true, axisLine: { show: false }, axisTick: { show: false },
+      axisLabel: { fontSize: 8, color: '#9aa1ad' },
+      splitLine: { lineStyle: { color: '#eef0f3' } }
+    }
+  };
+  if (s.type === 'line') {
+    base.series = [{ type: 'line', data: s.data, symbol: 'none', lineStyle: { color: '#e8402a', width: 1.6 },
+      areaStyle: { color: 'rgba(232,64,42,.10)' } }];
+  } else {
+    base.series = [{ type: 'candlestick', data: s.data,
+      itemStyle: { color: '#e8402a', color0: '#12a150', borderColor: '#e8402a', borderColor0: '#12a150' } }];
+  }
+  return base;
+}
+
+function chartSVG(){
+  const s = chartSeries(S.period);
+  const W = 600, H = 160;
+  if (s.type === 'line') {
+    const min = Math.min.apply(null, s.data), max = Math.max.apply(null, s.data);
+    const pts = s.data.map((v, i) => (i / (s.data.length - 1) * W).toFixed(1) + ',' +
+      (H - 10 - (v - min) / (max - min || 1) * (H - 30)).toFixed(1)).join(' ');
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
+      '<polyline points="' + pts + '" fill="none" stroke="#e8402a" stroke-width="1.8"/></svg>';
+  }
+  const all = s.data.flat();
+  const min = Math.min.apply(null, all), max = Math.max.apply(null, all);
+  const y = v => H - 10 - (v - min) / (max - min || 1) * (H - 24);
+  const bw = W / s.data.length * 0.55;
+  let cs = '';
+  s.data.forEach((c, i) => {
+    const x = (i + 0.5) * W / s.data.length;
+    const up = c[1] >= c[0];
+    const col = up ? '#e8402a' : '#12a150';
+    cs += '<line x1="' + x + '" y1="' + y(c[3]) + '" x2="' + x + '" y2="' + y(c[2]) + '" stroke="' + col + '" stroke-width="1.2"/>';
+    cs += '<rect x="' + (x - bw / 2) + '" y="' + y(Math.max(c[0], c[1])) + '" width="' + bw + '" height="' +
+      Math.max(2, Math.abs(y(c[0]) - y(c[1]))) + '" fill="' + col + '"/>';
+  });
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' + cs + '</svg>';
+}
+
+function mountChart(){
+  const box = document.getElementById('chartbox');
+  if (!box) return;
+  if (CHART.inst) { try { CHART.inst.dispose(); } catch (e) {} CHART.inst = null; }
+  CHART.seq++;
+  const engine = hasEcharts() ? 'ECharts 5' : '内置回退';
+  box.dataset.seq = CHART.seq;
+  box.dataset.engine = engine;
+  const tag = document.getElementById('engineTag');
+  if (tag) tag.textContent = engine;
+  box.innerHTML = '';
+  if (hasEcharts()) {
+    CHART.inst = echarts.init(box);
+    CHART.inst.setOption(chartOption(S.period));
+  } else {
+    box.innerHTML = chartSVG();
+  }
+}
+window.__remountChart = function(){ try { mountChart(); } catch (e) {} };
+function metricsHTML(){
+  const d = metrics();
+  const baseN = S.mode === 'pane' ? 6 : DEVICES[S.device].metrics;
+  const n = S.mExpanded ? 12 : baseN;
+  let cols = DEVICES[S.device].cols;
+  if (S.scale >= 1.3) cols -= 1;
+  if (S.scale >= 1.45) cols -= 1;
+  cols = Math.max(1, cols);
+  const html = POOL.slice(0, n).map(it => {
+    const cls = metricCls(it.k, d[it.k], d.prev);
+    return '<div class="mcell2 ' + cls + '" data-metric="' + it.k + '"><span>' + it.label + '</span><b>' + fmt(it.k, d[it.k]) + '</b></div>';
+  }).join('');
+  const grid = '<div class="dmetrics" data-metrics style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr))">' + html + '</div>';
+  const chev = (baseN < 12 || S.mExpanded)
+    ? '<button class="expand ' + (S.mExpanded ? 'up' : '') + '" data-action="metrics-expand" aria-label="展开全部指标"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6.5l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
+    : '';
+  return grid + chev;
+}
+function bookHTML(variant){
+  const narrow = variant === 'narrow';
+  const suspended = S.data === 'suspended';
+  const ASK_V = [69, 12, 66, 55, 33];
+  const BID_V = [11, 22, 33, 55, 66];
+
+  const askRows = ASKS.map((p, i) =>
+    '<div class="brow2"><span>卖' + (i + 1) + '</span><b class="' + (suspended ? 'flat' : 'up') + '">' +
+    (suspended ? '--' : p.toFixed(2)) + '</b><i>' + (suspended ? '--' : ASK_V[i]) + '</i></div>').join('');
+  const bidRows = BIDS.map((p, i) =>
+    '<div class="brow2"><span>买' + (i + 1) + '</span><b class="' + (suspended ? 'flat' : (p > BASE.prev ? 'up' : 'down')) + '">' +
+    (suspended ? '--' : p.toFixed(2)) + '</b><i>' + (suspended ? '--' : BID_V[i]) + '</i></div>').join('');
+
+  const askSum = ASK_V.reduce((a, b) => a + b, 0);
+  const bidSum = BID_V.reduce((a, b) => a + b, 0);
+  const bidPct = Math.min(95, Math.max(5, Math.round(bidSum / (askSum + bidSum) * 100)));
+  const ratio = suspended ? '' :
+    '<div class="ratio" data-ratio title="买 ' + bidPct + '% / 卖 ' + (100 - bidPct) + '%">' +
+    '<i style="width:' + bidPct + '%"></i></div>';
+
+  let trades = '';
+  for (let i = 0; i < 20; i++) {
+    if (suspended) {
+      trades += '<div class="trow2"><span>--:--</span><b class="flat">--</b><i>--</i></div>';
+      continue;
+    }
+    const up = i % 3 !== 2;
+    const t = 15 * 3600 + 3 * 60 - i * 7;
+    const hh = String(Math.floor(t / 3600)).padStart(2, '0');
+    const mm = String(Math.floor((t % 3600) / 60)).padStart(2, '0');
+    const price = (24.32 + (up ? 1 : -1) * 0.01 * (i % 4)).toFixed(2);
+    const vol = 11 + (i * 7) % 90;
+    trades += '<div class="trow2"><span>' + hh + ':' + mm + '</span><b class="' + (up ? 'up' : 'down') + '">' +
+      price + '</b><i>' + vol + '</i></div>';
+  }
+
+  if (narrow) {
+    return '<div class="dbook narrow" data-book>' +
+      '<div class="bsec">五档行情</div>' +
+      '<div class="bgrid"><div>' + askRows + '</div><div>' + bidRows + '</div></div>' +
+      ratio +
+      '<div class="bsec tick">成交明细</div>' +
+      '<div class="dtrades" data-trades>' + trades + '</div></div>';
+  }
+
+  return '<div class="dbook" data-book>' +
+    '<div class="bsec">五档行情</div>' + askRows + ratio + bidRows +
+    '<div class="bsec tick">成交明细</div>' +
+    '<div class="dtrades" data-trades>' + trades + '</div></div>';
+}
+function newsHTML(){
+  if (!S.newsOpen) return '';
+  return '<div class="news" data-news><b>最新资讯</b><span>某某地产：关于 2026 年三季度经营情况的公告</span><button data-action="news-close">×</button></div>';
+}
+function contentHTML(){
+  const tabs = [['discuss', '讨论'], ['must', '必读'], ['report', '研报'], ['fund', '资金'], ['data', '资料']];
+  return '<div class="dctabs2" data-ctabs>' + tabs.map(t =>
+    '<span class="' + (S.ctab === t[0] ? 'on' : '') + '" data-ctab="' + t[0] + '">' + t[1] + '</span>').join('') + '</div>' +
+    '<div class="dempty2" data-cempty>内容即将上线</div>';
+}
+function priceHTML(){
+  const q = quote();
+  if (q.price == null) return '<div class="dprice flat" data-price>--<em>--</em><em>--</em></div>';
+  const chg = q.chg == null ? '--' : (q.chg > 0 ? '+' : '') + q.chg.toFixed(2);
+  const pct = q.pct == null ? '--' : (q.pct > 0 ? '+' : '') + q.pct.toFixed(2) + '%';
+  return '<div class="dprice ' + q.cls + '" data-price>' + q.price.toFixed(2) +
+    '<em>' + chg + '</em><em>' + pct + '</em></div>';
+}
+
+/* ================= 整页渲染 ================= */
+function chartNode(){
+  return '<div class="dchart" data-chart><div class="chartbox" id="chartbox"></div><span class="engineTag" id="engineTag"></span></div>';
+}
+
+function pageBody(){
+  return '<div class="dscroll ' + (S.conn === 'offline' ? 'dim' : '') + '" data-scroll>' +
+    priceHTML() + metricsHTML() + newsHTML() +
+    '<div class="dtabs" data-periods>' + periodTabsHTML() + '</div>' +
+    '<div class="chartrow">' + chartNode() + bookHTML('full') + '</div>' + contentHTML() +
+    '</div>';
+}
+
+function actionBarHTML(){
+  const dis = S.data === 'suspended' ? ' disabled' : '';
+  const dots = [[5, 5], [11, 5], [17, 5], [5, 11], [11, 11], [17, 11], [5, 17], [11, 17], [17, 17]]
+    .map(p => '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.5"/>').join('');
+  return '<div class="dbar2" data-bar><div class="dbar-inner">' +
+    '<div class="act2" data-act="fav">' +
+      '<svg viewBox="0 0 22 22" fill="currentColor">' + dots + '</svg><span>自选设置</span></div>' +
+    '<div class="act2" data-act="pk">' +
+      '<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+      '<rect x="3" y="12" width="4" height="7" rx="1"/><rect x="9" y="9" width="4" height="10" rx="1"/>' +
+      '<rect x="15" y="6" width="4" height="13" rx="1"/><path d="M3 8l5-3 4 2 6-4"/></svg>' +
+      '<span>股票PK</span></div>' +
+    '<div class="act2" data-act="more">' +
+      '<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5">' +
+      '<rect x="3.5" y="3.5" width="6" height="6" rx="1.5"/><rect x="12.5" y="3.5" width="6" height="6" rx="1.5"/>' +
+      '<rect x="3.5" y="12.5" width="6" height="6" rx="1.5"/><rect x="12.5" y="12.5" width="6" height="6" rx="1.5"/></svg>' +
+      '<span>更多</span></div>' +
+    '<div class="buy2' + dis + '" data-act="trade">去交易</div>' +
+    '</div></div>';
+}
+
+function pageHTML(){
+  const title = '<div class="dnav"><button class="dbk" data-action="back">‹</button>' +
+    '<div class="dtitle"><b>' + BASE.name + '</b><span>' + BASE.code + '</span>' +
+    '<div class="dsub"><i class="dmk">' + BASE.market + '</i>已收盘 10-19 15:03:03</div></div>' +
+    '<span class="dsp"></span></div>';
+  if (S.page === 'loading') {
+    return '<div class="dpage"><div class="dwrap">' + title + '<div class="skel2" data-skel><i></i><i></i><i></i><i></i></div></div></div>';
+  }
+  if (S.page === '404') {
+    return '<div class="dpage"><div class="dwrap">' + title +
+      '<div class="err2" data-404><div class="ic">!</div><h3>未找到该股票</h3><p>代码或已退市，不显示骨架</p></div>' +
+      '</div></div>';
+  }
+  const banner = S.conn === 'offline' ? '<div class="banner" data-banner>行情连接中断，数据可能延迟</div>' : '';
+  return '<div class="dpage"><div class="dwrap">' + title + banner + pageBody() + '</div>' + actionBarHTML() + '</div>';
+}
+
+function paneHTML(){
+  const paneW = Math.round(DEVICES[S.device].w * 0.42);
+  const narrow = paneW < 360;
+  const rows = [['某某科技', '20.01'], ['某某地产', '24.32'], ['某某药业', '15.20'], ['某某银行', '12.08'], ['某某重工', '7.66']]
+    .map((r, i) => '<div class="srow ' + (i === 1 ? 'sel' : '') + '"><b>' + r[0] + '</b><span>' + r[1] + '</span></div>').join('');
+  const bottom = narrow
+    ? '<div class="pchart">' + chartNode() + '</div>' + bookHTML('narrow')
+    : '<div class="chartrow">' + chartNode() + bookHTML('full') + '</div>';
+  return '<div class="split' + (narrow ? ' narrow' : '') + '" data-pane>' +
+    '<div class="slist"><div class="sh">自选 · 融资融券</div>' + rows + '</div>' +
+    '<div class="pane">' +
+      '<div class="phead"><div class="dtitle"><b>' + BASE.name + '</b><span>' + BASE.code + '</span>' +
+      '<div class="dsub"><i class="dmk">' + BASE.market + '</i>已收盘 15:03:03</div></div><span class="pmore" data-action="more">⋯</span></div>' +
+      (S.pmenu ? '<div class="pmenu" data-menu>' +
+        '<div data-act="fav">自选设置</div><div data-act="pk">股票PK</div>' +
+        '<div data-act="more">更多</div><div data-act="trade">去交易</div></div>' : '') +
+      '<div class="pbody ' + (S.conn === 'offline' ? 'dim' : '') + '">' +
+        priceHTML() + metricsHTML() +
+        '<div class="dtabs" data-periods>' + periodTabsHTML() + '</div>' +
+        bottom +
+      '</div>' +
+    '</div></div>';
+}
+
+function render(){
+  const dev = DEVICES[S.device];
+  const outerW = dev.w + 12;
+  $('#qcard').style.width = outerW + 'px';
+  $('#devbar').style.width = outerW + 'px';
+  $('#meta2').style.width = Math.min(outerW, 720) + 'px';
+  $('#devLabel').textContent = '详情页 · ' + S.device + ' / ' + dev.label + ' ' + dev.w + ' · ' + S.mode + ' 壳';
+  $('#scaleLabel').textContent = '字号 ' + S.scale + '×';
+
+  if (CHART.inst) { try { CHART.inst.dispose(); } catch (e) {} CHART.inst = null; }
+  $('#screen').innerHTML = S.mode === 'pane' ? paneHTML() : pageHTML();
+  $('#screen').style.setProperty('--k', String(S.scale));
+  const tabGap = S.mode === 'pane' ? 14 : ({ sm: 12, md: 14, lg: 16, xl: 20 }[S.device] || 14);
+  $('#screen').style.setProperty('--tabgap', tabGap + 'px');
+  mountChart();
+
+  const secs = S.mode === 'pane' ? 6 : (S.page === 'ok' ? 8 : 2);
+  $('#mSecs').textContent = secs;
+  $('#mTabs').textContent = periodList().length;
+  $('#mMetric').textContent = S.mExpanded ? 12 : (S.mode === 'pane' ? 6 : dev.metrics);
+
+  $('#snapshot').innerHTML = `
+    <div>设备 <b>${S.device} ${dev.w}</b></div>
+    <div>形态 <b>${S.mode}</b></div>
+    <div>状态 <b>${S.data}</b></div>
+    <div>页面 <b>${S.page}</b></div>
+    <div>连接 <b>${S.conn}</b></div>
+    <div>周期 <b>${S.period}</b></div>
+    <div>字号 <b>${S.scale}×</b></div>
+    <div>资讯 <b>${S.newsOpen ? '开' : '关'}</b></div>`;
+}
+
+function syncControls(){
+  document.querySelectorAll('#segDevice button').forEach(b => b.classList.toggle('on', b.dataset.device === S.device));
+  document.querySelectorAll('#segMode button').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
+  document.querySelectorAll('#segData button').forEach(b => {
+    if (b.dataset.data) b.classList.toggle('on', S.page === 'ok' && b.dataset.data === S.data);
+    if (b.dataset.page) b.classList.toggle('on', S.page === b.dataset.page);
+  });
+  document.querySelectorAll('#segConn button').forEach(b => b.classList.toggle('on', b.dataset.conn === S.conn));
+  document.querySelectorAll('#segScale button').forEach(b => b.classList.toggle('on', +b.dataset.scale === S.scale));
+}
+
+/* ================= 行为 ================= */
+function setDevice(d){ S.device = d; syncControls(); render(); }
+function setMode(m){
+  S.mode = m;
+  if (m === 'pane' && S.page !== 'ok') S.page = 'ok';
+  if (m === 'pane' && S.device === 'sm') S.device = 'lg';
+  syncControls(); render();
+}
+function setData(d){ S.data = d; S.page = 'ok'; S.newsOpen = true; syncControls(); render(); }
+function setPage(p){ S.page = p; syncControls(); render(); }
+function setConn(c){ S.conn = c; syncControls(); render(); }
+function setScale(k){ S.scale = k; syncControls(); render(); }
+function setPeriod(p){
+  const item = periodList().find(x => x.k === p);
+  if (!item || S.period === p) return;
+  S.period = p;
+  render();
+  log('切换周期：' + item.l + ' · 图表已刷新');
+}
+function closeNews(){ S.newsOpen = false; render(); log('关闭资讯条'); }
+function setCtab(t){ S.ctab = t; render(); }
+
+function resetBench(){
+  S.device = 'sm'; S.mode = 'page'; S.data = 'normal'; S.conn = 'online'; S.page = 'ok';
+  S.scale = 1; S.period = 'timeline'; S.newsOpen = true; S.ctab = 'discuss'; S.mExpanded = false; S.pmenu = false;
+  syncControls(); render();
+}
+
+/* ================= 事件 ================= */
+$('#screen').addEventListener('click', e => {
+  const p = e.target.closest('[data-period]');
+  if (p) return setPeriod(p.dataset.period);
+
+  const ct = e.target.closest('[data-ctab]');
+  if (ct) return setCtab(ct.dataset.ctab);
+
+  const a = e.target.closest('[data-action]');
+  if (a) {
+    if (a.dataset.action === 'more') { S.pmenu = !S.pmenu; render(); return; }
+    if (a.dataset.action === 'metrics-expand') { S.mExpanded = !S.mExpanded; render(); return; }
+    if (a.dataset.action === 'news-close') return closeNews();
+    if (a.dataset.action === 'back') { log('返回（page 壳）'); return; }
+    return;
+  }
+
+  const act = e.target.closest('[data-act]');
+  if (act) {
+    if (act.dataset.act === 'trade' && act.classList.contains('disabled')) { log('停牌：去交易不可用'); return; }
+    log('点击动作：' + act.dataset.act);
+    if (S.pmenu) { S.pmenu = false; render(); }
+  }
+});
+
+document.querySelectorAll('#segDevice button').forEach(b => b.addEventListener('click', () => setDevice(b.dataset.device)));
+document.querySelectorAll('#segMode button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+document.querySelectorAll('#segData button').forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.data) setData(b.dataset.data); else setPage(b.dataset.page);
+}));
+document.querySelectorAll('#segConn button').forEach(b => b.addEventListener('click', () => setConn(b.dataset.conn)));
+document.querySelectorAll('#segScale button').forEach(b => b.addEventListener('click', () => setScale(+b.dataset.scale)));
+$('#btnReset').addEventListener('click', () => { resetBench(); log('已重置'); });
+
+/* ================= 用例 ================= */
+const CASES = [];
+function def(id, name, fn){ CASES.push({ id, name, fn, status: 'idle', msg: '' }); }
+function assert(c, m){ if (!c) throw new Error(m); }
+const q = sel => { const e = document.querySelector(sel); if (!e) throw new Error('找不到 ' + sel); return e; };
+const qa = sel => Array.from(document.querySelectorAll(sel));
+
+def('C01', 'page 壳八区块齐全', async () => {
+  resetBench(); setDevice('xl');
+  assert(!!q('.dbk'), '缺返回');
+  assert(!!q('[data-price]'), '缺报价');
+  assert(!!q('[data-metrics]'), '缺指标');
+  assert(!!q('[data-news]'), '缺资讯');
+  assert(!!q('[data-chart]'), '缺图表');
+  assert(!!q('[data-book]'), '缺盘口');
+  assert(!!q('[data-ctabs]'), '缺内容 Tab');
+  assert(!!q('.dbar2'), '缺动作栏');
+});
+
+def('C02', 'page 有返回，pane 无返回且有 ⋯', async () => {
+  resetBench(); setDevice('lg');
+  assert(!!q('.dbk'), 'page 应有返回');
+  setMode('pane');
+  assert(!document.querySelector('.dbk'), 'pane 不应有返回');
+  assert(!!q('.pmore'), 'pane 应有 ⋯');
+});
+
+def('C03', 'pane 隐藏资讯 / 内容 Tab / 动作栏', async () => {
+  resetBench(); setDevice('lg'); setMode('pane');
+  assert(!document.querySelector('[data-news]'), 'pane 不应有资讯条');
+  assert(!document.querySelector('[data-ctabs]'), 'pane 不应有内容 Tab');
+  assert(!document.querySelector('.dbar2'), 'pane 不应有动作栏');
+});
+
+def('C04', '周期 Tab 8 个（含年K）且横向可滑', async () => {
+  resetBench();
+  for (const d in DEVICES) {
+    setDevice(d);
+    assert(qa('[data-periods] span').length === 8, d + ' 应有 8 个周期，实际 ' + qa('[data-periods] span').length);
+  }
+  assert(qa('[data-periods] span').some(x => x.textContent.trim() === '年K'), '应包含年K');
+  setDevice('sm');
+  const st = q('[data-periods]');
+  assert(st.scrollWidth > st.clientWidth + 1, 'sm 下 8 个 Tab 应可横向滑动');
+  assert(getComputedStyle(st).columnGap === '12px', 'sm 间距应为 12px，实际 ' + getComputedStyle(st).columnGap);
+  setDevice('xl');
+  assert(getComputedStyle(q('[data-periods]')).columnGap === '20px', 'xl 间距应为 20px');
+});
+
+def('C05', '点击周期 Tab 后图表同步刷新', async () => {
+  resetBench(); setDevice('sm');
+  const before = +q('#chartbox').dataset.seq;
+  q('[data-period="year"]').click();
+  assert(S.period === 'year', '应切到年K');
+  assert(+q('#chartbox').dataset.seq > before, '图表应重新渲染');
+  assert(!!q('#chartbox').dataset.engine, '应记录图表引擎');
+  const seq2 = +q('#chartbox').dataset.seq;
+  q('[data-period="month"]').click();
+  assert(S.period === 'month', '应切到月K');
+  assert(+q('#chartbox').dataset.seq > seq2, '再次切换应再次刷新');
+});
+
+def('C06', '周期选择跨设备保持', async () => {
+  resetBench(); setDevice('sm');
+  q('[data-period="day"]').click();
+  assert(S.period === 'day', '应切到日K');
+  setDevice('xl');
+  assert(S.period === 'day', '切设备后应保持日K');
+  assert(q('[data-period="day"]').classList.contains('on'), '日K 应高亮');
+});
+
+def('C07', '指标项数 6 / 9 / 9 / 12', async () => {
+  resetBench();
+  const expect = { sm: 6, md: 9, lg: 9, xl: 12 };
+  for (const d in expect) {
+    setDevice(d);
+    assert(qa('[data-metrics] .mcell2').length === expect[d], d + ' 应 ' + expect[d] + ' 项，实际 ' + qa('[data-metrics] .mcell2').length);
+  }
+});
+
+def('C08', '资讯条可关闭且消失', async () => {
+  resetBench(); setDevice('lg');
+  assert(!!q('[data-news]'), '初始应有资讯条');
+  q('[data-action="news-close"]').click();
+  assert(!document.querySelector('[data-news]'), '关闭后应消失');
+});
+
+def('C09', '停牌：盘口全部 -- 且隐藏比例条', async () => {
+  resetBench(); setDevice('lg'); setData('suspended');
+  const rows = qa('[data-book] .brow2');
+  assert(rows.length === 10, '应有 10 档，实际 ' + rows.length);
+  rows.forEach(r => {
+    assert(r.querySelector('b').textContent.trim() === '--', '停牌档位应为 --');
+  });
+  assert(!document.querySelector('[data-book] .ratio'), '停牌应隐藏红绿比例条');
+  assert(S.data === 'suspended', '数据应为停牌');
+});
+
+def('C10', '停牌：去交易禁用', async () => {
+  resetBench(); setData('suspended');
+  const btn = q('[data-act="trade"]');
+  assert(btn.classList.contains('disabled'), '停牌应禁用去交易');
+  setData('normal');
+  assert(!q('[data-act="trade"]').classList.contains('disabled'), '正常应可交易');
+});
+
+def('C11', '内容 Tab 默认讨论，可切换', async () => {
+  resetBench(); setDevice('lg');
+  const on = q('[data-ctabs] .on');
+  assert(on.textContent.trim() === '讨论', '默认应为讨论，实际 ' + on.textContent.trim());
+  q('[data-ctab="report"]').click();
+  assert(q('[data-ctabs] .on').textContent.trim() === '研报', '应切到研报');
+});
+
+def('C12', '断线：单条 banner + 内容置灰', async () => {
+  resetBench(); setDevice('lg'); setConn('offline');
+  const banners = qa('[data-banner]');
+  assert(banners.length === 1, '应只有一条 banner');
+  assert(banners[0].textContent.includes('行情连接中断'), 'banner 文案不符');
+  const dim = q('[data-scroll]');
+  assert(dim.classList.contains('dim'), '内容应置灰');
+  assert(getComputedStyle(dim).opacity === '0.55', '置灰透明度应为 0.55，实际 ' + getComputedStyle(dim).opacity);
+});
+
+def('C13', '404：错误态且无骨架', async () => {
+  resetBench(); setPage('404');
+  assert(!!q('[data-404]'), '应显示 404 态');
+  assert(!document.querySelector('[data-skel]'), '404 不应有骨架');
+});
+
+def('C14', '加载：骨架且无报价', async () => {
+  resetBench(); setPage('loading');
+  assert(!!q('[data-skel]'), '应显示骨架');
+  assert(!document.querySelector('[data-price]'), '加载态不应有报价');
+});
+
+def('C15', '1.45× 下单元格不截断', async () => {
+  resetBench(); setScale(1.45);
+  for (const d of ['sm', 'md', 'lg', 'xl']) {
+    setDevice(d);
+    qa('[data-metrics] .mcell2 b').forEach(b => {
+      assert(b.scrollWidth <= b.clientWidth + 1, d + ' 指标截断：' + b.textContent);
+    });
+  }
+});
+
+def('C16', '动作栏四项齐全', async () => {
+  resetBench(); setDevice('lg');
+  const acts = qa('.dbar2 [data-act]').map(x => x.getAttribute('data-act'));
+  assert(acts.length === 4, '应 4 个动作，实际 ' + acts.length);
+  assert(acts.includes('fav') && acts.includes('pk') && acts.includes('more') && acts.includes('trade'), '动作不全：' + acts.join(','));
+});
+
+def('C17', '指标展开：6 → 12，xl 无展开按钮', async () => {
+  resetBench(); setDevice('sm');
+  assert(qa('[data-metrics] .mcell2').length === 6, 'sm 初始应 6 项');
+  assert(!!q('[data-action="metrics-expand"]'), 'sm 应有展开按钮');
+  q('[data-action="metrics-expand"]').click();
+  assert(qa('[data-metrics] .mcell2').length === 12, '展开后应 12 项');
+  assert(q('[data-action="metrics-expand"]').classList.contains('up'), '展开后箭头应朝上');
+  setDevice('xl');
+  assert(qa('[data-metrics] .mcell2').length === 12, 'xl 应保持 12 项');
+  setDevice('sm');
+  q('[data-action="metrics-expand"]').click();
+  assert(qa('[data-metrics] .mcell2').length === 6, '收起后应回 6 项');
+  setDevice('xl');
+  assert(!document.querySelector('[data-action="metrics-expand"]'), 'xl 已全显示，不应有展开按钮');
+});
+
+def('C18', '盘口按设计挂在图表右侧', async () => {
+  resetBench(); setDevice('lg');
+  const c = q('[data-chart]').getBoundingClientRect();
+  const b = q('[data-book]').getBoundingClientRect();
+  assert(b.left > c.left + 50, '盘口应在图表右侧');
+  assert(Math.abs(b.top - c.top) < 10, '盘口应与图表顶部对齐：' + Math.round(b.top) + ' vs ' + Math.round(c.top));
+  const rows = qa('[data-book] .brow2');
+  assert(rows.length === 10, '应为 10 档，实际 ' + rows.length);
+  assert(rows[0].textContent.includes('卖1'), '首行应为卖1');
+  assert(rows[5].textContent.includes('买1'), '第 6 行应为买1');
+  assert(rows[9].textContent.includes('买5'), '末行应为买5');
+  const secs = qa('[data-book] .bsec').map(x => x.textContent.trim());
+  assert(secs.includes('五档行情') && secs.includes('成交明细'), '应含五档行情/成交明细标题：' + secs.join(','));
+  assert(qa('[data-book] .trow2').length === 20, '成交明细应为 20 条，实际 ' + qa('[data-book] .trow2').length);
+  const bar = q('[data-book] .ratio i');
+  const w = parseFloat(bar.style.width);
+  assert(w >= 5 && w <= 95, '红绿比例条应在 5%~95%，实际 ' + w + '%');
+  assert(getComputedStyle(q('[data-book] .dtrades')).overflowY === 'auto', '成交明细应可滚动');
+});
+
+def('C19', '动作栏按设计：三项左、主按钮右且通栏', async () => {
+  resetBench(); setDevice('lg');
+  const bar = q('.dbar2');
+  const buy = q('.buy2');
+  const acts = qa('.dbar2 .act2');
+  assert(acts.length === 3, '左侧应有 3 项，实际 ' + acts.length);
+  const br = bar.getBoundingClientRect();
+  const rr = buy.getBoundingClientRect();
+  const a0 = acts[0].getBoundingClientRect();
+  const a2 = acts[2].getBoundingClientRect();
+  assert(Math.abs(br.width - q('#screen').getBoundingClientRect().width) < 2, '动作栏应通栏（' + Math.round(br.width) + '）');
+  assert(a2.right < rr.left, '主按钮应在三项右侧');
+  assert(rr.height >= 40, '主按钮高度应 ≥40，实际 ' + Math.round(rr.height));
+  assert(rr.width > a2.right - a0.left, '主按钮应宽于三项区域');
+  assert(!!acts[0].querySelector('svg') && !!acts[1].querySelector('svg') && !!acts[2].querySelector('svg'), '三项应使用图标');
+});
+
+def('C20', 'pane 紧凑版：图表 + 五档并排，无成交明细', async () => {
+  resetBench(); setDevice('lg'); setMode('pane');
+  const c = q('[data-chart]').getBoundingClientRect();
+  const b = q('[data-book]').getBoundingClientRect();
+  assert(b.left > c.left + 30, 'pane 五档应在图表右侧');
+  assert(Math.abs(b.top - c.top) < 10, 'pane 五档应与图表同顶');
+  assert(qa('[data-periods] span').length === 8, 'pane 也应有 8 个周期');
+  assert(qa('[data-metrics] .mcell2').length === 6, 'pane 指标应为 6 项');
+  assert(!!q('[data-book] .ratio'), 'pane 应保留红绿比例条');
+  assert(qa('[data-book] .trow2').length === 20, 'pane 也应显示 20 条成交明细');
+  assert(!document.querySelector('.dbar2'), 'pane 不应有底部动作栏');
+  q('[data-action="more"]').click();
+  assert(qa('[data-menu] div').length === 4, '⋯ 菜单应有 4 项');
+  q('[data-menu] div[data-act="fav"]').click();
+  assert(!document.querySelector('[data-menu]'), '点击菜单项后应收起');
+});
+
+def('C21', 'pane <360vp 退化为图表在上、五档两列 + 明细', async () => {
+  resetBench(); setDevice('md'); setMode('pane');
+  const c = q('[data-chart]').getBoundingClientRect();
+  const b = q('[data-book]').getBoundingClientRect();
+  assert(b.top > c.bottom - 2, '窄 pane 盘口应在图表下方');
+  assert(!!q('[data-book].narrow'), '窄 pane 应使用窄版盘口');
+  assert(qa('[data-book] .bgrid > div').length === 2, '五档应为两列');
+  assert(qa('[data-book] .trow2').length === 20, '成交明细应为 20 条');
+  assert(!!q('[data-book] .ratio'), '窄版也保留比例条');
+});
+
+/* ================= 用例面板 ================= */
+function renderTests(){
+  const wrap = $('#tests');
+  wrap.innerHTML = CASES.map((c, i) => `
+    <div class="cas ${c.status === 'run' ? 'run' : c.status}" data-case="${i}">
+      <span class="cid">${c.id}</span>
+      <span class="cn" title="${c.name}">${c.name}</span>
+      <span class="stt">${c.status === 'pass' ? '通过' : c.status === 'fail' ? '失败' : c.status === 'run' ? '运行中' : '待运行'}</span>
+      ${c.msg ? '<div class="msg">' + c.msg + '</div>' : ''}
+    </div>`).join('');
+  const pass = CASES.filter(c => c.status === 'pass').length;
+  const fail = CASES.filter(c => c.status === 'fail').length;
+  $('#summary').textContent = CASES.length + ' 条 · 通过 ' + pass + ' / 失败 ' + fail;
+  wrap.querySelectorAll('.cas').forEach(el => el.addEventListener('click', () => runOne(+el.dataset.case)));
+}
+
+async function runOne(i){
+  const c = CASES[i];
+  c.status = 'run'; c.msg = '';
+  renderTests();
+  try { await c.fn(); c.status = 'pass'; }
+  catch (e) { c.status = 'fail'; c.msg = e.message; log('用例失败 ' + c.id + '：' + e.message); }
+  renderTests();
+}
+
+let running = false;
+async function runAll(){
+  if (running) return;
+  running = true;
+  $('#runState').textContent = '运行中…';
+  CASES.forEach(c => { c.status = 'idle'; c.msg = ''; });
+  renderTests();
+  for (let i = 0; i < CASES.length; i++) await runOne(i);
+  running = false;
+  $('#runState').textContent = '完成';
+  const fail = CASES.filter(c => c.status === 'fail').length;
+  log(fail ? '全部完成，失败 ' + fail + ' 条' : '全部通过');
+}
+
+$('#runAll').addEventListener('click', runAll);
+$('#runReset').addEventListener('click', () => {
+  CASES.forEach(c => { c.status = 'idle'; c.msg = ''; });
+  resetBench(); renderTests(); log('用例与场景已重置');
+});
+
+/* ================= 启动 ================= */
+resetBench();
+renderTests();
+log('验证台就绪：先点「运行全部」，或用左侧控件切换形态与状态');
+</script>
+</body>
+</html>

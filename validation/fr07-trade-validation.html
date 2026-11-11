@@ -1,0 +1,1010 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FR-07 交易（买入委托）· 验证台</title>
+<style>
+  :root{
+    --bg:#f3f4f6; --card:#fff; --ink:#15171c; --ink2:#5b6270; --ink3:#8d95a3;
+    --line:#e6e8ec; --line2:#eef0f3;
+    --up:#e8402a; --down:#12a150; --flat:#7a828f;
+    --blue:#2b6cff; --bluebg:#eaf0ff;
+    --green:#2f8a52; --greenbg:#f2f8f3;
+    --red:#c2452f; --redbg:#fdf0ed;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:13px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .bench{max-width:1280px;margin:0 auto;padding:34px 24px 60px}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .kicker{font:600 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--ink3)}
+  h1{font-size:26px;margin:8px 0 6px;letter-spacing:-.01em}
+  h1 em{font-style:normal;color:var(--blue)}
+  .sub{font-size:12px;color:var(--ink2);margin:0;max-width:680px}
+  .note{font-size:11px;color:var(--ink3);background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;white-space:nowrap}
+
+  .stagewrap{display:flex;flex-direction:column;align-items:center;margin-top:18px}
+  .devlabel{width:100%;font:10.5px ui-monospace,Menlo,monospace;color:var(--ink3);margin-bottom:8px;display:flex;justify-content:space-between;gap:12px}
+  .qcard{width:375px;max-width:100%;background:#0b0d12;border-radius:26px;padding:6px;box-shadow:0 16px 40px rgba(16,22,36,.16);transition:width .22s ease}
+  .qscreen{background:#fff;border-radius:21px;overflow:hidden;position:relative;--k:1}
+
+  .shell{display:flex;flex-direction:column;height:100%}
+  .qhead{display:flex;align-items:flex-start;gap:10px;padding:12px 14px 0}
+  .back{width:30px;height:30px;border-radius:50%;border:0;background:#f2f3f6;display:grid;place-items:center;font-size:17px;color:#3a4150;line-height:1;cursor:pointer;flex:none}
+  .hd{flex:1;text-align:center;min-width:0}
+  .l1{display:flex;justify-content:center;align-items:baseline;gap:5px;line-height:1.25}
+  .l1 b{font-size:calc(15px * var(--k));font-weight:650}
+  .code{font-size:calc(10px * var(--k));color:var(--ink3)}
+  .l2{display:flex;justify-content:center;align-items:center;gap:4px;margin-top:3px;font-size:calc(10px * var(--k));color:var(--ink3);line-height:1.4}
+  .mk{font-style:normal;background:#eaf0ff;color:#2b6cff;border-radius:3px;font-size:calc(8px * var(--k));padding:0 3px;font-weight:600}
+  .sp{width:30px;flex:none}
+  .qpr{display:flex;align-items:baseline;gap:calc(8px * var(--k));padding:8px 16px 14px;flex-wrap:wrap}
+  .px{font-size:calc(30px * var(--k));font-weight:700;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .cg,.pc{font-size:calc(12px * var(--k));font-weight:600;font-variant-numeric:tabular-nums}
+  .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--flat)}
+
+  .meta{display:flex;gap:14px;padding:0 16px 10px;font-size:calc(10px * var(--k));color:var(--ink3);flex-wrap:wrap}
+  .meta b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;margin-left:2px}
+  .body{flex:1;display:flex;min-height:0;border-top:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+  .chart{flex:1;min-height:80px;position:relative;
+    background:
+      linear-gradient(to right,rgba(0,0,0,.035) 1px,transparent 1px) 0 0/20% 100%,
+      linear-gradient(to bottom,rgba(0,0,0,.03) 1px,transparent 1px) 0 0/100% 25%,
+      #fbfcfd}
+  .chart span{position:absolute;left:12px;top:8px;font-size:10px;color:#a7aeba;z-index:2}
+  .chart svg{position:absolute;inset:0;width:100%;height:100%}
+  .ob{width:30%;max-width:190px;border-left:1px solid var(--line2);padding:6px 9px;background:#fcfcfd;overflow:hidden}
+  .ob .t{background:#fbe9e7;color:#c2452f;text-align:center;border-radius:4px;padding:1px 0;margin-bottom:4px;font-size:calc(9.5px * var(--k))}
+  .ob .r{display:flex;justify-content:space-between;line-height:1.8;font-size:calc(10px * var(--k));color:var(--ink2);font-variant-numeric:tabular-nums}
+  .actbar{display:flex;align-items:center;gap:8px;padding:8px 10px 10px;border-top:1px solid var(--line);background:#fff}
+  .ai{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:calc(9px * var(--k));color:var(--ink3);min-width:40px}
+  .ai i{font-style:normal;font-size:12px;color:#6b7382}
+  .trade{flex:1;max-width:340px;margin-left:auto;height:44px;border:0;border-radius:999px;background:var(--up);color:#fff;
+    font:600 calc(13px * var(--k))/1 inherit;letter-spacing:.02em;cursor:pointer;min-width:110px}
+  .trade.off{background:#e9eaee;color:#9aa1ad}
+
+  .backdrop{position:absolute;inset:0;background:rgba(15,18,24,.42);z-index:5}
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:6;background:#fff;border-radius:18px 18px 0 0;
+    padding:14px 16px 16px;box-shadow:0 -10px 30px rgba(16,22,36,.14);max-height:88%;overflow:auto}
+  .sheet.kbd{bottom:190px;border-radius:18px}
+  .sheet.wide{left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-50%);
+    width:640px;max-width:88%;border-radius:22px;max-height:82%}
+  .sheet.login{left:50%;right:auto;bottom:50%;transform:translate(-50%,50%);width:320px;max-width:84%;border-radius:18px;text-align:center}
+  .sheet.login h4{margin:6px 0 4px;font-size:16px}
+  .sheet.login p{margin:0 0 14px;font-size:11.5px;color:var(--ink2)}
+
+  .sh-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .sh-head h4{margin:0;font-size:calc(16px * var(--k));font-weight:650;flex:1}
+  .sh-head .hcol{flex:1;min-width:0}
+  .sh-head .hcol span{display:block;font-size:calc(10px * var(--k));color:var(--ink3);margin-top:1px}
+  .x{width:28px;height:28px;border-radius:50%;border:0;background:#f2f3f6;color:#5b6270;font-size:13px;line-height:1;cursor:pointer;flex:none}
+  .x.ghost{background:#f7f8fa}
+
+  .ctx{display:flex;justify-content:space-between;gap:10px;font-size:calc(11.5px * var(--k));color:var(--ink2);margin-bottom:12px;flex-wrap:wrap}
+  .ctx em{font-style:normal;color:var(--ink3);letter-spacing:.04em}
+
+  .fld{border-radius:12px;padding:10px 12px;margin-bottom:10px;background:#fafbfc;border:1px solid var(--line2)}
+  .fld.bad{border-color:#f0c4ba;background:var(--redbg)}
+  .frow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .lb{font-size:calc(12.5px * var(--k));color:var(--ink2)}
+  .step{display:flex;align-items:center;gap:6px}
+  .step button{width:30px;height:30px;border-radius:50%;border:0;background:#eef0f4;color:#3a4150;font-size:14px;line-height:1;cursor:pointer}
+  .step button:active{background:#e2e6ec}
+  .val{display:inline-block;min-width:62px;text-align:center;font:650 calc(15px * var(--k))/1.4 inherit;font-variant-numeric:tabular-nums;cursor:text;padding:2px 4px;border-bottom:1px dashed transparent}
+  .val:hover{border-bottom-color:#c9cfda}
+  .num{width:80px;text-align:center;border:1px solid #c9cfda;border-radius:7px;font:650 calc(15px * var(--k))/1.4 inherit;padding:2px 4px;font-variant-numeric:tabular-nums;outline:none}
+  .num:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(43,108,255,.12)}
+  .lim{display:flex;justify-content:space-between;margin-top:8px;font-size:calc(10px * var(--k));color:var(--ink3)}
+  .err{margin-top:6px;font-size:calc(10.5px * var(--k));color:var(--red)}
+  .hint{margin:-2px 0 8px;font-size:calc(10.5px * var(--k));color:#a8721e}
+  .blk{margin:0 0 10px;padding:8px 10px;border-radius:9px;background:var(--redbg);color:var(--red);font-size:calc(11px * var(--k))}
+
+  .cta{width:100%;height:46px;border:0;border-radius:999px;background:var(--up);color:#fff;
+    font:650 calc(14px * var(--k))/1 inherit;letter-spacing:.02em;cursor:pointer;margin-top:2px}
+  .cta.off{background:#f0f1f4;color:#a2a9b5}
+  .cta.load{background:#e9eaee;color:#8d95a3}
+  .cta.load::after{content:"";display:inline-block;width:11px;height:11px;margin-left:8px;
+    border:2px solid #c2c8d2;border-top-color:#8d95a3;border-radius:50%;vertical-align:-1px;
+    animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .acct{font-size:calc(11.5px * var(--k));color:var(--ink2);margin:2px 0 12px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px;background:#fafbfc;border-radius:12px;margin-bottom:8px;font-size:calc(12.5px * var(--k));color:var(--ink2)}
+  .row b{font-size:calc(15px * var(--k));font-variant-numeric:tabular-nums}
+  .unk{background:#fff8e8;border:1px solid #f3e0b4;border-radius:12px;padding:10px 12px;margin:4px 0 10px}
+  .unk b{font-size:12px;color:#9a6b12}
+  .unk p{margin:4px 0 8px;font-size:11px;color:#9a6b12;line-height:1.5}
+  .ghostbtn{border:1px solid #e5cf9c;background:#fff;border-radius:8px;padding:5px 12px;font:inherit;font-size:11px;color:#9a6b12;cursor:pointer}
+
+  .toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);z-index:9;
+    background:rgba(20,22,28,.92);color:#fff;font-size:11.5px;padding:8px 14px;border-radius:999px;
+    max-width:86%;text-align:center;line-height:1.4;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+  .kbdpad{position:absolute;left:0;right:0;bottom:0;height:190px;z-index:8;background:#dfe3e9;border-top:1px solid #cfd5de;
+    display:grid;grid-template-columns:repeat(10,1fr);gap:3px;padding:6px}
+  .kbdpad i{background:#fff;border-radius:5px;display:block}
+
+  .lower{display:grid;grid-template-columns:520px 1fr;gap:22px;margin-top:20px;align-items:start}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card + .card{margin-top:12px}
+  .crow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line2);flex-wrap:wrap}
+  .crow:last-child{border-bottom:0}
+  .crow>span.k{width:44px;flex:none;font-size:11px;color:var(--ink3)}
+  .seg{display:flex;gap:5px;flex-wrap:wrap}
+  .seg button{border:1px solid var(--line);background:#fff;border-radius:7px;font:inherit;font-size:11px;color:var(--ink2);padding:4px 9px;cursor:pointer}
+  .seg button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .ops{display:flex;gap:6px;flex-wrap:wrap}
+  .ops button{border:1px solid var(--line);background:#fff;border-radius:7px;font:inherit;font-size:11px;color:var(--ink2);padding:4px 9px;cursor:pointer}
+  .ops button:hover{border-color:#c9cfda;color:var(--ink)}
+  .ops button.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+  .dinput{width:74px;border:1px solid var(--line);border-radius:7px;padding:4px 7px;font:inherit;font-size:11.5px;font-variant-numeric:tabular-nums}
+  .dinput.w{width:104px}
+  .grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;flex:1;min-width:0}
+  .grid4 label{display:flex;flex-direction:column;gap:2px;font-size:10px;color:var(--ink3)}
+  .grid4 .dinput{width:100%}
+
+  .side{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .side h3{margin:0 0 10px;font-size:12px;color:var(--ink2);display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .side h3 span{font-size:10px;color:var(--ink3);font-weight:400}
+  .tests{display:flex;flex-direction:column;gap:5px;max-height:392px;overflow:auto}
+  .cas{display:grid;grid-template-columns:64px 1fr 50px;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line2);border-radius:8px;cursor:pointer;font-size:11px}
+  .cas:hover{background:#fafbfc;border-color:var(--line)}
+  .cas .cid{font:600 9.5px ui-monospace,Menlo,monospace;color:var(--ink3)}
+  .cas .cn{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cas .stt{font-size:9.5px;text-align:right;color:var(--ink3)}
+  .cas.pass{border-color:#d7ebdd;background:var(--greenbg)} .cas.pass .stt{color:var(--green)}
+  .cas.fail{border-color:#f2cfc7;background:var(--redbg)} .cas.fail .stt{color:var(--red)}
+  .cas.run{border-color:#cfdcff;background:var(--bluebg)} .cas.run .stt{color:var(--blue)}
+  .msg{grid-column:2/4;font-size:10px;color:var(--red);line-height:1.5;word-break:break-all}
+  .runbar{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .runbar button{flex:1;height:32px;border-radius:8px;border:1px solid var(--line);background:#fff;font:inherit;font-size:11.5px;cursor:pointer;color:var(--ink2)}
+  .runbar button.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+  .runbar span{font-size:10.5px;color:var(--ink3);white-space:nowrap}
+
+  .funnel{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+  .funnel i{font-style:normal;font-size:9.5px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--ink3)}
+  .funnel i.on{border-color:#cfdcff;background:var(--bluebg);color:var(--blue)}
+  .log{max-height:150px;overflow:auto;font:10px/1.65 ui-monospace,Menlo,monospace;color:var(--ink3)}
+  .log div{border-bottom:1px dashed var(--line2);padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  @media (max-width:1010px){
+    .lower{grid-template-columns:1fr}
+    .bench{padding:28px 16px 52px}
+  }
+</style>
+</head>
+<body>
+<div class="bench">
+
+  <div class="top">
+    <div>
+      <div class="kicker">FR-07 · 交易 / 子需求 07.1–07.14 · 验证台</div>
+      <h1>买入委托：<em>入口、填单、校验与提交</em></h1>
+      <p class="sub">覆盖 4 断点（375 / 700 / 1000 / 1180）、9 种状态、价格涨跌停钳制、整手与可买校验、确认层与三态提交结果、幂等与关闭矩阵。数据可改，右侧 20 条用例可单跑或全跑。</p>
+    </div>
+    <div class="note">验证件，不计入需求文档</div>
+  </div>
+
+  <div class="stagewrap">
+    <div class="devlabel"><span id="devLabel">直板机 · 375vp · 字号 1.00×</span><span id="linkLabel">去交易 → 弹窗 → 确认 → 提交</span></div>
+    <div class="qcard" id="qcard"><div class="qscreen" id="qscreen"></div></div>
+  </div>
+
+  <div class="lower">
+
+    <div>
+      <div class="card">
+        <h3 style="margin:0 0 8px;font-size:12px;color:var(--ink2)">场景数据（自定义）</h3>
+
+        <div class="crow"><span class="k">登录</span>
+          <div class="seg" id="segLogin"><button data-k="loggedIn" data-v="1" class="on">已登录</button><button data-k="loggedIn" data-v="0">未登录</button></div></div>
+
+        <div class="crow"><span class="k">开户</span>
+          <div class="seg" id="segOpen"><button data-k="opened" data-v="1" class="on">已开通</button><button data-k="opened" data-v="0">未开通</button></div></div>
+
+        <div class="crow"><span class="k">交易</span>
+          <div class="seg" id="segState"><button data-k="tradeState" data-v="open" class="on">交易中</button><button data-k="tradeState" data-v="closed">已收盘</button><button data-k="tradeState" data-v="suspended">停牌</button><button data-k="tradeState" data-v="delisted">退市</button></div></div>
+
+        <div class="crow"><span class="k">网络</span>
+          <div class="seg" id="segNet"><button data-k="net" data-v="online" class="on">在线</button><button data-k="net" data-v="offline">断线</button></div></div>
+
+        <div class="crow"><span class="k">结果</span>
+          <div class="seg" id="segSim"><button data-k="sim" data-v="success" class="on">成功</button><button data-k="sim" data-v="fail">失败</button><button data-k="sim" data-v="timeout">超时</button></div></div>
+
+        <div class="crow"><span class="k">设备</span>
+          <div class="seg" id="segDev"><button data-k="dev" data-v="sm" class="on">sm 375</button><button data-k="dev" data-v="md">md 700</button><button data-k="dev" data-v="lg">lg 1000</button><button data-k="dev" data-v="xl">xl 1180</button></div></div>
+
+        <div class="crow"><span class="k">字号</span>
+          <div class="seg" id="segFs"><button data-k="fs" data-v="1" class="on">1.0×</button><button data-k="fs" data-v="1.3">1.3×</button><button data-k="fs" data-v="1.45">1.45×</button></div></div>
+
+        <div class="crow"><span class="k">数据</span>
+          <div class="grid4">
+            <label>昨收<input class="dinput" id="inPrev" value="19.84"></label>
+            <label>现价<input class="dinput" id="inPrice" value="20.01"></label>
+            <label>可买<input class="dinput" id="inCan" value="800"></label>
+            <label>持仓<input class="dinput" id="inHold" value="0"></label>
+          </div>
+        </div>
+
+        <div class="crow"><span class="k">账户</span>
+          <input class="dinput w" id="inAcct" value="50012345">
+          <span style="font-size:10.5px;color:var(--ink3)">展示为 500****5</span>
+        </div>
+
+        <div class="crow"><span class="k">操作</span>
+          <div class="ops">
+            <button id="btnApply" class="pri">应用数据</button>
+            <button id="btnOpen">打开弹窗</button>
+            <button id="btnSysBack">系统返回</button>
+            <button id="btnKbd">模拟键盘</button>
+            <button id="btnReset">重置</button>
+          </div>
+        </div>
+
+        <div class="crow" style="border-bottom:0"><span class="k">说明</span>
+          <span style="font-size:10.5px;color:var(--ink3);line-height:1.6">涨跌停由「昨收 × 10%」推导（19.84 → 涨停 21.82 / 跌停 17.86），改昨收即可看到钳制变化；弹窗内点数字可手输。</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h3>用例 <span id="sumTxt">0 / 20 通过</span></h3>
+        <div class="tests" id="testlist"></div>
+        <div class="runbar">
+          <button class="pri" id="btnRunAll">全部执行</button>
+          <button id="btnClear">清空结果</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>埋点漏斗 <span>FR-07.13</span></h3>
+        <div class="funnel" id="funnel"></div>
+        <h3 style="margin-top:6px">事件日志 <span>本地，不上报</span></h3>
+        <div class="log" id="logbox"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   FR-07 验证台：状态 → 渲染 → 交互 → 用例
+   数据全部本地，无网络请求。
+   ============================================================ */
+
+const DEV = {
+  sm:{w:375,h:720,label:'直板机'},
+  md:{w:700,h:700,label:'折叠展开'},
+  lg:{w:1000,h:620,label:'阔折叠'},
+  xl:{w:1180,h:620,label:'平板'}
+};
+const FUNNEL = ['entry_click','modal_open','value_change','confirm_view','submit','result_success'];
+
+const $ = s => document.querySelector(s);
+const qs = $('#qscreen');
+const logbox = $('#logbox');
+let toastTimer = null;
+let GEN = 0;   // 状态代际：重置后旧定时器一律作废，避免串用例
+
+const dec = n => Math.round(n*100)/100;
+const f2 = n => (Number.isFinite(n) ? n : 0).toFixed(2);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const maskCode = c => c ? c.slice(0,1) + '****' + c.slice(-1) : '';
+const maskAcct = a => a ? a.slice(0,3) + '****' + a.slice(-1) : '';
+
+function base(){
+  return {
+    dev:'sm', fs:1,
+    loggedIn:true, opened:true,
+    tradeState:'open', net:'online',
+    name:'某某科技', code:'603103', acct:'50012345',
+    prevClose:19.84, price:20.01,
+    canBuy:800, hold:0,
+    pv:20.01, qv:100,
+    modal:null, layer:'edit', submitting:false, unknown:false, failMsg:'',
+    sim:'success', orders:0, cid:null,
+    editing:null, err:{}, hint:'', toast:'', kbd:false, loginShow:false,
+    events:[], logs:[]
+  };
+}
+let S = base();
+
+/* ---------- 派生规则 ---------- */
+const limitUp   = () => dec(S.prevClose * 1.1);
+const limitDown = () => dec(S.prevClose * 0.9);
+const statusText = () => ({open:'交易中', closed:'已收盘', suspended:'停牌', delisted:'已退市'})[S.tradeState];
+
+function entryBlocked(){
+  if (!S.opened) return '请先开通交易账户';
+  if (S.tradeState === 'suspended') return '停牌期间不可交易';
+  if (S.tradeState === 'delisted')  return '已退市，不可交易';
+  return null;
+}
+function buyBlocked(){
+  if (S.net === 'offline') return '行情连接中断，暂不可委托';
+  if (S.tradeState === 'closed') return '非交易时段，暂不可委托';
+  if (S.tradeState === 'suspended') return '停牌期间不可委托';
+  if (S.tradeState === 'delisted') return '已退市，不可委托';
+  if (S.canBuy <= 0) return '可买 0 股，资金不足';
+  return null;
+}
+function validate(){
+  const e = {}, up = limitUp(), dn = limitDown();
+  if (!(S.pv > 0)) e.price = '请输入有效的委托价格';
+  else if (S.pv > up) e.price = '不得高于涨停价 ' + f2(up);
+  else if (S.pv < dn) e.price = '不得低于跌停价 ' + f2(dn);
+  if (!(S.qv > 0)) e.qty = '请输入委托数量';
+  else if (S.qv % 100 !== 0) e.qty = '委托数量须为 100 股整数倍';
+  else if (S.qv > S.canBuy) e.qty = '超过可买 ' + S.canBuy + ' 股';
+  return e;
+}
+
+/* ---------- 日志与埋点 ---------- */
+function log(msg){
+  const t = new Date().toLocaleTimeString('zh-CN',{hour12:false});
+  S.logs.push(t + ' ' + msg);
+  const d = document.createElement('div');
+  d.textContent = t + '  ' + msg;
+  logbox.prepend(d);
+  while (logbox.children.length > 140) logbox.lastChild.remove();
+}
+function pushEvent(name){
+  S.events.push(name);
+  renderFunnel();
+  log('埋点 ' + name);
+}
+function renderFunnel(){
+  const box = $('#funnel');
+  box.innerHTML = FUNNEL.map(k => {
+    const n = S.events.filter(x => x === k).length;
+    return `<i class="${n?'on':''}">${k}${n?' ×'+n:''}</i>`;
+  }).join('');
+}
+function toast(msg){
+  S.toast = msg;
+  render();
+  const g = GEN;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { if (g !== GEN) return; S.toast = ''; render(); }, 1800);
+}
+
+/* ---------- 渲染 ---------- */
+function render(){
+  const d = DEV[S.dev];
+  $('#qcard').style.width = d.w + 'px';
+  qs.style.height = d.h + 'px';
+  qs.style.setProperty('--k', S.fs);
+  $('#devLabel').textContent = `${d.label} · ${d.w}vp · 字号 ${S.fs.toFixed(2)}×`;
+  qs.innerHTML = shellHTML()
+    + (S.modal ? modalHTML() : '')
+    + (S.loginShow ? loginHTML() : '')
+    + (S.modal && S.kbd && S.dev !== 'lg' && S.dev !== 'xl' ? '<div class="kbdpad">' + '<i></i>'.repeat(30) + '</div>' : '')
+    + (S.toast ? `<div class="toast">${esc(S.toast)}</div>` : '');
+}
+
+function shellHTML(){
+  const chg = dec(S.price - S.prevClose);
+  const pct = S.prevClose ? dec(chg / S.prevClose * 100) : 0;
+  const cls = chg > 0 ? 'up' : chg < 0 ? 'down' : 'flat';
+  const blocked = entryBlocked();
+  const wide = S.dev === 'lg' || S.dev === 'xl';
+  return `
+  <div class="shell">
+    <div class="qhead">
+      <button class="back" data-act="noop">‹</button>
+      <div class="hd">
+        <div class="l1"><b>${esc(S.name)}</b><span class="code">(${maskCode(S.code)})</span></div>
+        <div class="l2"><em class="mk">深</em><span>${statusText()} · 10-19 15:03:03</span></div>
+      </div>
+      <div class="sp"></div>
+    </div>
+    <div class="qpr">
+      <span class="px ${cls}">${f2(S.price)}</span>
+      <span class="cg ${cls}">${chg>=0?'+':''}${f2(chg)}</span>
+      <span class="pc ${cls}">${pct>=0?'+':''}${f2(pct)}%</span>
+    </div>
+    <div class="meta">
+      <span>今开<b>19.86</b></span><span>最高<b>19.86</b></span><span>最低<b>19.81</b></span><span>换手<b>0.39%</b></span>
+    </div>
+    <div class="body">
+      <div class="chart"><span>分时 · 示意</span>
+        <svg viewBox="0 0 300 120" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="0" y1="58" x2="300" y2="58" stroke="#c9cfda" stroke-width=".8" stroke-dasharray="3 3"/>
+          <polyline points="0,70 20,62 40,74 60,55 80,64 100,42 120,50 140,30 160,46 180,38 200,56 220,46 240,66 260,54 280,72 300,64"
+            fill="none" stroke="#dfa03c" stroke-width="1.3" vector-effect="non-scaling-stroke"/>
+          <polyline points="0,66 30,62 60,64 90,56 120,52 150,50 180,50 210,54 240,56 270,58 300,60"
+            fill="none" stroke="#3f7bd6" stroke-width="1.1" vector-effect="non-scaling-stroke"/>
+        </svg>
+      </div>
+      ${wide ? orderBookHTML() : ''}
+    </div>
+    <div class="actbar">
+      <div class="ai"><i>···</i><span>自选设置</span></div>
+      <div class="ai"><i>PK</i><span>股票PK</span></div>
+      <div class="ai"><i>⋯</i><span>更多</span></div>
+      <button class="trade ${blocked?'off':''}" data-act="entry">去交易</button>
+    </div>
+  </div>`;
+}
+
+function orderBookHTML(){
+  const asks = [['卖5',20.06,33],['卖4',20.07,55],['卖3',20.08,66],['卖2',20.09,12],['卖1',20.10,69]];
+  const bids = [['买1',20.05,11],['买2',20.04,22],['买3',20.03,33],['买4',20.02,55],['买5',20.01,66]];
+  return `<div class="ob">
+    <div class="t">千档行情</div>
+    ${asks.map(a => `<div class="r"><span class="down">${a[0]} ${f2(a[1])}</span><span>${a[2]}</span></div>`).join('')}
+    <div class="r"><span style="flex:1;height:3px;border-radius:2px;background:#e8402a;margin-right:2px"></span><span style="flex:1;height:3px;border-radius:2px;background:#12a150;margin-left:2px"></span></div>
+    ${bids.map(b => `<div class="r"><span class="up">${b[0]} ${f2(b[1])}</span><span>${b[2]}</span></div>`).join('')}
+  </div>`;
+}
+
+function modalHTML(){
+  const wide = S.dev === 'lg' || S.dev === 'xl';
+  return `<div class="backdrop" data-act="backdrop"></div>
+    <div class="sheet ${wide?'wide':''} ${S.kbd && !wide && S.layer!=='confirm' ? 'kbd':''}" id="sheet">
+      ${S.layer === 'confirm' ? confirmHTML() : editHTML()}
+    </div>`;
+}
+
+function editHTML(){
+  const up = limitUp(), dn = limitDown(), blk = buyBlocked();
+  return `
+  <div class="sh-head">
+    <h4>普通交易</h4>
+    <button class="x" data-act="close">✕</button>
+  </div>
+  <div class="ctx">
+    <span>${esc(S.name)} <em>${maskCode(S.code)}</em></span>
+    <span>股东账户 ${maskAcct(S.acct)}</span>
+  </div>
+
+  <div class="fld ${S.err.price?'bad':''}">
+    <div class="frow">
+      <span class="lb">价格</span>
+      <div class="step">
+        <button data-act="dec" data-f="p">−</button>
+        ${S.editing === 'p'
+          ? `<input id="inP" class="num" inputmode="decimal" value="${f2(S.pv)}">`
+          : `<span class="val" data-act="edit" data-f="p">${f2(S.pv)}</span>`}
+        <button data-act="inc" data-f="p">+</button>
+      </div>
+    </div>
+    <div class="lim"><span class="down">跌停 ${f2(dn)}</span><span class="up">涨停 ${f2(up)}</span></div>
+    ${S.err.price ? `<div class="err">${esc(S.err.price)}</div>` : ''}
+  </div>
+
+  <div class="fld ${S.err.qty?'bad':''}">
+    <div class="frow">
+      <span class="lb">数量</span>
+      <div class="step">
+        <button data-act="dec" data-f="q">−</button>
+        ${S.editing === 'q'
+          ? `<input id="inQ" class="num" inputmode="numeric" value="${S.qv}">`
+          : `<span class="val" data-act="edit" data-f="q">${S.qv}</span>`}
+        <button data-act="inc" data-f="q">+</button>
+      </div>
+    </div>
+    <div class="lim"><span>已持有 ${S.hold} 股</span><span>可买 ${S.canBuy} 股</span></div>
+    ${S.err.qty ? `<div class="err">${esc(S.err.qty)}</div>` : ''}
+  </div>
+
+  ${S.hint ? `<div class="hint">${esc(S.hint)}</div>` : ''}
+  ${blk ? `<div class="blk">${esc(blk)}</div>` : ''}
+  <button class="cta ${blk?'off':''}" data-act="buy">买入</button>`;
+}
+
+function confirmHTML(){
+  return `
+  <div class="sh-head">
+    <button class="x ghost" data-act="back">‹</button>
+    <div class="hcol"><h4>买入</h4><span>${esc(S.name)} ${maskCode(S.code)}</span></div>
+    <button class="x" data-act="close">✕</button>
+  </div>
+  <div class="acct">股东账户：${maskAcct(S.acct)}</div>
+  <div class="row"><span>委托价格</span><b class="up">${f2(S.pv)}</b></div>
+  <div class="row"><span>委托数量</span><b>${S.qv}</b></div>
+  ${S.failMsg ? `<div class="blk">${esc(S.failMsg)}</div>` : ''}
+  ${S.unknown ? `<div class="unk"><b>结果未知</b><p>提交超时，委托可能已受理。请勿重复提交，可通过「查询委托」确认。</p><button class="ghostbtn" data-act="query">查询委托</button></div>` : ''}
+  <button class="cta ${S.submitting?'load':''} ${S.unknown?'off':''}" data-act="confirm">
+    ${S.submitting ? '提交中…' : '确认买入'}
+  </button>`;
+}
+
+function loginHTML(){
+  return `<div class="backdrop"></div>
+    <div class="sheet login">
+      <h4>请先登录</h4>
+      <p>登录后将回到当前标的继续委托。</p>
+      <button class="cta" data-act="dologin">登录</button>
+    </div>`;
+}
+
+/* ---------- 行为 ---------- */
+function onEntry(){
+  pushEvent('entry_click');
+  const b = entryBlocked();
+  if (b){ log('入口禁用：' + b); toast(b); return; }
+  if (!S.loggedIn){
+    S.loginShow = true; log('未登录 → 唤起登录'); render();
+    const g = GEN;
+    setTimeout(() => { if (g === GEN) doLogin(); }, 700);
+    return;
+  }
+  openModal();
+}
+function doLogin(){
+  S.loggedIn = true; S.loginShow = false;
+  log('登录成功 → 回到原标的');
+  openModal();
+}
+function openModal(){
+  S.modal = 'edit'; S.layer = 'edit';
+  S.pv = dec(S.price); S.qv = S.canBuy >= 100 ? 100 : 0;
+  S.err = {}; S.cid = null; S.unknown = false; S.failMsg = ''; S.hint = ''; S.editing = null;
+  pushEvent('modal_open');
+  log('打开弹窗 · ' + S.code);
+  render();
+}
+function step(f, dir){
+  if (f === 'p'){
+    S.pv = dir > 0 ? Math.min(limitUp(), dec(S.pv + 0.01)) : Math.max(limitDown(), dec(S.pv - 0.01));
+  } else {
+    const next = S.qv + dir * 100;
+    S.qv = Math.max(100, S.canBuy > 0 ? Math.min(next, S.canBuy) : next);
+  }
+  S.err = {}; S.hint = '';
+  pushEvent('value_change');
+  render();
+}
+function startEdit(f){
+  S.editing = f; render();
+  const inp = qs.querySelector(f === 'p' ? '#inP' : '#inQ');
+  if (inp){ inp.focus(); try{ inp.select(); }catch(e){} }
+}
+function commitPrice(raw){
+  S.editing = null;
+  const t = String(raw).trim(), n = Number(t);
+  if (t === '' || !Number.isFinite(n)){ toast('请输入数字'); render(); return; }
+  const up = limitUp(), dn = limitDown();
+  let v = dec(n);
+  if (v > up){ v = up; S.hint = '已按涨停价 ' + f2(up) + ' 修正'; }
+  else if (v < dn){ v = dn; S.hint = '已按跌停价 ' + f2(dn) + ' 修正'; }
+  else S.hint = '';
+  S.pv = v; S.err = {};
+  pushEvent('value_change'); log('手输价格 ' + t + ' → ' + f2(v));
+  render();
+}
+function commitQty(raw){
+  S.editing = null;
+  const t = String(raw).trim(), n = Number(t);
+  if (t === '' || !Number.isFinite(n) || n <= 0){ toast('请输入数字'); render(); return; }
+  let v = Math.floor(n);
+  if (v > S.canBuy){ v = S.canBuy; S.hint = '已按可买 ' + S.canBuy + ' 股修正'; }
+  else S.hint = '';
+  S.qv = v; S.err = {};
+  pushEvent('value_change'); log('手输数量 ' + t + ' → ' + v);
+  render();
+}
+function onBuy(){
+  const blk = buyBlocked();
+  if (blk){ log('买入不可用：' + blk); toast(blk); return; }
+  const e = validate();
+  S.err = e;
+  if (Object.keys(e).length){
+    log('校验拦截：' + Object.values(e).join('；'));
+    render();
+    return;
+  }
+  S.layer = 'confirm'; S.hint = ''; S.err = {};
+  pushEvent('confirm_view');
+  log('进入确认层 · ' + f2(S.pv) + ' × ' + S.qv);
+  render();
+}
+function onConfirm(){
+  if (S.submitting) return;              // 幂等：提交中不再受理
+  if (S.unknown) { toast('结果未知，请先查询委托'); return; }
+  if (!S.cid) S.cid = 'CO' + Date.now().toString(36).toUpperCase().slice(-6);
+  S.submitting = true; S.failMsg = '';
+  pushEvent('submit');
+  log('提交委托 ' + S.cid + '（幂等键复用）');
+  render();
+
+  const g = GEN;
+  setTimeout(() => {
+    if (g !== GEN) return;
+    S.submitting = false;
+    if (S.sim === 'success'){
+      S.orders++;
+      pushEvent('result_success');
+      log('受理成功 · 委托号 ' + S.orders + '***');
+      toast('已委托 · 委托号 ' + S.orders + '***');
+      setTimeout(() => {
+        if (g !== GEN) return;
+        S.modal = null; S.layer = 'edit'; S.cid = null;
+        log('成功后关闭弹窗，回详情');
+        render();
+      }, 700);
+    } else if (S.sim === 'fail'){
+      S.failMsg = '资金不足，可用 0.00 元';
+      log('受理失败：资金不足');
+      render();
+    } else {
+      S.unknown = true;
+      log('提交超时 → 结果未知，禁止自动重发');
+      render();
+    }
+  }, 900);
+}
+function back(){
+  if (S.submitting){ toast('委托提交中，暂不可关闭'); log('拦截关闭：提交中'); return; }
+  if (S.layer === 'confirm'){
+    S.layer = 'edit';
+    log('返回编辑层（保留 ' + f2(S.pv) + ' / ' + S.qv + '）');
+    render();
+    return;
+  }
+  closeAll();
+}
+function closeAll(){
+  if (S.submitting){ toast('委托提交中，暂不可关闭'); log('拦截关闭：提交中'); return; }
+  S.modal = null; S.layer = 'edit'; S.cid = null; S.unknown = false; S.failMsg = '';
+  S.err = {}; S.hint = ''; S.editing = null;
+  log('关闭弹窗');
+  render();
+}
+
+/* ---------- 事件委托 ---------- */
+qs.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  switch (el.dataset.act){
+    case 'noop': return;
+    case 'entry': onEntry(); return;
+    case 'backdrop':
+      if (S.layer === 'confirm'){ log('确认层：点遮罩不关闭（防误触）'); return; }
+      closeAll(); return;
+    case 'close': closeAll(); return;
+    case 'back': back(); return;
+    case 'dec': step(el.dataset.f, -1); return;
+    case 'inc': step(el.dataset.f, 1); return;
+    case 'edit': startEdit(el.dataset.f); return;
+    case 'buy': onBuy(); return;
+    case 'confirm': onConfirm(); return;
+    case 'query': log('查询委托（串行查询，本期不实现）'); toast('已发起查询'); return;
+    case 'dologin': doLogin(); return;
+  }
+});
+qs.addEventListener('change', e => {
+  if (e.target.id === 'inP') commitPrice(e.target.value);
+  else if (e.target.id === 'inQ') commitQty(e.target.value);
+});
+qs.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.target.id === 'inP' || e.target.id === 'inQ')) e.target.blur();
+});
+
+/* ---------- 控制面板 ---------- */
+function bindSeg(sel){
+  const seg = $(sel);
+  if (!seg) return;
+  seg.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const k = b.dataset.k, v = b.dataset.v;
+    let val = v;
+    if (k === 'loggedIn' || k === 'opened') val = v === '1';
+    else if (k === 'fs') val = Number(v);
+    S[k] = val;
+    if (k === 'dev') log('断点 → ' + v);
+    render(); syncSegs();
+  });
+}
+['#segLogin','#segOpen','#segState','#segNet','#segSim','#segDev','#segFs'].forEach(bindSeg);
+
+function syncSegs(){
+  document.querySelectorAll('.seg').forEach(seg => {
+    seg.querySelectorAll('button').forEach(b => {
+      const k = b.dataset.k, v = b.dataset.v;
+      let cur;
+      if (k === 'loggedIn' || k === 'opened') cur = S[k] ? '1' : '0';
+      else cur = String(S[k]);
+      b.classList.toggle('on', cur === v);
+    });
+  });
+  $('#inPrev').value = S.prevClose;
+  $('#inPrice').value = S.price;
+  $('#inCan').value = S.canBuy;
+  $('#inHold').value = S.hold;
+  $('#inAcct').value = S.acct;
+}
+
+$('#btnApply').onclick = () => {
+  const num = id => Number($(id).value);
+  S.prevClose = num('#inPrev') > 0 ? num('#inPrev') : S.prevClose;
+  S.price = num('#inPrice') > 0 ? num('#inPrice') : S.price;
+  S.canBuy = Math.max(0, Math.floor(num('#inCan') || 0));
+  S.hold = Math.max(0, Math.floor(num('#inHold') || 0));
+  S.acct = $('#inAcct').value.trim() || S.acct;
+  log('应用自定义数据：昨收 ' + f2(S.prevClose) + ' / 可买 ' + S.canBuy);
+  render(); syncSegs();
+};
+$('#btnOpen').onclick = () => { if (entryBlocked()){ toast(entryBlocked()); return; } onEntry(); };
+$('#btnSysBack').onclick = () => { if (!S.modal && !S.loginShow){ log('系统返回：无弹窗'); return; } back(); };
+$('#btnKbd').onclick = () => { S.kbd = !S.kbd; log('模拟键盘 ' + (S.kbd?'开':'关')); render(); };
+$('#btnReset').onclick = () => { resetState(); log('已重置'); };
+
+/* ---------- 用例 ---------- */
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const ok = (cond, msg) => { if (!cond) throw new Error(msg); };
+const q = sel => qs.querySelector(sel);
+const click = sel => { const el = q(sel); if (!el) throw new Error('找不到元素 ' + sel); el.click(); };
+const typeInto = (sel, v) => {
+  const el = q(sel); if (!el) throw new Error('找不到输入框 ' + sel);
+  el.value = v;
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+};
+function resetState(patch){
+  GEN++;
+  S = Object.assign(base(), patch || {});
+  render(); syncSegs(); renderFunnel();
+}
+
+const CASES = [
+{ id:'TC-07-01', ac:'AC-66', name:'未开户：入口禁用并引导开通', async fn(){
+    resetState({ opened:false });
+    click('[data-act="entry"]');
+    ok(S.modal === null, '未开户不应打开弹窗');
+    ok(/开通/.test(S.toast), '应提示开通交易账户，实际：' + S.toast);
+}},
+{ id:'TC-07-02', ac:'AC-66', name:'停牌 / 退市：入口禁用', async fn(){
+    resetState({ tradeState:'suspended' });
+    click('[data-act="entry"]');
+    ok(S.modal === null, '停牌不应打开弹窗');
+    ok(/停牌/.test(S.toast), '应提示停牌，实际：' + S.toast);
+
+    resetState({ tradeState:'delisted' });
+    click('[data-act="entry"]');
+    ok(S.modal === null, '退市不应打开弹窗');
+    ok(/退市/.test(S.toast), '应提示退市');
+}},
+{ id:'TC-07-03', ac:'AC-66', name:'未登录：登录回流并自动续开', async fn(){
+    resetState({ loggedIn:false });
+    click('[data-act="entry"]');
+    ok(S.loginShow === true, '应唤起登录层');
+    await wait(820);
+    ok(S.loggedIn === true, '应登录成功');
+    ok(S.modal === 'edit', '登录后应自动续开弹窗，实际 ' + S.modal);
+}},
+{ id:'TC-07-04', ac:'AC-75', name:'非交易时段：可开单不可提交', async fn(){
+    resetState({ tradeState:'closed' });
+    click('[data-act="entry"]');
+    ok(S.modal === 'edit', '收盘仍应允许打开弹窗（查看可买）');
+    ok(/非交易时段/.test(q('.blk')?.textContent || ''), '弹窗内应展示非交易时段提示');
+    click('[data-act="buy"]');
+    ok(S.layer === 'edit', '不应进入确认层');
+}},
+{ id:'TC-07-05', ac:'AC-67', name:'sm：弹窗为贴底 sheet', async fn(){
+    resetState({ dev:'sm' });
+    click('[data-act="entry"]');
+    const sh = q('.sheet').getBoundingClientRect(), sc = qs.getBoundingClientRect();
+    ok(Math.abs(sh.bottom - sc.bottom) < 2, 'sm 弹窗应贴底');
+    ok(Math.abs(sh.width - sc.width) < 2, 'sm 弹窗应近满宽');
+}},
+{ id:'TC-07-06', ac:'AC-67', name:'xl：居中模态且宽 640', async fn(){
+    resetState({ dev:'xl' });
+    click('[data-act="entry"]');
+    const sh = q('.sheet').getBoundingClientRect(), sc = qs.getBoundingClientRect();
+    const expect = Math.min(640, sc.width * 0.88);
+    ok(Math.abs(sh.width - expect) <= 2, 'xl 模态宽应 ' + Math.round(expect) + '，实际 ' + Math.round(sh.width));
+    ok(Math.abs((sh.left + sh.right) / 2 - (sc.left + sc.right) / 2) <= 2, '应水平居中');
+}},
+{ id:'TC-07-07', ac:'AC-69', name:'步进钳制在涨跌停之间', async fn(){
+    resetState({});
+    click('[data-act="entry"]');
+    S.pv = 21.81; render();
+    click('[data-act="inc"][data-f="p"]');
+    click('[data-act="inc"][data-f="p"]');
+    ok(Math.abs(S.pv - 21.82) < 1e-9, '应停在涨停 21.82，实际 ' + S.pv);
+
+    S.pv = 17.87; render();
+    click('[data-act="dec"][data-f="p"]');
+    click('[data-act="dec"][data-f="p"]');
+    ok(Math.abs(S.pv - 17.86) < 1e-9, '应停在跌停 17.86，实际 ' + S.pv);
+}},
+{ id:'TC-07-08', ac:'AC-69', name:'手输非数字被拒绝', async fn(){
+    resetState({});
+    click('[data-act="entry"]');
+    click('[data-act="edit"][data-f="p"]');
+    typeInto('#inP', 'abc');
+    ok(/数字/.test(S.toast), '应提示输入数字，实际：' + S.toast);
+    ok(Math.abs(S.pv - 20.01) < 1e-9, '价格不应被改动，实际 ' + S.pv);
+}},
+{ id:'TC-07-09', ac:'AC-69', name:'手输越界按涨跌停修正', async fn(){
+    resetState({});
+    click('[data-act="entry"]');
+    click('[data-act="edit"][data-f="p"]');
+    typeInto('#inP', '99');
+    ok(Math.abs(S.pv - 21.82) < 1e-9, '应修正为涨停 21.82，实际 ' + S.pv);
+    ok(/涨停价/.test(S.hint), '应说明按涨停价修正，实际：' + S.hint);
+}},
+{ id:'TC-07-10', ac:'AC-70', name:'非整手数量被拦截', async fn(){
+    resetState({});
+    click('[data-act="entry"]');
+    click('[data-act="edit"][data-f="q"]');
+    typeInto('#inQ', '150');
+    click('[data-act="buy"]');
+    ok(S.layer === 'edit', '不应进入确认层');
+    ok(/100 股整数倍/.test(S.err.qty || ''), '应提示整手，实际：' + (S.err.qty || '无'));
+}},
+{ id:'TC-07-11', ac:'AC-70', name:'超可买数量回填为可买', async fn(){
+    resetState({ canBuy:800 });
+    click('[data-act="entry"]');
+    click('[data-act="edit"][data-f="q"]');
+    typeInto('#inQ', '9999');
+    ok(S.qv === 800, '应回填 800，实际 ' + S.qv);
+    ok(/可买/.test(S.hint), '应说明按可买修正，实际：' + S.hint);
+}},
+{ id:'TC-07-12', ac:'AC-71', name:'可买为 0：校验阻断且不跳层', async fn(){
+    resetState({ canBuy:0 });
+    click('[data-act="entry"]');
+    click('[data-act="buy"]');
+    ok(S.layer === 'edit', '不应进入确认层');
+    ok(/可买|资金/.test(S.toast), '应提示可买不足，实际：' + S.toast);
+}},
+{ id:'TC-07-13', ac:'AC-72', name:'确认层摘要一致，返回保留输入', async fn(){
+    resetState({ canBuy:800 });
+    click('[data-act="entry"]');
+    S.pv = 20.05; S.qv = 300; render();
+    click('[data-act="buy"]');
+    ok(S.layer === 'confirm', '应进入确认层');
+    const rows = [...qs.querySelectorAll('.row')].map(r => r.textContent.replace(/\s/g,''));
+    ok(rows.some(t => t.includes('委托价格') && t.includes('20.05')), '价格摘要应一致：' + rows.join(' | '));
+    ok(rows.some(t => t.includes('委托数量') && t.includes('300')), '数量摘要应一致');
+    click('[data-act="back"]');
+    ok(S.layer === 'edit', '应回到编辑层');
+    ok(Math.abs(S.pv - 20.05) < 1e-9 && S.qv === 300, '返回后输入应保留');
+}},
+{ id:'TC-07-14', ac:'AC-73', name:'提交成功：回执 + 关闭回详情', async fn(){
+    resetState({ sim:'success' });
+    click('[data-act="entry"]');
+    click('[data-act="buy"]');
+    click('[data-act="confirm"]');
+    await wait(1000);
+    ok(S.orders === 1, '应产生 1 笔委托，实际 ' + S.orders);
+    ok(/委托号/.test(S.toast), '应提示委托号，实际：' + S.toast);
+    await wait(900);
+    ok(S.modal === null, '成功后应关闭弹窗');
+}},
+{ id:'TC-07-15', ac:'AC-73', name:'幂等：连点确认只产生一笔', async fn(){
+    resetState({ sim:'success' });
+    click('[data-act="entry"]');
+    click('[data-act="buy"]');
+    click('[data-act="confirm"]');
+    click('[data-act="confirm"]');
+    click('[data-act="confirm"]');
+    await wait(1000);
+    ok(S.orders === 1, '重复点击只应产生 1 笔，实际 ' + S.orders);
+}},
+{ id:'TC-07-16', ac:'AC-73', name:'超时：结果未知 + 查询入口，不自动重发', async fn(){
+    resetState({ sim:'timeout' });
+    click('[data-act="entry"]');
+    click('[data-act="buy"]');
+    click('[data-act="confirm"]');
+    await wait(1000);
+    ok(S.unknown === true, '应进入结果未知态');
+    ok(!!q('[data-act="query"]'), '应提供查询委托入口');
+    ok(S.orders === 0, '超时不应计入成功委托');
+}},
+{ id:'TC-07-17', ac:'AC-74', name:'提交中禁止关闭', async fn(){
+    resetState({ sim:'timeout' });
+    click('[data-act="entry"]');
+    click('[data-act="buy"]');
+    click('[data-act="confirm"]');
+    click('[data-act="close"]');
+    ok(S.modal !== null && S.layer === 'confirm', `提交中不得关闭弹窗（modal=${S.modal}, layer=${S.layer}, submitting=${S.submitting}）`);
+    ok(/提交中/.test(S.toast), '应提示提交中，实际：' + S.toast);
+}},
+{ id:'TC-07-18', ac:'AC-75', name:'断线：弹窗内提示且禁止委托', async fn(){
+    resetState({ net:'offline' });
+    click('[data-act="entry"]');
+    ok(/中断|离线/.test(q('.blk')?.textContent || ''), '弹窗内应有断线提示');
+    click('[data-act="buy"]');
+    ok(S.layer === 'edit', '断线时不得提交');
+}},
+{ id:'TC-07-19', ac:'AC-76', name:'1.45× 字号：弹窗不横向溢出', async fn(){
+    resetState({ fs:1.45, dev:'sm' });
+    click('[data-act="entry"]');
+    const sh = q('#sheet');
+    ok(sh.scrollWidth <= sh.clientWidth + 2, `应无横向溢出（${sh.scrollWidth} > ${sh.clientWidth}）`);
+}},
+{ id:'TC-07-20', ac:'AC-73', name:'埋点漏斗：一次成功流程事件齐全', async fn(){
+    resetState({ sim:'success' });
+    click('[data-act="entry"]');
+    click('[data-act="buy"]');
+    click('[data-act="confirm"]');
+    await wait(1000);
+    ['entry_click','modal_open','confirm_view','submit','result_success']
+      .forEach(k => ok(S.events.includes(k), '缺少埋点 ' + k));
+}}
+];
+
+/* ---------- 用例渲染与执行 ---------- */
+const listEl = $('#testlist');
+function renderCases(){
+  listEl.innerHTML = CASES.map(c =>
+    `<div class="cas" data-id="${c.id}" title="${esc(c.name)} · ${c.ac}"><span class="cid">${c.id}</span><span class="cn" title="${esc(c.name)}">${esc(c.name)}</span><span class="stt">待跑</span></div>`
+  ).join('');
+}
+function mark(id, cls, text, msg){
+  const el = listEl.querySelector(`[data-id="${id}"]`);
+  if (!el) return;
+  el.className = 'cas ' + (cls || '');
+  el.querySelector('.stt').textContent = text;
+  const old = el.querySelector('.msg');
+  if (old) old.remove();
+  if (msg){
+    const d = document.createElement('div');
+    d.className = 'msg';
+    d.textContent = msg;
+    el.appendChild(d);
+  }
+}
+function summary(){
+  const pass = CASES.filter(c => (listEl.querySelector(`[data-id="${c.id}"]`) || {}).classList?.contains('pass')).length;
+  $('#sumTxt').textContent = pass + ' / ' + CASES.length + ' 通过';
+}
+async function runCase(c){
+  mark(c.id, 'run', '执行中');
+  try {
+    await c.fn();
+    mark(c.id, 'pass', '通过');
+    return true;
+  } catch (e){
+    mark(c.id, 'fail', '失败', e.message || '断言失败');
+    return false;
+  } finally {
+    summary();
+  }
+}
+async function runAll(){
+  const btn = $('#btnRunAll');
+  btn.disabled = true; btn.textContent = '执行中…';
+  for (const c of CASES){ await runCase(c); }
+  btn.disabled = false; btn.textContent = '全部执行';
+  log('用例执行完毕：' + $('#sumTxt').textContent);
+}
+listEl.addEventListener('click', async e => {
+  const row = e.target.closest('.cas');
+  if (!row) return;
+  const c = CASES.find(x => x.id === row.dataset.id);
+  if (c) await runCase(c);
+});
+$('#btnRunAll').onclick = runAll;
+$('#btnClear').onclick = () => { renderCases(); summary(); };
+
+/* ---------- 启动 ---------- */
+renderCases();
+render();
+syncSegs();
+renderFunnel();
+log('验证台就绪 · FR-07');
+
+/* 深链：?dev=xl&open=1&layer=confirm，便于截图与快速演示 */
+(function boot(){
+  const p = new URLSearchParams(location.search);
+  if (p.get('dev') && DEV[p.get('dev')]){ S.dev = p.get('dev'); }
+  if (p.get('fs')){ S.fs = Number(p.get('fs')) || 1; }
+  render(); syncSegs();
+  if (p.get('open') && !entryBlocked()){
+    openModal();
+    if (p.get('layer') === 'confirm'){ S.layer = 'confirm'; render(); }
+    if (p.get('kbd')){ S.kbd = true; render(); }
+    log('深链直接打开弹窗');
+  }
+  if (p.get('runall')){ setTimeout(runAll, 60); }
+})();
+</script>
+</body>
+</html>

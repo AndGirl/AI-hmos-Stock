@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FR-06.16 悬停态与避让区 · 图解</title>
+<style>
+  :root{
+    --bg:#f3f4f6; --card:#fff; --ink:#15171c; --ink2:#5b6270; --ink3:#8d95a3;
+    --line:#e6e8ec; --line2:#eef0f3;
+    --up:#e8402a; --down:#12a150; --flat:#7a828f;
+    --shell:#2b6cff; --shellbg:#eaf0ff;
+    --amber:#e0a44a; --amberbg:#fff3df; --amberink:#8a5200;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1160px;margin:0 auto;padding:56px 32px 96px}
+  .kicker{font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.14em;color:var(--ink3)}
+  h1{font-size:38px;line-height:1.2;letter-spacing:-.02em;margin:14px 0 16px;font-weight:700}
+  h1 em{font-style:normal;color:var(--shell)}
+  .lede{max-width:740px;color:var(--ink2);font-size:15px;margin:0}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .pill{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12px;color:var(--ink2)}
+  .pill b{color:var(--ink);font-weight:600}
+  .pill.ok{border-color:#d3e8d8;background:#f4faf5;color:#2f6b3a}
+  .toc{display:flex;flex-wrap:wrap;gap:20px;margin-top:30px;font-size:12px}
+  .toc a{color:var(--ink2);text-decoration:none;border-bottom:1px solid var(--line);padding-bottom:2px}
+  .toc a:hover{color:var(--shell);border-color:var(--shell)}
+  section{margin-top:64px}
+  .sec-head{display:flex;align-items:baseline;gap:12px}
+  .sec-num{font:600 12px/1 ui-monospace,Menlo,monospace;color:#fff;background:var(--ink);border-radius:6px;padding:6px 8px}
+  h2{font-size:22px;margin:0;letter-spacing:-.01em}
+  .sec-desc{color:var(--ink2);font-size:13px;margin:8px 0 22px 44px}
+
+  /* 触发链 */
+  .gates{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;gap:10px;align-items:stretch}
+  .gate{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 14px 12px}
+  .gate b{display:block;font-size:13px;margin-bottom:3px}
+  .gate span{font-size:11px;color:var(--ink3);line-height:1.55;display:block}
+  .gate.final{border-color:#cfdcff;background:var(--shellbg)}
+  .gate.final b{color:var(--shell)}
+  .arrow{display:grid;place-items:center;color:#c2c8d2;font-size:16px}
+  .gates-note{margin-top:12px;font-size:11.5px;color:var(--ink3)}
+
+  /* 画布 */
+  .hv{display:flex;gap:30px;align-items:flex-start;overflow-x:auto;padding-bottom:4px}
+  .canvas{width:720px;height:760px;flex:none;background:#fff;border-radius:14px;overflow:hidden;
+    box-shadow:0 18px 44px rgba(18,24,38,.16);position:relative;display:flex;flex-direction:column;font-variant-numeric:tabular-nums}
+  .sb{height:28px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-size:10.5px;color:#3a4150}
+  .nav{height:40px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px}
+  .back{width:24px;height:24px;border-radius:50%;background:#f2f3f6;display:grid;place-items:center;font-size:16px;color:#3a4150;line-height:1;flex:none}
+  .navt{flex:1;display:flex;align-items:baseline;justify-content:center;gap:6px;font-size:13px;min-width:0}
+  .navt b{font-weight:650}
+  .navt .code{font-size:10px;color:var(--ink3)}
+  .navt .st{font-size:10px;color:var(--ink3);margin-left:4px}
+  .mkt{background:#eaf0ff;color:#2b6cff;border-radius:3px;font-size:9px;padding:1px 4px;font-weight:600}
+  .navsp{width:24px;flex:none}
+
+  .price{height:52px;flex:none;display:flex;align-items:baseline;gap:8px;padding:0 18px}
+  .price b{font-size:26px;font-weight:700;color:var(--up);letter-spacing:-.02em;line-height:1}
+  .price .chg{font-size:11px;font-weight:600;color:var(--up)}
+
+  .news{height:32px;flex:none;display:flex;align-items:center;gap:8px;background:#f7f8fa;padding:0 16px;font-size:10px}
+  .news b{white-space:nowrap;font-size:10px}
+  .news span{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .news i{margin-left:auto;font-style:normal;color:#aeb4bf}
+
+  .tabs{height:26px;flex:none;display:flex;align-items:center;gap:22px;padding:0 16px;font-size:10.5px;color:var(--ink2)}
+  .tabs .on{color:var(--ink);font-weight:700;position:relative;height:100%;display:flex;align-items:center}
+  .tabs .on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--up);border-radius:2px}
+  .tabs .dim{color:#c5cad3}
+
+  .chart{height:174px;flex:none;position:relative;padding:0 0 2px}
+  .chart svg{width:100%;height:100%;display:block}
+  .ax{position:absolute;font-size:9px;color:#9aa1ad;line-height:1}
+  .ax.top{left:16px;top:6px}
+  .ax.bot{left:16px;bottom:18px}
+  .ax.x1{left:16px;bottom:4px}
+  .ax.x2{left:50%;transform:translateX(-50%);bottom:4px}
+  .ax.x3{right:16px;bottom:4px}
+
+  .band{height:24px;flex:none;background:#f2f4f7;border-top:1px solid #e6e9ef;border-bottom:1px solid #e6e9ef;position:relative}
+  .band::after{content:"";position:absolute;left:0;right:0;top:11px;height:1px;background:#aab3c2}
+
+  .metrics{height:54px;flex:none;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid var(--line2)}
+  .cell{flex:1;display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:0 10px;border-right:1px solid var(--line2);font-size:9.5px;color:var(--ink3)}
+  .cell:last-child{border-right:0}
+  .cell b{font-size:10.5px;color:var(--ink);font-weight:600}
+  .cell b.up{color:var(--up)} .cell b.down{color:var(--down)}
+
+  .mid{height:250px;flex:none;display:flex;min-height:0}
+  .book{width:300px;flex:none;padding:8px 12px 6px;border-right:1px solid var(--line2);display:flex;flex-direction:column;font-size:9px}
+  .bhead{font-size:9px;color:#c0655a;background:#fbf3f2;border-radius:3px;text-align:center;padding:2px 0;margin-bottom:2px;line-height:1.4}
+  .brow{display:flex;justify-content:space-between;align-items:center;height:15px;color:var(--ink2)}
+  .brow b{font-weight:600}
+  .brow i{font-style:normal;color:var(--ink3)}
+  .barbar{height:3px;border-radius:2px;margin:2px 0 3px;background:linear-gradient(90deg,var(--up) 0 44%,var(--down) 44% 100%)}
+  .bhead.tick{margin-top:4px;background:#f6f7f9;color:var(--ink3)}
+  .trow{display:flex;justify-content:space-between;align-items:center;height:14px;font-size:8.5px;color:var(--ink3)}
+
+  .content{flex:1;min-width:0;padding:8px 14px 8px;display:flex;flex-direction:column}
+  .ctabs{display:flex;gap:16px;font-size:10px;color:var(--ink2);padding-bottom:6px;border-bottom:1px solid var(--line2);flex:none}
+  .ctabs .on{color:var(--ink);font-weight:700;position:relative}
+  .ctabs .on::after{content:"";position:absolute;left:0;right:0;bottom:-7px;height:2px;background:var(--up);border-radius:2px}
+  .cempty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--ink3);font-size:9.5px;background:#fafbfc;border-radius:6px;margin-top:10px}
+  .cempty svg{opacity:.5}
+  .scrollnote{font-size:8.5px;color:#b6bcc7;margin-top:4px;text-align:center}
+
+  .actions{height:64px;flex:none;display:flex;align-items:center;gap:16px;padding:0 16px;border-top:1px solid var(--line2)}
+  .act{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:8.5px;color:var(--ink2);flex:none}
+  .btn{flex:1;height:40px;border-radius:20px;background:var(--up);color:#fff;font-size:12.5px;font-weight:600;display:grid;place-items:center;letter-spacing:.02em}
+  .ind{height:16px;flex:none;display:grid;place-items:center;background:#fff}
+  .ind i{width:120px;height:4px;border-radius:2px;background:#cfd4dc;display:block}
+
+  /* 侧栏 */
+  .hv-side{width:300px;flex:none}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 16px 12px}
+  .panel h3{margin:0 0 10px;font-size:13.5px}
+  .stack{width:100%;border-collapse:collapse;font-size:11px}
+  .stack th{text-align:left;font-weight:600;font-size:9.5px;color:var(--ink3);padding:4px 0;border-bottom:1px solid var(--line2)}
+  .stack td{padding:4px 0;border-bottom:1px solid var(--line2);color:var(--ink2)}
+  .stack td:first-child{color:var(--ink)}
+  .stack td.v{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink);width:52px}
+  .stack tr.grp td{background:#fafbfc;font-weight:600;color:var(--ink);font-size:10px;padding:5px 6px;border-bottom:0}
+  .stack tr.grp td.v{color:var(--ink3);font-weight:500}
+  .stack tr.bd td{background:#f2f4f7;color:#6b7381;font-size:10px;padding:5px 6px}
+  .stack tr:last-child td{border-bottom:0}
+  .why{margin-top:12px;font-size:11px;color:var(--ink2);line-height:1.7}
+  .why b{color:var(--ink)}
+
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card .n{font:600 10px/1 ui-monospace,Menlo,monospace;color:#fff;background:var(--ink);border-radius:5px;padding:4px 6px;display:inline-block}
+  .card h4{margin:8px 0 4px;font-size:13px}
+  .card p{margin:0;font-size:11.5px;color:var(--ink2)}
+  .card.a{border-color:#cfdcff;background:linear-gradient(180deg,#f7faff,#fff)}
+  .card.b{border-color:#e8dcc6;background:linear-gradient(180deg,#fffaf1,#fff)}
+  .card.c{border-color:#d9e6d9;background:linear-gradient(180deg,#f7fbf7,#fff)}
+
+  .avoid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .av{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .av h4{margin:0 0 6px;font-size:12.5px}
+  .av p{margin:0;font-size:11px;color:var(--ink2);line-height:1.6}
+  .av .fail{display:block;margin-top:8px;font-size:10px;color:#a33322;background:#fdf0ed;border-radius:5px;padding:3px 7px}
+
+  .ladder{display:flex;flex-direction:column;gap:8px}
+  .rung{display:grid;grid-template-columns:34px 1fr 120px;gap:12px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+  .rung .lv{font:600 11px/1 ui-monospace,Menlo,monospace;color:var(--ink3)}
+  .rung .txt{font-size:11.5px;color:var(--ink2)}
+  .rung .txt b{color:var(--ink);font-weight:600}
+  .rung .bar{height:6px;border-radius:3px;background:linear-gradient(90deg,#e8402a,#e0a44a);opacity:.75}
+
+  .reds{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .red{background:#fff;border:1px solid var(--line);border-left:3px solid var(--up);border-radius:10px;padding:14px 16px}
+  .red h4{margin:0 0 4px;font-size:12.5px}
+  .red h4 span{color:var(--up);margin-right:6px}
+  .red p{margin:0;font-size:11px;color:var(--ink2)}
+
+  .table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .table th,.table td{padding:10px 14px;border-bottom:1px solid var(--line2);font-size:11.5px;text-align:left}
+  .table th{background:#fafbfc;color:var(--ink2);font-weight:600;font-size:10.5px}
+  .table tr:last-child td{border-bottom:0}
+  .table td:first-child{color:var(--ink);white-space:nowrap}
+
+  .acs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .ac{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+  .ac .id{font:600 11px/1 ui-monospace,Menlo,monospace;color:var(--shell)}
+  .ac h4{margin:8px 0 6px;font-size:13px}
+  .ac p{margin:0;font-size:11.5px;color:var(--ink2)}
+
+  .foot{margin-top:64px;border-top:1px solid var(--line);padding-top:16px;font-size:11.5px;color:var(--ink3);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+  @media (max-width:1080px){
+    .hv{flex-direction:column}
+    .hv-side{width:100%}
+    .gates{grid-template-columns:1fr}
+    .arrow{display:none}
+    .cards,.avoid,.reds,.acs{grid-template-columns:1fr}
+    .wrap{padding:40px 20px 72px}
+    h1{font-size:28px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">FR-06 · 个股详情 / 子需求 06.16</div>
+    <h1>悬停态：把<em>折痕</em>当作两页的边界</h1>
+    <p class="lede">半折叠进入 DESKTOP_MODE 后，详情页按折痕切成上屏「走势页」与下屏「数据与操作页」。折痕区域整段留白，只作边界，不放文字与交互；所有原有区块一个不删，只换归属。</p>
+    <div class="pills">
+      <span class="pill"><b>触发</b> 折叠屏 · 全屏 · 半折叠 · 折痕横向</span>
+      <span class="pill"><b>示例画布</b> 720 × 760</span>
+      <span class="pill ok">H1 指标入 B ✓</span>
+      <span class="pill ok">H2 盘口 / 内容并排 ✓</span>
+      <span class="pill ok">H3 边界 1px ✓</span>
+    </div>
+    <nav class="toc">
+      <a href="#s1">01 触发条件</a>
+      <a href="#s2">02 两页切分</a>
+      <a href="#s3">03 边界与避让</a>
+      <a href="#s4">04 压缩阶梯</a>
+      <a href="#s5">05 红线与边界场景</a>
+      <a href="#s6">06 验收</a>
+    </nav>
+  </header>
+
+  <section id="s1">
+    <div class="sec-head"><span class="sec-num">01</span><h2>触发条件</h2></div>
+    <p class="sec-desc">四道门全过才进悬停态；任意一道不过，保持常规布局，不劣化。</p>
+
+    <div class="gates">
+      <div class="gate"><b>折叠屏</b><span>display.isFoldable() 为 true；直板机直接结束</span></div>
+      <div class="arrow">→</div>
+      <div class="gate"><b>全屏窗口</b><span>分屏 / 悬浮 / 自由窗口不触发</span></div>
+      <div class="arrow">→</div>
+      <div class="gate"><b>半折叠 + 折痕横向</b><span>FOLD_STATUS_HALF_FOLDED；书本型设备通常出现在横屏</span></div>
+      <div class="arrow">→</div>
+      <div class="gate final"><b>DESKTOP_MODE</b><span>系统姿态回调；应用只消费，不自行推断</span></div>
+    </div>
+    <p class="gates-note">推论：pane 与 window 两种壳天然不涉及悬停——它们所在的分屏 / 多窗环境不会被系统判为悬停。悬停只属于 page 壳的第 4 种形态。</p>
+  </section>
+
+  <section id="s2">
+    <div class="sec-head"><span class="sec-num">02</span><h2>两页切分</h2></div>
+    <p class="sec-desc">左图按 720×760 等比绘制，高度标注见右侧预算表；数值由 creaseTop / creaseHeight 推导，不是写死的。</p>
+
+    <div class="hv">
+      <div class="canvas">
+        <div class="sb"><span>15:03</span><span>5G ▮ 86%</span></div>
+
+        <div class="nav">
+          <span class="back">‹</span>
+          <div class="navt"><b>某某地产</b><span class="code">60**19</span><span class="mkt">深</span><span class="st">已收盘 10-19 15:03:03</span></div>
+          <span class="navsp"></span>
+        </div>
+
+        <div class="price"><b>24.32</b><span class="chg">+0.16</span><span class="chg">+1.04%</span></div>
+
+        <div class="news"><b>最新资讯</b><span>某某地产：关于 2026 年三季度经营情况的公告</span><i>×</i></div>
+
+        <div class="tabs"><span class="on">分时</span><span class="dim">五日</span><span>日K</span><span class="dim">周K</span><span class="dim">月K</span></div>
+
+        <div class="chart">
+          <svg viewBox="0 0 720 174" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="hg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#e8402a" stop-opacity=".15"/>
+                <stop offset="1" stop-color="#e8402a" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="88" x2="720" y2="88" stroke="#cfd4de" stroke-width="1" stroke-dasharray="4 4"/>
+            <path d="M0,96 L30,90 L60,94 L90,86 L120,90 L150,84 L180,88 L210,80 L240,86 L270,82 L300,88 L330,84 L360,90 L390,86 L420,92 L450,88 L480,94 L510,90 L540,86 L570,92 L600,88 L630,94 L660,90 L690,86 L720,90 L720,150 L0,150 Z" fill="url(#hg)"/>
+            <polyline points="0,96 30,90 60,94 90,86 120,90 150,84 180,88 210,80 240,86 270,82 300,88 330,84 360,90 390,86 420,92 450,88 480,94 510,90 540,86 570,92 600,88 630,94 660,90 690,86 720,90" fill="none" stroke="#e8402a" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M6,150 V138 M36,150 V144 M66,150 V136 M96,150 V141 M126,150 V133 M156,150 V143 M186,150 V138 M216,150 V146 M246,150 V134 M276,150 V140 M306,150 V137 M336,150 V145 M366,150 V139 M396,150 V136 M426,150 V142 M456,150 V147 M486,150 V135 M516,150 V140 M546,150 V138 M576,150 V144 M606,150 V136 M636,150 V141 M666,150 V137 M696,150 V143" stroke="#e8402a" stroke-width="7"/>
+            <path d="M21,150 V144 M51,150 V138 M81,150 V142 M111,150 V146 M141,150 V137 M171,150 V141 M201,150 V145 M231,150 V139 M261,150 V143 M291,150 V136 M321,150 V142 M351,150 V146 M381,150 V140 M411,150 V137 M441,150 V144 M471,150 V138 M501,150 V142 M531,150 V146 M561,150 V137 M591,150 V141 M621,150 V145 M651,150 V139 M681,150 V143 M711,150 V137" stroke="#12a150" stroke-width="7"/>
+          </svg>
+          <span class="ax top">26.58</span>
+          <span class="ax bot">21.74</span>
+          <span class="ax x1">09:30</span>
+          <span class="ax x2">11:30 / 13:00</span>
+          <span class="ax x3">15:00</span>
+        </div>
+
+        <div class="band"></div>
+
+        <div class="metrics">
+          <div class="cell"><span>今开</span><b class="up">24.18</b></div>
+          <div class="cell"><span>昨收</span><b>24.16</b></div>
+          <div class="cell"><span>最高</span><b class="up">24.55</b></div>
+          <div class="cell"><span>最低</span><b class="down">24.02</b></div>
+          <div class="cell"><span>换手</span><b>1.12%</b></div>
+          <div class="cell"><span>市盈</span><b>12.66</b></div>
+        </div>
+
+        <div class="mid">
+          <div class="book">
+            <div class="bhead">五档行情</div>
+            <div class="brow"><span>卖5</span><b class="up">24.55</b><i>12</i></div>
+            <div class="brow"><span>卖4</span><b class="up">24.51</b><i>66</i></div>
+            <div class="brow"><span>卖3</span><b class="up">24.47</b><i>33</i></div>
+            <div class="brow"><span>卖2</span><b class="up">24.42</b><i>55</i></div>
+            <div class="brow"><span>卖1</span><b class="up">24.38</b><i>21</i></div>
+            <div class="barbar"></div>
+            <div class="brow"><span>买1</span><b class="up">24.30</b><i>66</i></div>
+            <div class="brow"><span>买2</span><b class="up">24.26</b><i>22</i></div>
+            <div class="brow"><span>买3</span><b class="up">24.22</b><i>33</i></div>
+            <div class="brow"><span>买4</span><b class="up">24.18</b><i>55</i></div>
+            <div class="brow"><span>买5</span><b class="down">24.14</b><i>11</i></div>
+            <div class="bhead tick">成交明细</div>
+            <div class="trow"><span>15:03</span><b class="up">24.32</b><i>11</i></div>
+            <div class="trow"><span>15:03</span><b class="up">24.31</b><i>22</i></div>
+          </div>
+
+          <div class="content">
+            <div class="ctabs"><span class="on">讨论</span><span>必读</span><span>研报</span><span>资金</span><span>资料</span></div>
+            <div class="cempty">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9h10M7 13h6"/></svg>
+              <span>内容即将上线</span>
+              <span class="scrollnote">此区可滚动，不挤压动作栏</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <div class="act">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="#4a5261"><circle cx="4" cy="4" r="1.5"/><circle cx="12" cy="4" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/></svg>
+            <span>自选设置</span>
+          </div>
+          <div class="act">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="#4a5261"><rect x="2" y="9" width="3" height="5" rx="1"/><rect x="6.5" y="6" width="3" height="8" rx="1"/><rect x="11" y="3" width="3" height="11" rx="1"/></svg>
+            <span>股票PK</span>
+          </div>
+          <div class="act">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="#4a5261"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+            <span>更多</span>
+          </div>
+          <div class="btn">去交易</div>
+        </div>
+
+        <div class="ind"><i></i></div>
+      </div>
+
+      <aside class="hv-side">
+        <div class="panel">
+          <h3>垂直预算 · 720 × 760</h3>
+          <table class="stack">
+            <tr><th>区块</th><th style="text-align:right">高度</th></tr>
+            <tr class="grp"><td>A 页 · 走势</td><td class="v">352</td></tr>
+            <tr><td>状态栏避让</td><td class="v">28</td></tr>
+            <tr><td>导航（返回 / 名称 / 状态）</td><td class="v">40</td></tr>
+            <tr><td>报价</td><td class="v">52</td></tr>
+            <tr><td>资讯条</td><td class="v">32</td></tr>
+            <tr><td>周期 Tab</td><td class="v">26</td></tr>
+            <tr><td>图表（弹性，下限 160）</td><td class="v">174</td></tr>
+            <tr class="bd"><td>折痕避让带 · 纯占位</td><td class="v">24</td></tr>
+            <tr class="grp"><td>B 页 · 数据与操作</td><td class="v">384</td></tr>
+            <tr><td>指标（6 项单行）</td><td class="v">54</td></tr>
+            <tr><td>盘口 300 / 内容 420</td><td class="v">250</td></tr>
+            <tr><td>动作栏（主按钮 40）</td><td class="v">64</td></tr>
+            <tr><td>导航条避让</td><td class="v">16</td></tr>
+          </table>
+        </div>
+
+        <div class="panel" style="margin-top:14px">
+          <h3>为什么这样切</h3>
+          <p class="why">
+            <b>图表拿到 174。</b>指标下沉后，上屏整条竖向预算都给走势；图表不再被压到 110 以下的「装饰高度」。<br>
+            <b>数据归数据。</b>指标与五档同属盘口信息，相邻摆放，读一眼不用来回扫屏。<br>
+            <b>两页都完整。</b>上屏是一张完整走势页，下屏是一张完整数据页，没有哪一页只剩半截。
+          </p>
+        </div>
+      </aside>
+    </div>
+
+    <div class="cards">
+      <div class="card a">
+        <span class="n">A</span>
+        <h4>上屏 · 走势页</h4>
+        <p>导航 / 报价 / 资讯 / 周期 Tab / 图表。只读为主，不滚动，首屏完整。返回键在此，需避让状态栏。</p>
+      </div>
+      <div class="card b">
+        <span class="n">B</span>
+        <h4>折痕 · 边界</h4>
+        <p>高度 = max(折痕高/2 + 16, 16)vp。整段留白，中央一根 1px 中性线作两页分界；带内无文字、无可点元素。</p>
+      </div>
+      <div class="card c">
+        <span class="n">C</span>
+        <h4>下屏 · 数据与操作</h4>
+        <p>指标单行 → 左盘口 / 右内容 → 动作栏。固定坞不滚动；只有右侧内容区可滚，底部避让导航条。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s3">
+    <div class="sec-head"><span class="sec-num">03</span><h2>边界与避让</h2></div>
+    <p class="sec-desc">四类避让缺一不可；三处高度都必须动态刷新，只查一次迟早穿帮。</p>
+
+    <div class="avoid">
+      <div class="av">
+        <h4>折痕</h4>
+        <p>内容封顶 creaseTop；避让带 max(折痕高/2+16,16)vp，中央 1px 线作边界。</p>
+        <span class="fail">失效：文字压在畸变区，观感像「压折痕」</span>
+      </div>
+      <div class="av">
+        <h4>状态栏</h4>
+        <p>进页查 TYPE_SYSTEM，A 页顶部交互（返回、标题）叠加该高度。</p>
+        <span class="fail">失效：返回键被状态栏盖住</span>
+      </div>
+      <div class="av">
+        <h4>导航条</h4>
+        <p>查 TYPE_NAVIGATION_INDICATOR，B 页动作栏底部叠加该高度。</p>
+        <span class="fail">失效：去交易按钮压住小白条</span>
+      </div>
+      <div class="av">
+        <h4>坐标对齐</h4>
+        <p>根组件 expandSafeArea 铺满后，折痕 display 坐标才可与窗口坐标直换。</p>
+        <span class="fail">失效：两页分界整体偏移</span>
+      </div>
+    </div>
+
+    <p class="gates-note" style="margin-top:14px">
+      取源优先级：getLiveCreaseRegion（API 20+）→ getCurrentFoldCreaseRegion（API 10+）→ 屏幕中线兜底（标注为估算）。
+      rect 单位是 px，转 vp 用 <b>除以</b> densityPixels。加 expandSafeArea 会关掉系统自动避让，必须成对补手动避让。
+      刷新时机：进页初始查询 + avoidAreaChange 监听 + 旋转 / 进出悬停后经 setTimeout(0) 复核。
+    </p>
+  </section>
+
+  <section id="s4">
+    <div class="sec-head"><span class="sec-num">04</span><h2>高度不够时的压缩阶梯</h2></div>
+    <p class="sec-desc">只允许压缩，不允许删除区块；任何一档都不使用截断、省略号或整块隐藏。</p>
+
+    <div class="ladder">
+      <div class="rung">
+        <span class="lv">L1</span>
+        <span class="txt"><b>图表高度收缩</b>：向下限 160vp 靠拢，节点不重建，只改高度参数</span>
+        <span class="bar" style="width:92%"></span>
+      </div>
+      <div class="rung">
+        <span class="lv">L2</span>
+        <span class="txt"><b>指标两行 → 一行 6 列</b>：字号不变，仅重排列数</span>
+        <span class="bar" style="width:76%"></span>
+      </div>
+      <div class="rung">
+        <span class="lv">L3</span>
+        <span class="txt"><b>资讯条折叠为单行</b>：点击与关闭保留，标题省略用滚动而非截断</span>
+        <span class="bar" style="width:60%"></span>
+      </div>
+      <div class="rung">
+        <span class="lv">L4</span>
+        <span class="txt"><b>右侧内容区高度归零</b>：Tab 仍可切换，内容进入滚动区</span>
+        <span class="bar" style="width:42%"></span>
+      </div>
+      <div class="rung">
+        <span class="lv">L5</span>
+        <span class="txt"><b>A 页整体可滚</b>：返回键与报价常驻顶部，其余内容依次进入滚动</span>
+        <span class="bar" style="width:24%"></span>
+      </div>
+    </div>
+  </section>
+
+  <section id="s5">
+    <div class="sec-head"><span class="sec-num">05</span><h2>红线与边界场景</h2></div>
+    <p class="sec-desc">四条红线里任意一条破了，悬停态在真机上一定出问题。</p>
+
+    <div class="reds">
+      <div class="red">
+        <h4><span>✕</span>图表节点进 if/else</h4>
+        <p>悬停分支里重建 Canvas 会丢缓存、闪黑、重绘一次。只改高度参数，节点常驻。</p>
+      </div>
+      <div class="red">
+        <h4><span>✕</span>回调里做同步查询</h4>
+        <p>折痕与避让查询一律 setTimeout(0) 派发到回调外；回调只切 isInHover 一个状态位。</p>
+      </div>
+      <div class="red">
+        <h4><span>✕</span>用横屏判断压制悬停</h4>
+        <p>isHoverLayout() 直接返回 isInHover。书本型设备悬停就发生在横屏，加方向守卫会永不切换。</p>
+      </div>
+      <div class="red">
+        <h4><span>✕</span>监听只加不减</h4>
+        <p>姿态、避让、尺寸三个监听必须在页面销毁时全部 off，否则返回再进会重复响应。</p>
+      </div>
+    </div>
+
+    <table class="table" style="margin-top:16px">
+      <thead><tr><th>场景</th><th>处理</th></tr></thead>
+      <tbody>
+        <tr><td>悬停 + 自选设置弹层</td><td>锚定 A 页的半模态，不跨折痕；遮罩不铺到 B 页</td></tr>
+        <tr><td>悬停 + 键盘（讨论输入）</td><td>键盘避让优先，B 页盘口 / 内容区压缩，动作栏上移</td></tr>
+        <tr><td>悬停 + 断线</td><td>两页同时置灰 + 顶部唯一 banner，沿用 CC-7.6，不新增策略</td></tr>
+        <tr><td>悬停 + 1.45× 字号</td><td>走压缩阶梯，不换行溢出、不缩字号</td></tr>
+        <tr><td>旋转与折叠同时到达</td><td>状态各自更新，以终态组合渲染，不做中间态特判</td></tr>
+        <tr><td>悬停时的分屏 / 全屏入口</td><td>隐藏，系统姿态优先；退出悬停后恢复</td></tr>
+        <tr><td>SDK 未声明 WindowPostureMode</td><td>降级：getFoldStatus 判半折叠 + windowSizeChange 复核全屏，非全屏强制清除</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="s6">
+    <div class="sec-head"><span class="sec-num">06</span><h2>验收</h2></div>
+    <p class="sec-desc">三条，均可在真机用 hidumper 模拟折叠形态复现。</p>
+    <div class="acs">
+      <div class="ac">
+        <div class="id">AC-66</div>
+        <h4>悬停几何</h4>
+        <p>进入悬停后 A 页高度等于 creaseTop、避让带 ≥16vp 且带内无文字与可点元素、B 页吃掉剩余高度；折痕取源三级降级均可用。</p>
+      </div>
+      <div class="ac">
+        <div class="id">AC-67</div>
+        <h4>完整性合同</h4>
+        <p>8 个区块在悬停态全部存在；仅在高度不足时按 L1–L5 压缩，不出现整块消失或文字截断。</p>
+      </div>
+      <div class="ac">
+        <div class="id">AC-68</div>
+        <h4>避让动态刷新</h4>
+        <p>旋转 / 折展 / 进出悬停后，状态栏与导航条避让在 1 帧内更新；无内容钻到系统栏下方。</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <span>FR-06.16 悬停态与避让区 · 界面示意</span>
+    <span>数据自造 · 无交互 · 无校验 · 2026-11-11</span>
+  </div>
+</div>
+</body>
+</html>

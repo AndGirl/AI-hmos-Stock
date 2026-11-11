@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FR-06.4 验证台 · 指标面板</title>
+<style>
+  :root{
+    --bg:#f3f4f6; --card:#fff; --ink:#15171c; --ink2:#5b6270; --ink3:#8d95a3;
+    --line:#e6e8ec; --line2:#eef0f3;
+    --up:#e8402a; --down:#12a150; --flat:#7a828f;
+    --blue:#2b6cff; --bluebg:#eaf0ff;
+    --green:#2f8a52; --greenbg:#f2f8f3;
+    --red:#c2452f; --redbg:#fdf0ed;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:13px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .bench{max-width:1240px;margin:0 auto;padding:36px 24px 64px}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .kicker{font:600 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--ink3)}
+  h1{font-size:26px;margin:8px 0 6px;letter-spacing:-.01em}
+  h1 em{font-style:normal;color:var(--blue)}
+  .sub{font-size:12px;color:var(--ink2);margin:0;max-width:680px}
+  .note{font-size:11px;color:var(--ink3);background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+
+  .stagewrap{display:flex;flex-direction:column;align-items:center;margin-top:22px}
+  .devlabel{width:100%;max-width:100%;font:10.5px ui-monospace,Menlo,monospace;color:var(--ink3);margin-bottom:8px;display:flex;justify-content:space-between;gap:12px}
+  .qcard{width:387px;max-width:100%;background:#0b0d12;border-radius:26px;padding:6px;box-shadow:0 16px 40px rgba(16,22,36,.16)}
+  .panel{background:#fff;border-radius:21px;overflow:hidden}
+  .pinner{max-width:860px;margin:0 auto;padding:12px 16px 8px}
+
+  .phead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:8px;border-bottom:1px solid var(--line2)}
+  .phead b{font-size:calc(11px * var(--k));color:var(--ink2);font-weight:600}
+  .phint{font-size:calc(9.5px * var(--k));color:var(--ink3);font-variant-numeric:tabular-nums}
+  .expand{display:flex;align-items:center;justify-content:center;width:44px;height:28px;margin:2px auto 0;padding:0;border:0;background:transparent;color:#b3b9c4;cursor:pointer;border-radius:6px}
+  .expand:hover{color:#6b7381;background:#f6f7f9}
+  .expand svg{transition:transform .2s ease}
+  .expand.up svg{transform:rotate(180deg)}
+
+  .grid{display:grid;gap:0 18px;padding-top:2px}
+  .mcell{display:flex;justify-content:space-between;align-items:baseline;gap:8px;min-width:0;padding:calc(4px * var(--k)) 0;border-bottom:1px solid var(--line2)}
+  .ml{font-size:calc(10px * var(--k));color:var(--ink3);white-space:nowrap;flex:none}
+  .mv{font-size:calc(11px * var(--k));font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .mcell.up .mv{color:var(--up)}
+  .mcell.down .mv{color:var(--down)}
+  .mcell.flat .mv{color:var(--flat)}
+
+  .meta2{width:387px;max-width:100%;margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .meta2 div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:10px;color:var(--ink3);text-align:center}
+  .meta2 b{display:block;font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums;margin-top:2px}
+  .hint{grid-column:1/4;font-size:10px;color:var(--ink3);background:#fff;border:1px dashed var(--line);border-radius:10px;padding:7px 10px;text-align:left}
+
+  .lower{display:grid;grid-template-columns:520px 1fr;gap:24px;margin-top:20px;align-items:start}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .crow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line2)}
+  .crow:last-child{border-bottom:0}
+  .crow>span{width:44px;flex:none;font-size:11px;color:var(--ink3)}
+  .seg{display:flex;gap:5px;flex-wrap:wrap}
+  .seg button{border:1px solid var(--line);background:#fff;border-radius:7px;font:inherit;font-size:11px;color:var(--ink2);padding:4px 9px;cursor:pointer}
+  .seg button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .ops{display:flex;gap:6px;flex-wrap:wrap}
+  .ops button{border:1px solid var(--line);background:#fff;border-radius:7px;font:inherit;font-size:11px;color:var(--ink2);padding:4px 9px;cursor:pointer}
+  .ops button:hover{border-color:#c9cfda;color:var(--ink)}
+
+  .side{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .side h3{margin:0 0 10px;font-size:12px;color:var(--ink2);display:flex;justify-content:space-between;align-items:center}
+  .side h3 span{font-size:10px;color:var(--ink3);font-weight:400}
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:11px}
+  .kv div{display:flex;justify-content:space-between;gap:8px;color:var(--ink3);border-bottom:1px dashed var(--line2);padding:2px 0}
+  .kv b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+
+  .tests{display:flex;flex-direction:column;gap:6px}
+  .cas{display:grid;grid-template-columns:34px 1fr 44px;gap:8px;align-items:center;padding:7px 8px;border:1px solid var(--line2);border-radius:8px;cursor:pointer;font-size:11px}
+  .cas:hover{background:#fafbfc;border-color:var(--line)}
+  .cas .cid{font:600 9.5px ui-monospace,Menlo,monospace;color:var(--ink3)}
+  .cas .cn{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cas .stt{font-size:9.5px;text-align:right;color:var(--ink3)}
+  .cas.pass{border-color:#d7ebdd;background:var(--greenbg)}
+  .cas.pass .stt{color:var(--green)}
+  .cas.fail{border-color:#f2cfc7;background:var(--redbg)}
+  .cas.fail .stt{color:var(--red)}
+  .cas.run{border-color:#cfdcff;background:var(--bluebg)}
+  .cas.run .stt{color:var(--blue)}
+  .msg{grid-column:2/4;font-size:10px;color:var(--red);line-height:1.5;word-break:break-all}
+  .runbar{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .runbar button{flex:1;height:32px;border-radius:8px;border:1px solid var(--line);background:#fff;font:inherit;font-size:11.5px;cursor:pointer;color:var(--ink2)}
+  .runbar button.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+  .runbar span{font-size:10.5px;color:var(--ink3);white-space:nowrap}
+
+  .log{max-height:140px;overflow:auto;font:10px/1.6 ui-monospace,Menlo,monospace;color:var(--ink3)}
+  .log div{border-bottom:1px dashed var(--line2);padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  @media (max-width:980px){
+    .lower{grid-template-columns:1fr}
+    .bench{padding:30px 18px 56px}
+  }
+</style>
+</head>
+<body>
+<div class="bench">
+
+  <div class="top">
+    <div>
+      <div class="kicker">FR-06 · 个股详情 / 子需求 06.4 · 验证台</div>
+      <h1>指标面板：<em>6 / 9 / 12 项与列数降级</em></h1>
+      <p class="sub">四种设备宽度、三档字号、五种数据形态。验证展示项数、列数降级、指标顺序、单位格式化、空值与亏损、开高低着色、展开后不截断。</p>
+    </div>
+    <div class="note">验证用，不计入需求文档</div>
+  </div>
+
+  <div class="stagewrap">
+    <div class="devlabel" id="devbar"><span id="devLabel">指标面板 · sm / 直板机 375</span><span id="scaleLabel">字号 1.0×</span></div>
+    <div class="qcard" id="qcard">
+      <div class="panel">
+        <div class="pinner" id="pinner" style="--k:1">
+          <div class="phead">
+            <b>核心指标</b>
+            <span class="phint" id="pHint">6 / 12</span>
+          </div>
+          <div class="grid" id="grid"></div>
+          <button class="expand" id="btnExpand" aria-label="展开全部指标">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 6.5l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="meta2" id="meta2">
+      <div>断点<b id="mDev">sm</b></div>
+      <div>列数<b id="mCols">2</b></div>
+      <div>项数<b id="mCount">6</b></div>
+      <div class="hint">展开后在当前列数下追加行，不横向滚动；字号每升一档列数减 1，下限 1 列，只降列不截断。</div>
+    </div>
+  </div>
+
+  <div class="lower">
+    <div class="card ctrl">
+      <div class="crow"><span>设备</span>
+        <div class="seg" id="segDevice">
+          <button data-device="sm" class="on">直板机 375</button>
+          <button data-device="md">折叠展开 720</button>
+          <button data-device="lg">阔折叠 990</button>
+          <button data-device="xl">平板 1180</button>
+        </div>
+      </div>
+      <div class="crow"><span>字号</span>
+        <div class="seg" id="segScale">
+          <button data-scale="1" class="on">1.0×</button><button data-scale="1.3">1.3×</button><button data-scale="1.45">1.45×</button>
+        </div>
+      </div>
+      <div class="crow"><span>数据</span>
+        <div class="seg" id="segData">
+          <button data-data="normal" class="on">正常</button><button data-data="loss">亏损</button><button data-data="new">新股</button>
+          <button data-data="suspended">停牌</button><button data-data="extreme">极值</button>
+        </div>
+      </div>
+      <div class="crow"><span>展开</span>
+        <div class="seg" id="segExpand">
+          <button data-expand="0" class="on">收起</button><button data-expand="1">展开</button>
+        </div>
+      </div>
+      <div class="crow"><span>操作</span>
+        <div class="ops">
+          <button id="btnReset">重置</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="card">
+        <h3>状态快照</h3>
+        <div class="kv" id="snapshot"></div>
+      </div>
+
+      <div class="card">
+        <h3>用例 <span id="summary"></span></h3>
+        <div class="tests" id="tests"></div>
+        <div class="runbar">
+          <button class="pri" id="runAll">运行全部</button>
+          <button id="runReset">重置</button>
+          <span id="runState"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>日志</h3>
+        <div class="log" id="log"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+/* ================= 数据 ================= */
+const DEVICES = {
+  sm: { label: '直板机', w: 375, cols: 2, count: 6 },
+  md: { label: '折叠展开', w: 720, cols: 3, count: 9 },
+  lg: { label: '阔折叠', w: 990, cols: 3, count: 9 },
+  xl: { label: '平板', w: 1180, cols: 4, count: 12 }
+};
+
+const POOL = [
+  { k: 'open', label: '今开' },
+  { k: 'prev', label: '昨收' },
+  { k: 'turnover', label: '换手率' },
+  { k: 'high', label: '最高' },
+  { k: 'low', label: '最低' },
+  { k: 'pe', label: '市盈率' },
+  { k: 'volume', label: '成交量' },
+  { k: 'amount', label: '成交额' },
+  { k: 'cap', label: '总市值' },
+  { k: 'pb', label: '市净率' },
+  { k: 'amp', label: '振幅' },
+  { k: 'ratio', label: '量比' }
+];
+
+const DATA = {
+  normal: {
+    open: 19.86, prev: 19.84, turnover: 0.39, high: 20.33, low: 19.72, pe: 95.32,
+    volume: 4570, amount: 9105000, cap: 2610000000, pb: 8.41, amp: 3.07, ratio: 1.24
+  },
+  loss: {
+    open: 8.12, prev: 8.20, turnover: 1.05, high: 8.18, low: 7.96, pe: -12.40,
+    volume: 88200, amount: 70200000, cap: 5600000000, pb: 1.32, amp: 2.68, ratio: 0.86
+  },
+  new: {
+    open: null, prev: null, turnover: null, high: null, low: null, pe: 45.20,
+    volume: 12000, amount: 50000000, cap: 8000000000, pb: 6.20, amp: null, ratio: null
+  },
+  suspended: {
+    open: null, prev: null, turnover: null, high: null, low: null, pe: null,
+    volume: null, amount: null, cap: 2610000000, pb: 8.41, amp: null, ratio: null
+  },
+  extreme: {
+    open: 19.86, prev: 19.84, turnover: 99.99, high: 12345.67, low: 1.02, pe: 8888.88,
+    volume: 123456789, amount: 98765432100, cap: 1234567890000, pb: 1234.56, amp: 99.99, ratio: 1234.5
+  }
+};
+
+const S = {
+  device: 'sm',
+  scale: 1,
+  data: 'normal',
+  expanded: false
+};
+
+const $ = s => document.querySelector(s);
+const logEl = $('#log');
+const logs = [];
+function log(msg){
+  const t = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  logs.unshift(t + '  ' + msg);
+  if (logs.length > 50) logs.pop();
+  logEl.innerHTML = logs.map(l => '<div>' + esc(l) + '</div>').join('');
+}
+
+/* ================= 计算 ================= */
+function baseCols(d){ return DEVICES[d].cols; }
+function cols(){
+  let c = baseCols(S.device);
+  if (S.scale >= 1.3) c -= 1;
+  if (S.scale >= 1.45) c -= 1;
+  return Math.max(1, c);
+}
+function count(){ return S.expanded ? 12 : DEVICES[S.device].count; }
+
+/* ================= 格式化 ================= */
+function handFmt(n){
+  if (n >= 1e8) return (n / 1e8).toFixed(2) + '亿手';
+  if (n >= 1e4) return (n / 1e4).toFixed(2) + '万手';
+  return n + '手';
+}
+function moneyFmt(n){
+  if (n >= 1e12) return (n / 1e12).toFixed(2) + '万亿';
+  if (n >= 1e8) return (n / 1e8).toFixed(2) + '亿';
+  if (n >= 1e4) return (n / 1e4).toFixed(2) + '万';
+  return String(n);
+}
+function fmt(k, v){
+  if (v == null || isNaN(v)) return '--';
+  if (k === 'pe') return v < 0 ? '亏损' : v.toFixed(2);
+  if (k === 'turnover' || k === 'amp') return v.toFixed(2) + '%';
+  if (k === 'volume') return handFmt(v);
+  if (k === 'amount' || k === 'cap') return moneyFmt(v);
+  return v.toFixed(2);
+}
+function cellCls(k, d){
+  const v = d[k], prev = d.prev;
+  if (v == null) return 'flat';
+  if (k === 'open' || k === 'high' || k === 'low') {
+    if (prev == null) return 'flat';
+    if (v > prev) return 'up';
+    if (v < prev) return 'down';
+    return 'flat';
+  }
+  return '';
+}
+
+/* ================= 渲染 ================= */
+function render(){
+  const dev = DEVICES[S.device];
+  const outerW = dev.w + 12;
+  const card = $('#qcard');
+  if (card) card.style.width = outerW + 'px';
+  const bar = $('#devbar');
+  if (bar) bar.style.width = outerW + 'px';
+  const meta = $('#meta2');
+  if (meta) meta.style.width = Math.min(outerW, 720) + 'px';
+  const lab = $('#devLabel');
+  if (lab) lab.textContent = '指标面板 · ' + S.device + ' / ' + dev.label + ' ' + dev.w;
+  $('#scaleLabel').textContent = '字号 ' + S.scale + '×';
+  $('#pinner').style.setProperty('--k', S.scale);
+
+  const c = cols(), n = count();
+  const d = DATA[S.data];
+  const grid = $('#grid');
+  grid.style.gridTemplateColumns = 'repeat(' + c + ', minmax(0,1fr))';
+  grid.innerHTML = POOL.slice(0, n).map(it => {
+    const cls = cellCls(it.k, d);
+    return '<div class="mcell ' + cls + '" data-k="' + it.k + '">' +
+      '<span class="ml">' + it.label + '</span>' +
+      '<b class="mv">' + fmt(it.k, d[it.k]) + '</b></div>';
+  }).join('');
+
+  $('#mDev').textContent = S.device;
+  $('#mCols').textContent = c;
+  $('#mCount').textContent = n;
+  $('#pHint').textContent = n + ' / 12';
+  const btn = $('#btnExpand');
+  btn.classList.toggle('up', S.expanded);
+  btn.style.display = (DEVICES[S.device].count < 12 || S.expanded) ? 'flex' : 'none';
+
+  $('#snapshot').innerHTML = `
+    <div>设备 <b>${S.device} ${dev.w}</b></div>
+    <div>列数 <b>${c}</b></div>
+    <div>项数 <b>${n}</b></div>
+    <div>字号 <b>${S.scale}×</b></div>
+    <div>数据 <b>${S.data}</b></div>
+    <div>展开 <b>${S.expanded ? '是' : '否'}</b></div>`;
+}
+
+function syncControls(){
+  document.querySelectorAll('#segDevice button').forEach(b => b.classList.toggle('on', b.dataset.device === S.device));
+  document.querySelectorAll('#segScale button').forEach(b => b.classList.toggle('on', +b.dataset.scale === S.scale));
+  document.querySelectorAll('#segData button').forEach(b => b.classList.toggle('on', b.dataset.data === S.data));
+  document.querySelectorAll('#segExpand button').forEach(b => b.classList.toggle('on', b.dataset.expand === (S.expanded ? '1' : '0')));
+}
+
+function setDevice(d){ S.device = d; syncControls(); render(); }
+function setScale(k){ S.scale = k; syncControls(); render(); }
+function setData(d){ S.data = d; syncControls(); render(); }
+function setExpanded(b){ S.expanded = !!b; syncControls(); render(); }
+
+function resetBench(){
+  S.device = 'sm'; S.scale = 1; S.data = 'normal'; S.expanded = false;
+  syncControls(); render();
+}
+
+/* ================= 事件 ================= */
+document.querySelectorAll('#segDevice button').forEach(b => b.addEventListener('click', () => setDevice(b.dataset.device)));
+document.querySelectorAll('#segScale button').forEach(b => b.addEventListener('click', () => setScale(+b.dataset.scale)));
+document.querySelectorAll('#segData button').forEach(b => b.addEventListener('click', () => setData(b.dataset.data)));
+document.querySelectorAll('#segExpand button').forEach(b => b.addEventListener('click', () => setExpanded(b.dataset.expand === '1')));
+$('#btnExpand').addEventListener('click', () => setExpanded(!S.expanded));
+$('#btnReset').addEventListener('click', () => { resetBench(); log('已重置'); });
+
+/* ================= 用例 ================= */
+const CASES = [];
+function def(id, name, fn){ CASES.push({ id, name, fn, status: 'idle', msg: '' }); }
+function assert(c, m){ if (!c) throw new Error(m); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const q = sel => { const e = document.querySelector(sel); if (!e) throw new Error('找不到 ' + sel); return e; };
+const cells = () => Array.from(document.querySelectorAll('#grid .mcell'));
+const cellBy = k => document.querySelector('#grid .mcell[data-k="' + k + '"]');
+const mv = k => { const c = cellBy(k); return c ? c.querySelector('.mv').textContent.trim() : null; };
+const color = k => getComputedStyle(cellBy(k).querySelector('.mv')).color;
+function colCount(){
+  return getComputedStyle(q('#grid')).gridTemplateColumns.split(' ').filter(Boolean).length;
+}
+const UP = 'rgb(232, 64, 42)', DOWN = 'rgb(18, 161, 80)', FLAT = 'rgb(122, 130, 143)';
+
+def('C01', '断点展示项数 6 / 9 / 9 / 12', async () => {
+  resetBench();
+  for (const d in DEVICES) {
+    setDevice(d);
+    assert(cells().length === DEVICES[d].count, d + ' 应有 ' + DEVICES[d].count + ' 项，实际 ' + cells().length);
+  }
+});
+
+def('C02', '断点列数 2 / 3 / 3 / 4', async () => {
+  resetBench();
+  for (const d in DEVICES) {
+    setDevice(d); setScale(1);
+    assert(colCount() === DEVICES[d].cols, d + ' 应有 ' + DEVICES[d].cols + ' 列，实际 ' + colCount());
+  }
+});
+
+def('C03', '展开后各断点均为 12 项', async () => {
+  resetBench();
+  for (const d in DEVICES) {
+    setDevice(d); setExpanded(true);
+    assert(cells().length === 12, d + ' 展开后应为 12 项，实际 ' + cells().length);
+  }
+});
+
+def('C04', '指标顺序符合优先级序', async () => {
+  resetBench(); setDevice('xl');
+  const labels = cells().map(c => c.querySelector('.ml').textContent.trim());
+  const expect = POOL.map(p => p.label);
+  assert(labels.join(',') === expect.join(','), '顺序不符：' + labels.join(','));
+});
+
+def('C05', '单位格式化：手 / 万 / 亿 / 万亿', async () => {
+  resetBench(); setDevice('xl'); setData('normal');
+  assert(mv('volume') === '4570手', '成交量应为 4570手，实际 ' + mv('volume'));
+  assert(mv('amount') === '910.50万', '成交额应为 910.50万，实际 ' + mv('amount'));
+  assert(mv('cap') === '26.10亿', '总市值应为 26.10亿，实际 ' + mv('cap'));
+  setData('extreme');
+  assert(mv('volume') === '1.23亿手', '极值成交量应为 1.23亿手，实际 ' + mv('volume'));
+  assert(mv('amount') === '987.65亿', '极值成交额应为 987.65亿，实际 ' + mv('amount'));
+  assert(mv('cap') === '1.23万亿', '极值总市值应为 1.23万亿，实际 ' + mv('cap'));
+});
+
+def('C06', '负市盈率显示「亏损」', async () => {
+  resetBench(); setData('loss');
+  assert(mv('pe') === '亏损', '负市盈率应显示亏损，实际 ' + mv('pe'));
+  assert(!mv('pe').startsWith('-'), '不应显示负数');
+});
+
+def('C07', '停牌：空值全部 --', async () => {
+  resetBench(); setData('suspended'); setExpanded(true);
+  cells().forEach(c => {
+    const k = c.dataset.k;
+    const t = c.querySelector('.mv').textContent.trim();
+    if (DATA.suspended[k] == null) assert(t === '--', k + ' 应为 --，实际 ' + t);
+  });
+});
+
+def('C08', '新股：无昨收相关项为 --', async () => {
+  resetBench(); setData('new');
+  assert(mv('prev') === '--', '昨收应为 --');
+  assert(mv('open') === '--', '今开应为 --');
+  assert(mv('high') === '--', '最高应为 --');
+  assert(mv('volume') !== '--', '成交量应有值');
+  assert(mv('pe') === '45.20', '市盈率应有值');
+});
+
+def('C09', '开 / 高 / 低相对昨收着色', async () => {
+  resetBench(); setData('normal'); setDevice('xl');
+  assert(color('open') === UP, '今开应红，实际 ' + color('open'));
+  assert(color('high') === UP, '最高应红');
+  assert(color('low') === DOWN, '最低应绿，实际 ' + color('low'));
+  assert(color('prev') === FLAT || color('prev') === 'rgb(21, 23, 28)', '昨收应中性，实际 ' + color('prev'));
+});
+
+def('C10', '1.3× 列数降一档', async () => {
+  resetBench();
+  setDevice('xl'); setScale(1.3);
+  assert(colCount() === 3, 'xl 1.3× 应为 3 列，实际 ' + colCount());
+  setDevice('sm');
+  assert(colCount() === 1, 'sm 1.3× 应为 1 列，实际 ' + colCount());
+});
+
+def('C11', '1.45× 再降一档且不低于 1 列', async () => {
+  resetBench();
+  setDevice('xl'); setScale(1.45);
+  assert(colCount() === 2, 'xl 1.45× 应为 2 列，实际 ' + colCount());
+  setDevice('lg');
+  assert(colCount() === 1, 'lg 1.45× 应为 1 列，实际 ' + colCount());
+  setDevice('sm');
+  assert(colCount() === 1, 'sm 1.45× 下限应为 1 列，实际 ' + colCount());
+});
+
+def('C12', '四种设备 × 三档字号：单元格不截断', async () => {
+  resetBench(); setData('extreme');
+  for (const d in DEVICES) {
+    for (const k of [1, 1.3, 1.45]) {
+      setDevice(d); setScale(k); setExpanded(true);
+      cells().forEach(c => {
+        const v = c.querySelector('.mv');
+        assert(v.scrollWidth <= v.clientWidth + 1,
+          d + ' ' + k + '× ' + c.dataset.k + ' 截断：' + v.scrollWidth + ' > ' + v.clientWidth);
+      });
+    }
+  }
+});
+
+def('C13', '展开态在切换设备与字号后保持', async () => {
+  resetBench(); setExpanded(true);
+  setDevice('xl');
+  assert(cells().length === 12, '切设备后应保持展开');
+  setScale(1.3);
+  assert(cells().length === 12, '切字号后应保持展开');
+  assert(q('#btnExpand').classList.contains('up'), '展开后箭头应朝上');
+});
+
+def('C14', '空值不着色', async () => {
+  resetBench(); setData('suspended'); setDevice('xl');
+  cells().forEach(c => {
+    if (c.querySelector('.mv').textContent.trim() === '--') {
+      assert(getComputedStyle(c.querySelector('.mv')).color === FLAT, c.dataset.k + ' 的 -- 应为中性色');
+    }
+  });
+});
+
+def('C15', '展开后追加行、不横向滚动', async () => {
+  resetBench(); setExpanded(true);
+  const g = q('#grid');
+  assert(g.scrollWidth <= g.clientWidth + 1, '网格不应横向滚动：' + g.scrollWidth + ' > ' + g.clientWidth);
+  assert(cells().length === 12, '应为 12 项');
+  const rows = new Set(cells().map(c => Math.round(c.getBoundingClientRect().top)));
+  assert(rows.size > 3, '12 项应折成多行，实际 ' + rows.size + ' 行');
+});
+
+def('C16', '展开按钮按断点出现，无隐藏项时隐藏', async () => {
+  resetBench();
+  setDevice('sm');
+  assert(q('#btnExpand').style.display !== 'none', 'sm 应有展开按钮');
+  setDevice('md');
+  assert(q('#btnExpand').style.display !== 'none', 'md 应有展开按钮');
+  setDevice('lg');
+  assert(q('#btnExpand').style.display !== 'none', 'lg 应有展开按钮');
+  setDevice('xl');
+  assert(q('#btnExpand').style.display === 'none', 'xl 已显示 12 项，不应有展开按钮');
+  setDevice('sm'); setExpanded(true);
+  assert(q('#btnExpand').style.display !== 'none', '展开后应保留收起按钮');
+  assert(q('#btnExpand').classList.contains('up'), '展开后箭头应朝上');
+});
+
+/* ================= 用例面板 ================= */
+function renderTests(){
+  const wrap = $('#tests');
+  wrap.innerHTML = CASES.map((c, i) => `
+    <div class="cas ${c.status === 'run' ? 'run' : c.status}" data-case="${i}">
+      <span class="cid">${c.id}</span>
+      <span class="cn" title="${c.name}">${c.name}</span>
+      <span class="stt">${c.status === 'pass' ? '通过' : c.status === 'fail' ? '失败' : c.status === 'run' ? '运行中' : '待运行'}</span>
+      ${c.msg ? '<div class="msg">' + c.msg + '</div>' : ''}
+    </div>`).join('');
+  const pass = CASES.filter(c => c.status === 'pass').length;
+  const fail = CASES.filter(c => c.status === 'fail').length;
+  $('#summary').textContent = CASES.length + ' 条 · 通过 ' + pass + ' / 失败 ' + fail;
+  wrap.querySelectorAll('.cas').forEach(el => el.addEventListener('click', () => runOne(+el.dataset.case)));
+}
+
+async function runOne(i){
+  const c = CASES[i];
+  c.status = 'run'; c.msg = '';
+  renderTests();
+  try { await c.fn(); c.status = 'pass'; }
+  catch (e) { c.status = 'fail'; c.msg = e.message; log('用例失败 ' + c.id + '：' + e.message); }
+  renderTests();
+}
+
+let running = false;
+async function runAll(){
+  if (running) return;
+  running = true;
+  $('#runState').textContent = '运行中…';
+  CASES.forEach(c => { c.status = 'idle'; c.msg = ''; });
+  renderTests();
+  for (let i = 0; i < CASES.length; i++) await runOne(i);
+  running = false;
+  $('#runState').textContent = '完成';
+  const fail = CASES.filter(c => c.status === 'fail').length;
+  log(fail ? '全部完成，失败 ' + fail + ' 条' : '全部通过');
+}
+
+$('#runAll').addEventListener('click', runAll);
+$('#runReset').addEventListener('click', () => {
+  CASES.forEach(c => { c.status = 'idle'; c.msg = ''; });
+  resetBench(); renderTests(); log('用例与场景已重置');
+});
+
+/* ================= 启动 ================= */
+resetBench();
+renderTests();
+log('验证台就绪：先点「运行全部」，或用左侧控件切换设备与数据形态');
+</script>
+</body>
+</html>

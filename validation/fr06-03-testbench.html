@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FR-06.3 验证台 · 报价头部</title>
+<style>
+  :root{
+    --bg:#f3f4f6; --card:#fff; --ink:#15171c; --ink2:#5b6270; --ink3:#8d95a3;
+    --line:#e6e8ec; --line2:#eef0f3;
+    --up:#e8402a; --down:#12a150; --flat:#7a828f;
+    --blue:#2b6cff; --bluebg:#eaf0ff;
+    --green:#2f8a52; --greenbg:#f2f8f3;
+    --red:#c2452f; --redbg:#fdf0ed;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:13px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .bench{max-width:1240px;margin:0 auto;padding:36px 24px 64px}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .kicker{font:600 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--ink3)}
+  h1{font-size:26px;margin:8px 0 6px;letter-spacing:-.01em}
+  h1 em{font-style:normal;color:var(--blue)}
+  .sub{font-size:12px;color:var(--ink2);margin:0;max-width:620px}
+  .note{font-size:11px;color:var(--ink3);background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+
+  .stagewrap{display:flex;flex-direction:column;align-items:center;margin-top:22px}
+  .devlabel{width:100%;max-width:100%;font:10.5px ui-monospace,Menlo,monospace;color:var(--ink3);margin-bottom:8px;display:flex;justify-content:space-between;gap:12px}
+  .qcard{width:387px;max-width:100%;background:#0b0d12;border-radius:26px;padding:6px;box-shadow:0 16px 40px rgba(16,22,36,.16)}
+  .lower{display:grid;grid-template-columns:520px 1fr;gap:24px;margin-top:20px;align-items:start}
+  .qscreen{background:#fff;border-radius:21px;overflow:hidden;min-height:118px;display:flex;flex-direction:column}
+
+  .qhead{display:flex;align-items:flex-start;gap:10px;padding:12px 14px 0}
+  .back{width:30px;height:30px;border-radius:50%;border:0;background:#f2f3f6;display:grid;place-items:center;font-size:17px;color:#3a4150;line-height:1;cursor:pointer;flex:none}
+  .hd{flex:1;text-align:center;min-width:0}
+  .l1{display:flex;justify-content:center;align-items:baseline;gap:5px;line-height:1.25}
+  .l1 b{font-size:calc(15px * var(--k));font-weight:650;color:var(--ink)}
+  .code{font-size:calc(10px * var(--k));color:var(--ink3)}
+  .l2{display:flex;justify-content:center;align-items:center;gap:4px;margin-top:3px;font-size:calc(10px * var(--k));color:var(--ink3);line-height:1.4}
+  .mk{font-style:normal;background:#eaf0ff;color:#2b6cff;border-radius:3px;font-size:calc(8px * var(--k));padding:0 3px;font-weight:600}
+  .st{color:var(--ink3)}
+  .tm{font-variant-numeric:tabular-nums}
+  .sp{width:30px;flex:none}
+
+  .qpr{display:flex;align-items:baseline;gap:calc(8px * var(--k));padding:6px 16px 14px;flex-wrap:nowrap}
+  .qhead,.qpr{max-width:860px;margin-left:auto;margin-right:auto}
+  .px{font-size:calc(30px * var(--k));font-weight:700;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .cg,.pc{font-size:calc(12px * var(--k));font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--flat)}
+  .qpr.flash .px{animation:flash .42s ease}
+  @keyframes flash{0%{background:#ffe6e0;border-radius:6px}100%{background:transparent}}
+
+  .skel-head{padding:14px 14px 0}
+  .skel-head i{display:block;background:#eef0f4;border-radius:6px;margin-bottom:8px}
+  .skel-price{padding:10px 16px 16px}
+  .skel-price i{display:block;background:#eef0f4;border-radius:8px;height:26px;width:150px}
+
+  .meta2{width:375px;max-width:100%;margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .meta2 div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:10px;color:var(--ink3)}
+  .meta2 b{display:block;font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums;margin-top:2px}
+  .hint{grid-column:1/3;font-size:10px;color:var(--ink3);background:#fff;border:1px dashed var(--line);border-radius:10px;padding:7px 10px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .ctrl{margin-top:0}
+  .crow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line2)}
+  .crow:last-child{border-bottom:0}
+  .crow>span{width:44px;flex:none;font-size:11px;color:var(--ink3)}
+  .seg{display:flex;gap:5px;flex-wrap:wrap}
+  .seg button{border:1px solid var(--line);background:#fff;border-radius:7px;font:inherit;font-size:11px;color:var(--ink2);padding:4px 9px;cursor:pointer}
+  .seg button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .ops{display:flex;gap:6px;flex-wrap:wrap}
+  .ops button{border:1px solid var(--line);background:#fff;border-radius:7px;font:inherit;font-size:11px;color:var(--ink2);padding:4px 9px;cursor:pointer}
+  .ops button:hover{border-color:#c9cfda;color:var(--ink)}
+
+  .side{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .side h3{margin:0 0 10px;font-size:12px;color:var(--ink2);display:flex;justify-content:space-between;align-items:center}
+  .side h3 span{font-size:10px;color:var(--ink3);font-weight:400}
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:11px}
+  .kv div{display:flex;justify-content:space-between;gap:8px;color:var(--ink3);border-bottom:1px dashed var(--line2);padding:2px 0}
+  .kv b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+
+  .tests{display:flex;flex-direction:column;gap:6px}
+  .cas{display:grid;grid-template-columns:34px 1fr 44px;gap:8px;align-items:center;padding:7px 8px;border:1px solid var(--line2);border-radius:8px;cursor:pointer;font-size:11px}
+  .cas:hover{background:#fafbfc;border-color:var(--line)}
+  .cas .cid{font:600 9.5px ui-monospace,Menlo,monospace;color:var(--ink3)}
+  .cas .cn{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cas .stt{font-size:9.5px;text-align:right;color:var(--ink3)}
+  .cas.pass{border-color:#d7ebdd;background:var(--greenbg)}
+  .cas.pass .stt{color:var(--green)}
+  .cas.fail{border-color:#f2cfc7;background:var(--redbg)}
+  .cas.fail .stt{color:var(--red)}
+  .cas.run{border-color:#cfdcff;background:var(--bluebg)}
+  .cas.run .stt{color:var(--blue)}
+  .msg{grid-column:2/4;font-size:10px;color:var(--red);line-height:1.5;word-break:break-all}
+  .runbar{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .runbar button{flex:1;height:32px;border-radius:8px;border:1px solid var(--line);background:#fff;font:inherit;font-size:11.5px;cursor:pointer;color:var(--ink2)}
+  .runbar button.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+  .runbar span{font-size:10.5px;color:var(--ink3);white-space:nowrap}
+
+  .log{max-height:140px;overflow:auto;font:10px/1.6 ui-monospace,Menlo,monospace;color:var(--ink3)}
+  .log div{border-bottom:1px dashed var(--line2);padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  @media (max-width:980px){
+    .lower{grid-template-columns:1fr}
+    .bench{padding:30px 18px 56px}
+  }
+</style>
+</head>
+<body>
+<div class="bench">
+
+  <div class="top">
+    <div>
+      <div class="kicker">FR-06 · 个股详情 / 子需求 06.3 · 验证台</div>
+      <h1>报价头部：<em>状态、时间与涨跌</em></h1>
+      <p class="sub">覆盖四种设备宽度（375 / 720 / 990 / 1180）、六种交易状态、沪深北三个市场、涨/跌/平/停牌/新股五种数据形态，字号 1.0–1.45。右侧 17 条用例可单跑或全跑。</p>
+    </div>
+    <div class="note">验证用，不计入需求文档</div>
+  </div>
+
+  <div class="stagewrap">
+    <div class="devlabel" id="devbar"><span id="devLabel">报价头部 · sm / 直板机 375</span><span id="scaleLabel">字号 1.0×</span></div>
+    <div class="qcard" id="qcard">
+      <div class="qscreen" id="qscreen"></div>
+    </div>
+    <div class="meta2" id="meta2">
+      <div>行情时间（快照）<b id="qtime2">--</b></div>
+      <div>设备时间（实时）<b id="devclock">--:--:--</b></div>
+      <div class="hint">改设备时间不会影响上面的报价时间；交易中推送才会推进行情时间。宽屏下头部内容区最大 860vp 居中。</div>
+    </div>
+  </div>
+
+  <div class="lower">
+    <div class="card ctrl">
+      <div class="crow"><span>设备</span>
+        <div class="seg" id="segDevice">
+          <button data-device="sm" class="on">直板机 375</button>
+          <button data-device="md">折叠展开 720</button>
+          <button data-device="lg">阔折叠 990</button>
+          <button data-device="xl">平板 1180</button>
+        </div>
+      </div>
+      <div class="crow"><span>市场</span>
+        <div class="seg" id="segMarket">
+          <button data-market="SH" class="on">沪</button><button data-market="SZ">深</button><button data-market="BJ">北</button>
+        </div>
+      </div>
+      <div class="crow"><span>状态</span>
+        <div class="seg" id="segStatus">
+          <button data-status="pre">未开盘</button><button data-status="auction">集合竞价</button><button data-status="open">交易中</button>
+          <button data-status="lunch">午间休市</button><button data-status="closed" class="on">已收盘</button><button data-status="suspended">停牌</button>
+        </div>
+      </div>
+      <div class="crow"><span>数据</span>
+        <div class="seg" id="segMode">
+          <button data-mode="up" class="on">上涨</button><button data-mode="down">下跌</button><button data-mode="flat">平盘</button><button data-mode="new">新股</button>
+        </div>
+      </div>
+      <div class="crow"><span>字号</span>
+        <div class="seg" id="segScale">
+          <button data-scale="1" class="on">1.0×</button><button data-scale="1.3">1.3×</button><button data-scale="1.45">1.45×</button>
+        </div>
+      </div>
+      <div class="crow"><span>操作</span>
+        <div class="ops">
+          <button id="btnPush">推送 +0.01</button>
+          <button id="btnPush3">连推 ×3</button>
+          <button id="btnLoad">加载态</button>
+          <button id="btnClock">设备时钟 +2h</button>
+          <button id="btnReset">重置</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="card">
+        <h3>状态快照</h3>
+        <div class="kv" id="snapshot"></div>
+      </div>
+
+      <div class="card">
+        <h3>用例 <span id="summary"></span></h3>
+        <div class="tests" id="tests"></div>
+        <div class="runbar">
+          <button class="pri" id="runAll">运行全部</button>
+          <button id="runReset">重置</button>
+          <span id="runState"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>日志</h3>
+        <div class="log" id="log"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+/* ================= 数据 ================= */
+const SAMPLES = {
+  SH: { name: '某某地产', code: '60**19', prev: 24.16 },
+  SZ: { name: '某某科技', code: '00**66', prev: 18.40 },
+  BJ: { name: '某某精密', code: '83**21', prev: 9.80 }
+};
+const MARKETS = { SH: '沪', SZ: '深', BJ: '北' };
+const STATUS = {
+  pre: '未开盘', auction: '集合竞价', open: '交易中',
+  lunch: '午间休市', closed: '已收盘', suspended: '停牌'
+};
+const COLORS = { up: 'rgb(232, 64, 42)', down: 'rgb(18, 161, 80)', flat: 'rgb(122, 130, 143)' };
+const DEVICES = {
+  sm: { label: '直板机', w: 375 },
+  md: { label: '折叠展开', w: 720 },
+  lg: { label: '阔折叠', w: 990 },
+  xl: { label: '平板', w: 1180 }
+};
+
+const S = {
+  device: 'sm',
+  market: 'SH',
+  status: 'closed',
+  mode: 'up',
+  scale: 1,
+  loading: false,
+  price: 24.32,
+  prevClose: 24.16,
+  qtime: new Date(2026, 9, 19, 15, 3, 3),
+  deviceOffsetMin: 0,
+  flashCount: 0,
+  lastFlash: 0,
+  pushes: 0
+};
+
+const $ = s => document.querySelector(s);
+const logEl = $('#log');
+const logs = [];
+const pad = n => String(n).padStart(2, '0');
+
+function log(msg){
+  const t = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  logs.unshift(t + '  ' + msg);
+  if (logs.length > 50) logs.pop();
+  logEl.innerHTML = logs.map(l => '<div>' + esc(l) + '</div>').join('');
+}
+
+/* ================= 渲染 ================= */
+function fmt(d){
+  return pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' +
+         pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+function devClock(){
+  const d = new Date(Date.now() + S.deviceOffsetMin * 60000);
+  return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+
+function priceClass(p, prev){
+  if (prev == null) return 'flat';
+  if (p > prev) return 'up';
+  if (p < prev) return 'down';
+  return 'flat';
+}
+function signed(n, suffix){
+  const s = n > 0 ? '+' : (n < 0 ? '' : '');
+  return s + n.toFixed(2) + (suffix || '');
+}
+
+function render(){
+  const qs = $('#qscreen');
+  const mk = MARKETS[S.market];
+  const dev = DEVICES[S.device];
+  const card = $('#qcard');
+  const outerW = dev.w + 12;
+  if (card) card.style.width = outerW + 'px';
+  const bar = $('#devbar');
+  if (bar) bar.style.width = outerW + 'px';
+  const meta = $('#meta2');
+  if (meta) meta.style.width = Math.min(outerW, 720) + 'px';
+  const lab = $('#devLabel');
+  if (lab) lab.textContent = '报价头部 · ' + S.device + ' / ' + dev.label + ' ' + dev.w;
+
+  if (S.loading) {
+    qs.innerHTML = `
+      <div class="qhead"><button class="back">‹</button><div class="hd"></div><span class="sp"></span></div>
+      <div class="skel-head"><i style="width:120px;height:14px;margin:0 auto 8px"></i><i style="width:150px;height:10px;margin:0 auto"></i></div>
+      <div class="skel-price"><i></i></div>`;
+    $('#qtime2').textContent = '--';
+    renderInspector();
+    return;
+  }
+
+  const suspended = S.status === 'suspended';
+  const isNew = S.mode === 'new';
+  let px, cg, pc, cls;
+
+  if (suspended) {
+    px = '--'; cg = '--'; pc = '--'; cls = 'flat';
+  } else if (isNew) {
+    px = S.price.toFixed(2); cg = '--'; pc = '--'; cls = 'flat';
+  } else {
+    const chg = S.price - S.prevClose;
+    const pct = chg / S.prevClose * 100;
+    px = S.price.toFixed(2);
+    cg = Math.abs(chg) < 0.005 ? '0.00' : signed(chg);
+    pc = Math.abs(chg) < 0.005 ? '0.00%' : signed(pct, '%');
+    cls = priceClass(S.price, S.prevClose);
+  }
+
+  qs.innerHTML = `
+    <div class="qhead" style="--k:${S.scale}">
+      <button class="back">‹</button>
+      <div class="hd">
+        <div class="l1"><b>${SAMPLES[S.market].name}</b><span class="code">${SAMPLES[S.market].code}</span></div>
+        <div class="l2"><i class="mk">${mk}</i><span class="st">${STATUS[S.status]}</span><span class="tm">${fmt(S.qtime)}</span></div>
+      </div>
+      <span class="sp"></span>
+    </div>
+    <div class="qpr" id="qpr" style="--k:${S.scale}">
+      <b class="px ${cls}">${px}</b>
+      <span class="cg ${cls}">${cg}</span>
+      <span class="pc ${cls}">${pc}</span>
+    </div>`;
+
+  $('#qtime2').textContent = fmt(S.qtime);
+  renderInspector();
+}
+
+function renderInspector(){
+  const px = document.querySelector('.px') ? document.querySelector('.px').textContent.trim() : '-';
+  const cg = document.querySelector('.cg') ? document.querySelector('.cg').textContent.trim() : '-';
+  const pc = document.querySelector('.pc') ? document.querySelector('.pc').textContent.trim() : '-';
+  $('#snapshot').innerHTML = `
+    <div>设备 <b>${DEVICES[S.device].label} ${DEVICES[S.device].w}</b></div>
+    <div>市场 <b>${MARKETS[S.market]}（${S.market}）</b></div>
+    <div>状态 <b>${STATUS[S.status]}</b></div>
+    <div>数据 <b>${S.mode}</b></div>
+    <div>字号 <b>${S.scale}×</b></div>
+    <div>价格 <b>${px}</b></div>
+    <div>涨跌 <b>${cg}</b></div>
+    <div>涨幅 <b>${pc}</b></div>
+    <div>闪 <b>${S.flashCount}</b></div>
+    <div>推送 <b>${S.pushes}</b></div>
+    <div>时钟偏移 <b>${S.deviceOffsetMin} 分</b></div>`;
+}
+
+function syncControls(){
+  document.querySelectorAll('#segDevice button').forEach(b => b.classList.toggle('on', b.dataset.device === S.device));
+  document.querySelectorAll('#segMarket button').forEach(b => b.classList.toggle('on', b.dataset.market === S.market));
+  document.querySelectorAll('#segStatus button').forEach(b => b.classList.toggle('on', b.dataset.status === S.status));
+  document.querySelectorAll('#segMode button').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
+  document.querySelectorAll('#segScale button').forEach(b => b.classList.toggle('on', +b.dataset.scale === S.scale));
+  $('#scaleLabel').textContent = '字号 ' + S.scale + '×';
+}
+
+/* ================= 行为 ================= */
+function setMarket(m){
+  S.market = m;
+  applyMode();
+  syncControls(); render();
+}
+function setStatus(v){
+  S.status = v;
+  syncControls(); render();
+}
+function setMode(m){
+  S.mode = m;
+  applyMode();
+  syncControls(); render();
+}
+function setScale(k){
+  S.scale = k;
+  syncControls(); render();
+}
+function setDevice(d){
+  S.device = d;
+  syncControls(); render();
+  log('切换设备：' + DEVICES[d].label + ' ' + DEVICES[d].w);
+}
+function setLoading(b){
+  S.loading = b;
+  render();
+}
+function setDeviceOffset(min){
+  S.deviceOffsetMin = min;
+  renderInspector();
+  log('设备时钟偏移改为 ' + min + ' 分钟');
+}
+
+function applyMode(){
+  const base = SAMPLES[S.market];
+  S.prevClose = base.prev;
+  if (S.mode === 'up') S.price = +(base.prev + 0.16).toFixed(2);
+  else if (S.mode === 'down') S.price = +(base.prev - 0.16).toFixed(2);
+  else if (S.mode === 'flat') S.price = base.prev;
+  else if (S.mode === 'new') S.price = 33.50;
+}
+
+function pushTick(){
+  const now = Date.now();
+  const flash = now - S.lastFlash >= 1000;
+  if (flash) { S.lastFlash = now; S.flashCount++; }
+
+  if (S.status !== 'suspended') S.price = +(S.price + 0.01).toFixed(2);
+  if (S.status === 'open') S.qtime = new Date(S.qtime.getTime() + 1000);
+  S.pushes++;
+
+  render();
+  if (flash) {
+    const el = $('#qpr');
+    if (el) {
+      el.classList.add('flash');
+      setTimeout(() => el.classList.remove('flash'), 420);
+    }
+  }
+  log('推送 +0.01 · 价格 ' + S.price.toFixed(2) + (flash ? ' · 闪烁' : ' · 抑制闪烁'));
+  return flash;
+}
+
+function resetBench(){
+  S.device = 'sm';
+  S.market = 'SH'; S.status = 'closed'; S.mode = 'up'; S.scale = 1;
+  S.loading = false; S.prevClose = 24.16; S.price = 24.32;
+  S.qtime = new Date(2026, 9, 19, 15, 3, 3);
+  S.deviceOffsetMin = 0; S.flashCount = 0; S.lastFlash = 0; S.pushes = 0;
+  syncControls(); render();
+}
+
+/* ================= 事件 ================= */
+document.querySelectorAll('#segDevice button').forEach(b =>
+  b.addEventListener('click', () => setDevice(b.dataset.device)));
+document.querySelectorAll('#segMarket button').forEach(b =>
+  b.addEventListener('click', () => setMarket(b.dataset.market)));
+document.querySelectorAll('#segStatus button').forEach(b =>
+  b.addEventListener('click', () => setStatus(b.dataset.status)));
+document.querySelectorAll('#segMode button').forEach(b =>
+  b.addEventListener('click', () => setMode(b.dataset.mode)));
+document.querySelectorAll('#segScale button').forEach(b =>
+  b.addEventListener('click', () => setScale(+b.dataset.scale)));
+
+$('#btnPush').addEventListener('click', pushTick);
+$('#btnPush3').addEventListener('click', () => { pushTick(); pushTick(); pushTick(); });
+$('#btnLoad').addEventListener('click', () => { setLoading(!S.loading); log(S.loading ? '进入加载态' : '退出加载态'); });
+$('#btnClock').addEventListener('click', () => setDeviceOffset(S.deviceOffsetMin === 120 ? 0 : 120));
+$('#btnReset').addEventListener('click', () => { resetBench(); log('已重置'); });
+
+setInterval(() => {
+  const el = $('#devclock');
+  if (el) el.textContent = devClock();
+}, 500);
+
+/* ================= 用例 ================= */
+const CASES = [];
+function def(id, name, fn){ CASES.push({ id, name, fn, status:'idle', msg:'' }); }
+function assert(cond, msg){ if (!cond) throw new Error(msg); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function q(sel){ const e = document.querySelector(sel); if (!e) throw new Error('找不到元素 ' + sel); return e; }
+function txt(sel){ return q(sel).textContent.trim(); }
+function color(sel){ return getComputedStyle(q(sel)).color; }
+function tmText(){ return txt('.tm'); }
+
+def('C01', '六种状态的文案', async () => {
+  resetBench();
+  for (const k in STATUS) {
+    setStatus(k);
+    assert(txt('.st') === STATUS[k], '状态 ' + k + ' 文案错误：' + txt('.st'));
+  }
+});
+
+def('C02', '行情时间格式 MM-DD HH:mm:ss', async () => {
+  resetBench();
+  assert(/^\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(tmText()), '时间格式错误：' + tmText());
+});
+
+def('C03', '时间取行情快照，不随设备时钟', async () => {
+  resetBench();
+  const before = tmText();
+  setDeviceOffset(120);
+  await sleep(20);
+  assert(tmText() === before, '设备时钟偏移后报价时间不应变化');
+  setDeviceOffset(0);
+});
+
+def('C04', '收盘后推送不推进行情时间', async () => {
+  resetBench();
+  setStatus('closed');
+  const before = tmText();
+  pushTick();
+  assert(tmText() === before, '收盘后时间应冻结：' + before + ' → ' + tmText());
+});
+
+def('C05', '交易中推送推进 1 秒', async () => {
+  resetBench();
+  setStatus('open');
+  const before = tmText();
+  pushTick();
+  assert(tmText() !== before, '交易中推送应推进行情时间');
+});
+
+def('C06', '停牌：价格类全部 -- 且中性色', async () => {
+  resetBench();
+  setStatus('suspended');
+  assert(txt('.px') === '--' && txt('.cg') === '--' && txt('.pc') === '--', '停牌应全部 --');
+  assert(color('.px') === COLORS.flat, '停牌价格应为中性灰，实际 ' + color('.px'));
+});
+
+def('C07', '平盘：0.00 不带符号且中性色', async () => {
+  resetBench();
+  setStatus('closed');
+  setMode('flat');
+  assert(txt('.cg') === '0.00', '涨跌应为 0.00，实际 ' + txt('.cg'));
+  assert(txt('.pc') === '0.00%', '涨跌幅应为 0.00%，实际 ' + txt('.pc'));
+  assert(color('.px') === COLORS.flat, '平盘应为中性灰');
+});
+
+def('C08', '上涨用红', async () => {
+  resetBench();
+  setMode('up');
+  assert(color('.px') === COLORS.up, '上涨颜色应为红，实际 ' + color('.px'));
+  assert(color('.cg') === COLORS.up, '涨跌颜色应为红');
+});
+
+def('C09', '下跌用绿', async () => {
+  resetBench();
+  setMode('down');
+  assert(color('.px') === COLORS.down, '下跌颜色应为绿，实际 ' + color('.px'));
+  assert(color('.pc') === COLORS.down, '涨跌幅颜色应为绿');
+});
+
+def('C10', '市场标签：沪 / 深 / 北', async () => {
+  resetBench();
+  setMarket('SH'); assert(txt('.mk') === '沪', 'SH 应显示沪');
+  setMarket('SZ'); assert(txt('.mk') === '深', 'SZ 应显示深');
+  setMarket('BJ'); assert(txt('.mk') === '北', 'BJ 应显示北');
+});
+
+def('C11', '涨跌与价格自洽', async () => {
+  resetBench();
+  setMode('up');
+  const price = parseFloat(txt('.px'));
+  const chg = parseFloat(txt('.cg'));
+  const pct = parseFloat(txt('.pc'));
+  const prev = S.prevClose;
+  assert(Math.abs(chg - (price - prev)) < 0.011, '涨跌与价格不一致：' + chg + ' vs ' + (price - prev).toFixed(2));
+  assert(Math.abs(pct - chg / prev * 100) < 0.05, '涨跌幅与涨跌不一致：' + pct);
+});
+
+def('C12', '1 秒内两次推送只闪一次', async () => {
+  resetBench();
+  pushTick();
+  assert(S.flashCount === 1, '首次推送应闪烁');
+  pushTick();
+  assert(S.flashCount === 1, '1 秒内不应再次闪烁，实际 ' + S.flashCount);
+});
+
+def('C13', '1 秒后可再次闪烁', async () => {
+  resetBench();
+  pushTick();
+  assert(S.flashCount === 1, '首次应闪烁');
+  await sleep(1060);
+  pushTick();
+  assert(S.flashCount === 2, '1 秒后应重新闪烁，实际 ' + S.flashCount);
+});
+
+def('C14', '新股：涨跌 --，价格正常', async () => {
+  resetBench();
+  setMode('new');
+  assert(txt('.px') === '33.50', '价格应正常显示，实际 ' + txt('.px'));
+  assert(txt('.cg') === '--' && txt('.pc') === '--', '新股涨跌应为 --');
+});
+
+def('C15', '1.45× 下四种设备均不溢出', async () => {
+  resetBench();
+  for (const d of Object.keys(DEVICES)) {
+    setDevice(d);
+    setScale(1.45);
+    const pr = q('.qpr'), l2 = q('.l2');
+    assert(pr.scrollWidth <= pr.clientWidth + 1, DEVICES[d].label + ' 价格行溢出：' + pr.scrollWidth + ' > ' + pr.clientWidth);
+    assert(l2.scrollWidth <= l2.clientWidth + 1, DEVICES[d].label + ' 状态行溢出：' + l2.scrollWidth + ' > ' + l2.clientWidth);
+  }
+});
+
+def('C16', '加载态显示骨架，不出现数值', async () => {
+  resetBench();
+  setLoading(true);
+  assert(!!document.querySelector('.skel-head'), '加载态应显示骨架');
+  const t = q('#qscreen').textContent;
+  assert(!/0\.00|--/.test(t), '加载态不应出现 0.00 或 --');
+});
+
+def('C17', '切换设备保持数据状态', async () => {
+  resetBench();
+  setMarket('SZ'); setMode('down');
+  const price = txt('.px');
+  setDevice('xl');
+  assert(txt('.px') === price, '切换设备不应改变价格');
+  assert(S.market === 'SZ' && S.mode === 'down', '切换设备不应改变市场或数据形态');
+  setDevice('sm');
+  assert(txt('.px') === price, '来回切换后价格应不变');
+});
+
+/* ================= 用例面板 ================= */
+function renderTests(){
+  const wrap = $('#tests');
+  wrap.innerHTML = CASES.map((c, i) => `
+    <div class="cas ${c.status === 'run' ? 'run' : c.status}" data-case="${i}">
+      <span class="cid">${c.id}</span>
+      <span class="cn" title="${c.name}">${c.name}</span>
+      <span class="stt">${c.status === 'pass' ? '通过' : c.status === 'fail' ? '失败' : c.status === 'run' ? '运行中' : '待运行'}</span>
+      ${c.msg ? '<div class="msg">' + c.msg + '</div>' : ''}
+    </div>`).join('');
+  const pass = CASES.filter(c => c.status === 'pass').length;
+  const fail = CASES.filter(c => c.status === 'fail').length;
+  $('#summary').textContent = CASES.length + ' 条 · 通过 ' + pass + ' / 失败 ' + fail;
+  wrap.querySelectorAll('.cas').forEach(el => el.addEventListener('click', () => runOne(+el.dataset.case)));
+}
+
+async function runOne(i){
+  const c = CASES[i];
+  c.status = 'run'; c.msg = '';
+  renderTests();
+  try { await c.fn(); c.status = 'pass'; }
+  catch (e) { c.status = 'fail'; c.msg = e.message; log('用例失败 ' + c.id + '：' + e.message); }
+  renderTests();
+}
+
+let running = false;
+async function runAll(){
+  if (running) return;
+  running = true;
+  $('#runState').textContent = '运行中…';
+  CASES.forEach(c => { c.status = 'idle'; c.msg = ''; });
+  renderTests();
+  for (let i = 0; i < CASES.length; i++) await runOne(i);
+  running = false;
+  $('#runState').textContent = '完成';
+  const fail = CASES.filter(c => c.status === 'fail').length;
+  log(fail ? '全部完成，失败 ' + fail + ' 条' : '全部通过');
+}
+
+$('#runAll').addEventListener('click', runAll);
+$('#runReset').addEventListener('click', () => {
+  CASES.forEach(c => { c.status = 'idle'; c.msg = ''; });
+  resetBench(); renderTests(); log('用例与场景已重置');
+});
+
+/* ================= 启动 ================= */
+resetBench();
+renderTests();
+log('验证台就绪：先点「运行全部」，或用左侧控件切换状态');
+</script>
+</body>
+</html>

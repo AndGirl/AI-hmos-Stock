@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<!--
+  FR-02 自选列表 · 交互验证页（验证件，不计入需求文档）
+  ------------------------------------------------------------------
+  用途：在浏览器中验证 FR-02 的列集、断点、状态矩阵、刷新粒度与交互。
+  数据：全部为自定义 Mock 数据，不接任何接口。
+  说明：本文件是验证工具，不是设计交付物，未复刻系统状态栏图标与 HMSymbol。
+  自测：宽度 sm/md/lg、页面状态、推送刷新、排序、分组、行点击。
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FR-02 自选列表 · 验证页</title>
+<style>
+  :root{
+    /* ---- color ---- */
+    --brand:#E84026;
+    --brand-soft:rgba(232,64,38,.10);
+    --up:#E84026;
+    --down:#0A9E5C;
+    --flat:#6B6B70;
+    --canvas:#E9EBEF;
+    --surface:#FFFFFF;
+    --text-1:#181818;
+    --text-2:#8A8A8E;
+    --text-3:#B0B0B6;
+    --line:#F1F1F3;
+    --line-strong:#E4E6EA;
+    --tag-fin-bg:#F3EEFF; --tag-fin-fg:#6F45E0;
+    --tag-star-bg:#FFF3E2; --tag-star-fg:#C9791A;
+    --tag-stop-bg:#F2F3F5; --tag-stop-fg:#6B6B70;
+    /* ---- space / radius ---- */
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px;
+    --r-s:8px; --r-m:12px; --r-l:16px; --r-pill:999px;
+    /* ---- type ---- */
+    --font-family:"HarmonyOS Sans SC","HarmonyOS Sans","PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    --fs-title:24px; --fs-h2:15px; --fs-body:16px; --fs-sub:13px; --fs-cap:11px; --fs-micro:10px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--canvas);color:var(--text-1);
+    font-family:var(--font-family);font-size:var(--fs-body);
+  }
+  button{font:inherit;color:inherit;cursor:pointer}
+
+  /* ================= layout ================= */
+  .app{display:grid;grid-template-columns:330px minmax(0,1fr);height:100vh}
+  .panel{background:#fff;border-right:1px solid var(--line-strong);padding:18px 16px 28px;overflow:auto}
+  .panel .kicker{font-size:11px;letter-spacing:.06em;color:var(--text-2);text-transform:uppercase}
+  .panel h1{font-size:18px;margin:6px 0 4px;font-weight:650;letter-spacing:-.01em}
+  .panel .desc{font-size:12px;line-height:1.6;color:var(--text-2);margin:0 0 4px}
+  .badge-note{display:inline-block;margin-top:8px;font-size:11px;color:#8A5A00;background:#FFF7E6;border:1px solid #F5E3BE;border-radius:6px;padding:3px 7px}
+  .sec{margin-top:18px}
+  .sec > h2{font-size:11px;letter-spacing:.06em;color:var(--text-2);font-weight:600;margin:0 0 8px;text-transform:uppercase}
+  .btns{display:flex;flex-wrap:wrap;gap:6px}
+  .btn{font-size:12px;padding:6px 11px;border-radius:var(--r-s);border:1px solid var(--line-strong);background:#fff;color:#3A3A3E;transition:background .15s,border-color .15s,color .15s}
+  .btn:hover{background:#F6F7F9}
+  .btn.on{background:var(--brand-soft);border-color:#F3B3A8;color:#C6341C;font-weight:600}
+  .btn.ghost{color:var(--text-2)}
+  .hint{font-size:11px;color:var(--text-3);margin-top:6px;line-height:1.5}
+  .stat{display:flex;justify-content:space-between;font-size:12px;color:#5A5A60;padding:6px 0;border-bottom:1px dashed var(--line)}
+  .stat b{font-variant-numeric:tabular-nums;color:var(--text-1);font-weight:600}
+  .checklist{margin-top:6px;display:flex;flex-direction:column;gap:2px}
+  .check{display:flex;gap:8px;align-items:flex-start;font-size:12px;line-height:1.45;color:#4A4A50;padding:5px 0;border-bottom:1px dashed var(--line);cursor:pointer}
+  .check input{margin:2px 0 0;accent-color:var(--brand)}
+  .check.done{color:var(--text-3);text-decoration:line-through}
+  .progress{font-size:11px;color:var(--text-2);margin-top:8px}
+
+  /* ================= stage / device ================= */
+  .stage{display:flex;align-items:center;justify-content:center;padding:28px;overflow:auto;
+    background:radial-gradient(120% 120% at 50% 0%,#F5F7FA 0%,#E4E7EC 100%)}
+  .device{background:#0E0F12;border-radius:42px;padding:10px;
+    box-shadow:0 30px 80px rgba(16,24,40,.24),0 0 0 1px rgba(255,255,255,.35) inset;
+    transition:width .25s ease,height .25s ease}
+  .screen{position:relative;width:100%;height:100%;background:var(--surface);border-radius:34px;
+    overflow:hidden;display:flex;flex-direction:column}
+
+  /* ================= shell ================= */
+  .statusbar{height:26px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 20px;font-size:11px;font-weight:600;color:#141414;flex:0 0 auto}
+  .statusbar .right{display:flex;gap:8px;align-items:center;color:#141414;font-weight:600}
+  .titlebar{padding:6px 16px 8px;font-size:var(--fs-title);font-weight:700;letter-spacing:-.02em;flex:0 0 auto}
+
+  .indexrow{display:flex;gap:10px;padding:0 16px 10px;flex:0 0 auto;align-items:stretch}
+  .indexbar{display:flex;gap:10px;overflow-x:auto;flex:1;min-width:0}
+  .indexbar::-webkit-scrollbar{display:none}
+  .idx{min-width:68px}
+  .idx .n{font-size:var(--fs-cap);color:var(--text-2);white-space:nowrap}
+  .idx .v{font-size:15px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.3}
+  .idx .d{font-size:var(--fs-micro);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .promo{flex:0 0 92px;padding:5px 9px;border-radius:10px;display:flex;flex-direction:column;justify-content:center;
+    background:linear-gradient(160deg,#FFF1EF,#FFE7E3)}
+  .promo .t{font-size:12px;font-weight:650;color:#C6341C;display:flex;align-items:center;gap:2px;white-space:nowrap}
+  .promo .s{font-size:10px;color:#C6341C;opacity:.85;line-height:1.35;margin-top:2px}
+
+  /* ================= split (lg) ================= */
+  .split{flex:1;min-height:0;display:flex}
+  .pane-left{flex:1;min-width:0;display:flex;flex-direction:column}
+  .pane-right{display:none;flex:0 0 42%;border-left:1px solid var(--line);padding:18px 18px 24px;overflow:auto}
+  .screen[data-width="lg"] .pane-right{display:block}
+
+  /* ================= group bar ================= */
+  .groupbar{display:flex;align-items:center;gap:16px;padding:0 16px;
+    border-bottom:1px solid var(--line);flex:0 0 auto}
+  .gtab{font-size:var(--fs-h2);color:#5A5A60;padding:7px 0 9px;position:relative;cursor:pointer;white-space:nowrap}
+  .gtab.on{color:var(--brand);font-weight:650}
+  .gtab.on::after{content:"";position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+    width:20px;height:3px;border-radius:2px;background:var(--brand)}
+  .groupbar .spacer{flex:1}
+  .iconbtn{width:28px;height:28px;display:grid;place-items:center;border-radius:8px;color:#3A3A3E;background:transparent;border:0}
+  .iconbtn:hover{background:#F4F5F7}
+
+  /* ================= table · 11 列 + 横向滑动 + 名称列冻结 ================= */
+  .table-wrap{flex:1;min-height:0;position:relative;display:flex;flex-direction:column}
+  .table-fade{position:absolute;top:0;right:0;width:22px;height:100%;pointer-events:none;z-index:7;
+    background:linear-gradient(to right,rgba(255,255,255,0),#fff 88%)}
+  .table-scroll{
+    --cols:minmax(calc(112px * var(--fs-scale)),1fr) calc(76px * var(--fs-scale)) calc(70px * var(--fs-scale))
+      calc(78px * var(--fs-scale)) calc(82px * var(--fs-scale)) calc(68px * var(--fs-scale))
+      calc(78px * var(--fs-scale)) calc(66px * var(--fs-scale)) calc(66px * var(--fs-scale))
+      calc(70px * var(--fs-scale)) calc(68px * var(--fs-scale));
+    flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;position:relative
+  }
+  .table-scroll::-webkit-scrollbar{height:6px;width:6px}
+  .table-scroll::-webkit-scrollbar-thumb{background:#D8DBE0;border-radius:3px}
+  .table-scroll::-webkit-scrollbar-track{background:transparent}
+
+  .thead,.row{display:grid;grid-template-columns:var(--cols);width:max-content;min-width:100%}
+  .thead{position:sticky;top:0;z-index:4;background:#fff;border-bottom:1px solid var(--line);
+    font-size:var(--fs-cap);color:var(--text-2);padding:7px 12px 7px 0;align-items:center}
+  .thead .h{text-align:right;user-select:none;cursor:pointer;white-space:nowrap;padding-left:8px}
+  .thead .h:first-child{text-align:left;cursor:default;padding-left:16px;
+    position:sticky;left:0;z-index:6;background:#fff}
+  .thead .h.sorted{color:var(--brand);font-weight:600}
+  .thead .h .arrow{font-size:9px;margin-left:2px}
+
+  .row{align-items:center;padding:9px 12px 9px 0;border-bottom:1px solid #F7F7F9;
+    cursor:pointer;background:#fff;transition:background .15s}
+  .row:hover{background:#FAFAFB}
+  .row.sel{background:#FFF7F5}
+  .row.flash-up{animation:flashUp .5s ease-out}
+  .row.flash-down{animation:flashDown .5s ease-out}
+  @keyframes flashUp{0%{background:#FCE7E2}100%{background:transparent}}
+  @keyframes flashDown{0%{background:#E2F5EA}100%{background:transparent}}
+
+  .namecell{display:flex;flex-direction:column;gap:3px;min-width:0;padding-left:16px;
+    position:sticky;left:0;z-index:2;background:#fff;align-self:stretch;justify-content:center;
+    transition:background .15s}
+  .row:hover .namecell{background:#FAFAFB}
+  .row.sel .namecell{background:#FFF7F5;box-shadow:inset 3px 0 0 var(--brand)}
+  .nm{font-size:var(--fs-body);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .meta{display:flex;align-items:center;gap:4px;font-size:var(--fs-cap);color:#A0A0A6;
+    font-variant-numeric:tabular-nums}
+  .tag{font-size:9px;line-height:14px;padding:0 4px;border-radius:3px;font-weight:500}
+  .tag.fin{background:var(--tag-fin-bg);color:var(--tag-fin-fg)}
+  .tag.star{background:var(--tag-star-bg);color:var(--tag-star-fg)}
+  .tag.stop{background:var(--tag-stop-bg);color:var(--tag-stop-fg)}
+
+  .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:8px}
+  .num.price{font-size:15px;color:var(--text-1);font-weight:500}
+  .num.chg,.num.pct{font-size:15px;font-weight:500}
+  .num.vol,.num.amt,.num.last,.num.amp,.num.turn,.num.pe,.num.pb{font-size:13px;color:#4A4A50}
+  .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--flat)}
+  .dim{color:var(--text-3)}
+  .row.is-suspended{opacity:.55}
+  .row.is-suspended .num{color:var(--text-3)}
+
+  /* ===== C10 断线：冻结 + 置灰 + 顶部条 ===== */
+  .conn-offline .row, .conn-offline .card{opacity:.55}
+
+  /* ===== CC-6 字号缩放：列宽与字号同比例放大 ===== */
+  .screen{--fs-scale:1}
+  .row .nm{font-size:calc(16px * var(--fs-scale))}
+  .row .meta{font-size:calc(11px * var(--fs-scale))}
+  .row .num.vol,.row .num.amt,.row .num.last,.row .num.amp,.row .num.turn,.row .num.pe,.row .num.pb{font-size:calc(13px * var(--fs-scale))}
+  .row .num.price,.row .num.chg,.row .num.pct{font-size:calc(15px * var(--fs-scale))}
+  .thead{font-size:calc(11px * var(--fs-scale))}
+
+  /* ===== CC-7 连接状态：单例 banner ===== */
+  .offline.strong{background:#FFF1EF;color:#C6341C}
+
+  .addwrap{flex:0 0 auto;padding:14px 16px 10px;display:flex;justify-content:center}
+  .btn-add{width:72%;height:38px;border-radius:var(--r-pill);border:1px solid #ECECEF;
+    background:#fff;color:var(--text-3);font-size:14px}
+  .btn-add:hover{background:#FAFAFB;color:var(--text-2)}
+
+  /* ================= states ================= */
+  .offline{display:none;align-items:center;gap:6px;padding:7px 16px;background:#FFF7E6;
+    color:#A96400;font-size:12px;flex:0 0 auto}
+  .offline.show{display:flex}
+  .latebadge{display:none;margin-left:auto;font-size:10px;color:#A96400;background:#FFF3DB;
+    border-radius:4px;padding:1px 5px}
+  .screen[data-late="1"] .latebadge{display:inline-block}
+
+  .skeleton{padding:0 16px;flex:1;overflow:hidden}
+  .sk-row{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #F7F7F9}
+  .sk{border-radius:6px;background:linear-gradient(90deg,#F3F4F6 25%,#E9EBEF 37%,#F3F4F6 63%);
+    background-size:400% 100%;animation:shimmer 1.3s infinite}
+  @keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+
+  .state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:40px 32px;text-align:center;gap:6px}
+  .state .art{width:64px;height:64px;border-radius:20px;background:#F4F5F7;margin-bottom:10px}
+  .state .t{font-size:15px;font-weight:600}
+  .state .d{font-size:12px;color:var(--text-2);line-height:1.6}
+  .state .btn{margin-top:14px;padding:8px 18px;border-radius:var(--r-pill)}
+
+  /* ================= bottom tab ================= */
+  .tabbar{flex:0 0 auto;height:62px;display:grid;grid-template-columns:repeat(4,1fr);
+    border-top:1px solid var(--line);background:rgba(255,255,255,.94);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+  .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    font-size:10px;color:#8A8A8E;background:none;border:0}
+  .tab.on{color:var(--brand);font-weight:650}
+  .tab svg{display:block}
+
+  /* ================= toast ================= */
+  .toast{position:absolute;left:50%;bottom:78px;transform:translate(-50%,8px);
+    background:rgba(20,20,22,.9);color:#fff;font-size:12px;padding:8px 14px;border-radius:var(--r-pill);
+    opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:80%;text-align:center}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  /* ================= right pane ================= */
+  .pane-right .ph{font-size:11px;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase}
+  .pane-right .dt{font-size:22px;font-weight:700;margin-top:10px}
+  .pane-right .dc{font-size:12px;color:var(--text-2);margin-top:2px;font-variant-numeric:tabular-nums}
+  .pane-right .dprice{font-size:34px;font-weight:700;margin:14px 0 2px;font-variant-numeric:tabular-nums}
+  .pane-right .dchg{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+  .pane-right .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 16px;margin-top:18px;
+    padding-top:16px;border-top:1px solid var(--line)}
+  .pane-right .grid div{display:flex;justify-content:space-between;font-size:12px;color:var(--text-2)}
+  .pane-right .grid b{color:var(--text-1);font-weight:600;font-variant-numeric:tabular-nums}
+  .pane-right .tip{margin-top:22px;font-size:11px;color:var(--text-3);line-height:1.6;
+    background:#FAFAFB;border:1px dashed var(--line-strong);border-radius:10px;padding:10px 12px}
+
+  @media (max-width:900px){
+    .app{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+    .panel{border-right:0;border-bottom:1px solid var(--line-strong);max-height:40vh}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ================= 控制面板 ================= -->
+  <aside class="panel">
+    <div class="kicker">FR-02 · Validation</div>
+    <h1>自选列表验证页</h1>
+    <p class="desc">验证 FR-02 的列集、断点、状态矩阵、刷新粒度与交互。数据全为 Mock。</p>
+    <span class="badge-note">验证件，不计入需求文档</span>
+
+    <section class="sec">
+      <h2>视图宽度 · FR-02.10</h2>
+      <div class="btns" id="widthBtns">
+        <button class="btn on" data-width="sm">sm 直板 375</button>
+        <button class="btn" data-width="md">md 折叠 700</button>
+        <button class="btn" data-width="lg">lg 平板 1000</button>
+        <button class="btn" data-width="xl">xl 2in1 1180</button>
+      </div>
+      <div class="hint">全列 11 列 · 数字列定宽、名称列吸收富余 · 不足则横向滑动 · 名称列冻结</div>
+    </section>
+
+    <section class="sec">
+      <h2>页面状态 · FR-02.9</h2>
+      <div class="btns" id="stateBtns">
+        <button class="btn on" data-state="normal">正常</button>
+        <button class="btn" data-state="skeleton">骨架</button>
+        <button class="btn" data-state="empty">空态</button>
+        <button class="btn" data-state="error">错误</button>
+      </div>
+      <div class="hint">断线与延迟已归入「连接状态」（CC-7）</div>
+    </section>
+
+    <section class="sec">
+      <h2>连接状态 · CC-7</h2>
+      <div class="btns" id="connBtns">
+        <button class="btn on" data-conn="online">在线</button>
+        <button class="btn" data-conn="weak">弱网</button>
+        <button class="btn" data-conn="offline">断线</button>
+        <button class="btn" data-conn="delayed">延迟</button>
+      </div>
+      <div class="hint">全局单例 banner；延迟以角标挂在「涨跌幅」列头</div>
+    </section>
+
+    <section class="sec">
+      <h2>字号 · CC-6</h2>
+      <div class="btns" id="fsBtns">
+        <button class="btn on" data-fs="1">1.0×</button>
+        <button class="btn" data-fs="1.3">1.3×</button>
+        <button class="btn" data-fs="1.45">1.45×</button>
+      </div>
+      <div class="hint">列宽与字号同比例放大，出现横滑属预期</div>
+    </section>
+
+    <section class="sec">
+      <h2>刷新模拟 · FR-02.7</h2>
+      <div class="btns" id="pushBtns">
+        <button class="btn on" data-push="1">推送开</button>
+        <button class="btn" data-push="0">推送关</button>
+      </div>
+      <div class="hint">1s 节流，仅更新变动行并高亮 300ms</div>
+    </section>
+
+    <section class="sec">
+      <h2>数据量与排序</h2>
+      <div class="btns" id="countBtns">
+        <button class="btn on" data-count="12">12 行</button>
+        <button class="btn" data-count="50">50 行</button>
+        <button class="btn" data-count="200">200 行（压测）</button>
+      </div>
+      <div class="btns" style="margin-top:6px" id="sortBtns">
+        <button class="btn on" data-sort="">默认序</button>
+        <button class="btn" data-sort="pct">按涨幅</button>
+        <button class="btn" data-sort="price">按价格</button>
+      </div>
+      <div class="hint">也可直接点表头列排序（升/降切换）</div>
+    </section>
+
+    <section class="sec">
+      <h2>实时指标</h2>
+      <div class="stat"><span>当前行数</span><b id="stRows">0</b></div>
+      <div class="stat"><span>分组</span><b id="stGroup">全部</b></div>
+      <div class="stat"><span>指数条</span><b id="stIndex">0 个</b></div>
+      <div class="stat"><span>刷新批次</span><b id="stTick">0</b></div>
+      <div class="stat"><span>本批更新行</span><b id="stUpdated">0</b></div>
+      <div class="hint" id="tickInfo">等待推送…</div>
+    </section>
+
+    <section class="sec">
+      <h2>验收清单（手工勾选）</h2>
+      <div class="checklist" id="checklist"></div>
+      <div class="progress" id="progress">0 / 10</div>
+    </section>
+  </aside>
+
+  <!-- ================= 设备舞台 ================= -->
+  <main class="stage">
+    <div class="device" id="device" style="width:375px;height:780px">
+      <div class="screen" id="screen" data-width="sm" data-state="normal" data-late="0">
+
+        <div class="statusbar">
+          <span>09:41</span>
+          <span class="right"><span>5G</span><span>86%</span></span>
+        </div>
+
+        <div class="titlebar">自选股</div>
+
+        <div class="indexrow">
+          <div class="indexbar" id="indexbar"></div>
+          <div class="promo">
+            <div class="t">券某某股 ›</div>
+            <div class="s">本期这些股票最被看好</div>
+          </div>
+        </div>
+
+        <div class="offline" id="offlineBar">⚠︎ 行情连接中… 数据可能延迟</div>
+
+        <div class="split">
+          <div class="pane-left">
+            <div class="groupbar">
+              <div class="gtab on" data-group="all">全部</div>
+              <div class="gtab" data-group="fin">融资融券</div>
+              <div class="gtab" data-group="star">创业板</div>
+              <div class="spacer"></div>
+              <button class="iconbtn" title="切换卡片视图（FR-03 未实现）" aria-label="切换卡片视图">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <rect x="3.5" y="6.5" width="12" height="12" rx="2.5"/><path d="M8.5 6.5V5a1.5 1.5 0 0 1 1.5-1.5h9A1.5 1.5 0 0 1 20.5 5v9a1.5 1.5 0 0 1-1.5 1.5h-1.5"/>
+                </svg>
+              </button>
+              <button class="iconbtn" title="排序与列设置（含义待确认）" aria-label="排序与列设置">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M4 7h16M4 12h16M4 17h16"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="table-wrap" id="tableWrap">
+              <div class="table-scroll" id="tableScroll">
+                <div class="thead" id="listhead"></div>
+                <div class="tbody" id="list"></div>
+              </div>
+              <div class="table-fade" aria-hidden="true"></div>
+            </div>
+            <div class="skeleton" id="skeleton" style="display:none"></div>
+            <div class="state" id="emptyState" style="display:none">
+              <div class="art"></div>
+              <div class="t">还没有自选股</div>
+              <div class="d">添加关注的股票，随时查看行情</div>
+              <button class="btn" onclick="toast('进入添加自选流程（FR-04 未实现）')">添加自选</button>
+            </div>
+            <div class="state" id="errorState" style="display:none">
+              <div class="art"></div>
+              <div class="t">加载失败</div>
+              <div class="d">网络异常，请稍后重试</div>
+              <button class="btn" onclick="setState('normal')">重新加载</button>
+            </div>
+
+            <div class="addwrap" id="addwrap">
+              <button class="btn-add" onclick="toast('进入添加自选流程（FR-04 未实现）')">添加自选</button>
+            </div>
+          </div>
+
+          <aside class="pane-right" id="paneRight">
+            <div class="ph">详情占位 · FR-06 未实现</div>
+            <div id="rightBody">
+              <div class="dt">请选择股票</div>
+              <div class="dc">点击左侧列表任意一行</div>
+              <div class="tip">此区域用于验证 lg 断点下「列表-详情联动」：点击行只切换右栏内容，不发生页面跳转。</div>
+            </div>
+          </aside>
+        </div>
+
+        <nav class="tabbar">
+          <button class="tab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg>首页</button>
+          <button class="tab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>最新资讯</button>
+          <button class="tab on"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 4.5h13a1 1 0 0 1 1 1V21l-7.5-4L4 21V5.5a1 1 0 0 1 1-1Z"/><path d="M9.5 9.5h5"/></svg>自选</button>
+          <button class="tab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19h16"/><path d="M7 16V9M12 16V5M17 16v-4"/></svg>行情</button>
+        </nav>
+
+        <div class="toast" id="toast"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------- 自定义 Mock 数据 ---------------- */
+  const SEED = [
+    { name: "某某科技", code: "60**39", tags: ["fin"],  price: 9.04,    change: 0.04,  vol: 310511, lastVol: 1232, amt: 12.5e8, amplitude: 2.84, turnover: 0.39, pe: 18.42,  pb: 2.41 },
+    { name: "某某地产", code: "60**19", tags: ["fin"],  price: 1821.04, change: 3.04,  vol: 30176,  lastVol: 550,  amt: 15.5e8, amplitude: 4.12, turnover: 1.02, pe: 9.87,   pb: 1.35 },
+    { name: "某某药业", code: "30**89", tags: ["star"], price: 15.20,   change: -0.16, vol: 19593,  lastVol: 3461, amt: 13.5e8, amplitude: 3.55, turnover: 2.31, pe: 26.40,  pb: 3.02 },
+    { name: "某某科技", code: "60**99", tags: ["fin"],  price: 20.01,   change: 0.13,  vol: 7071,   lastVol: 4890, amt: 10.5e8, amplitude: 5.08, turnover: 3.12, pe: 41.06,  pb: 5.88 },
+    { name: "某某地产", code: "30**59", tags: ["star"], price: 24.32,   change: 0.25,  vol: 6953,   lastVol: 1321, amt: 19.9e8, amplitude: 2.16, turnover: 1.44, pe: 15.33,  pb: 1.92 },
+    { name: "某某银行", code: "60**28", tags: ["fin"],  price: 6.88,    change: 0,     vol: 120330, lastVol: 800,  amt: 8.2e8,  amplitude: 0.00, turnover: 0.21, pe: 5.12,   pb: 0.61 },
+    { name: "某某能源", code: "00**17", tags: ["fin"],  price: 12.36,   change: 0.42,  vol: 88210,  lastVol: 2100, amt: 10.9e8, amplitude: 4.66, turnover: 2.05, pe: 12.80,  pb: 1.74 },
+    { name: "某某医药", code: "68**03", tags: ["star"], price: 88.10,   change: -2.30, vol: 4302,   lastVol: 120,  amt: 3.8e8,  amplitude: 6.21, turnover: 1.87, pe: 55.40,  pb: 8.12 },
+    { name: "某某重工", code: "60**71", tags: ["fin"],  price: 5.42,    change: 0.11,  status: "suspended", vol: 0, lastVol: 0, amt: 0, amplitude: null, turnover: null, pe: null, pb: null },
+    { name: "某某芯片", code: "68**55", tags: ["star"], price: null,    change: null,  status: "noquote",  vol: 0, lastVol: 0, amt: 0, amplitude: null, turnover: null, pe: null, pb: null },
+    { name: "某某证券", code: "60**12", tags: ["fin"],  price: 14.05,   change: 0.68,  vol: 402918, lastVol: 5300, amt: 56.1e8, amplitude: 7.12, turnover: 6.55, pe: 33.18,  pb: 2.06 },
+    { name: "某某汽车", code: "00**66", tags: ["star"], price: 41.77,   change: -0.35, vol: 23140,  lastVol: 960,  amt: 9.6e8,  amplitude: 3.98, turnover: 2.77, pe: -12.45, pb: 4.33 }
+  ];
+
+  const WIDTHS = {
+    sm: { w: 375,  h: 780 },
+    md: { w: 700,  h: 860 },
+    lg: { w: 1000, h: 760 },
+    xl: { w: 1180, h: 760 }
+  };
+
+  const state = {
+    width: "sm",
+    view: "normal",
+    conn: "online",
+    fs: 1,
+    push: true,
+    count: 12,
+    sortKey: "",
+    sortDir: 1,
+    group: "all",
+    selected: null,
+    tick: 0,
+    updated: 0,
+    stocks: []
+  };
+
+  const el = (id) => document.getElementById(id);
+  const listEl = el("list");
+  const headEl = el("listhead");
+  const screenEl = el("screen");
+  const deviceEl = el("device");
+
+  let refs = new Map();     // code -> { row, price, chg, pct }
+  let pushTimer = null;
+  let toastTimer = null;
+
+  /* ---------------- 数据准备 ---------------- */
+  function buildData() {
+    const base = SEED.map((s, i) => {
+      const prevClose = s.price == null ? null : +(s.price - s.change).toFixed(2);
+      const pct = prevClose ? (s.change / prevClose) * 100 : null;
+      return { ...s, id: i, prevClose, pct, status: s.status || "" };
+    });
+    // 按需扩充行数（性能验证）
+    const out = base.slice();
+    let i = base.length;
+    while (out.length < state.count) {
+      const s = base[i % base.length];
+      const price = s.price == null ? null : +(s.price * (0.8 + (i % 9) / 20)).toFixed(2);
+      const change = price == null ? null : +((i % 2 ? 1 : -1) * (0.02 + (i % 7) * 0.03)).toFixed(2);
+      const prevClose = price == null ? null : +(price - change).toFixed(2);
+      out.push({
+        ...s,
+        id: i,
+        code: s.code.slice(0, 2) + String(30 + (i % 60)) + s.code.slice(4),
+        name: s.name + (i > 99 ? "·" + Math.floor(i / 10) : ""),
+        price, change, prevClose,
+        pct: prevClose ? (change / prevClose) * 100 : null,
+        vol: s.vol ? s.vol + i * 37 : 0,
+        lastVol: s.lastVol ? s.lastVol + (i % 50) : 0,
+        amt: s.amt ? s.amt + i * 1e6 : 0,
+        status: s.status,
+        id2: i
+      });
+      i++;
+    }
+    state.stocks = out;
+    /* CC-2 / D24：tags 只表板块状态，分组归属落到独立 groups 字段；INV-1 兜底 */
+    state.stocks.forEach((s) => {
+      const g = [];
+      if (s.tags.includes("fin")) g.push("fin");
+      if (s.tags.includes("star")) g.push("star");
+      if (!g.length) g.push("fin");
+      s.groups = g;
+    });
+  }
+
+  /* ---------------- 格式化 ---------------- */
+  const fmtPrice = (v) => (v == null ? "--" : v.toFixed(2));
+  const fmtSigned = (v, digits) => (v == null ? "--" : (v > 0 ? "+" : "") + v.toFixed(digits));
+  const fmtPct = (v) => (v == null ? "--" : (v > 0 ? "+" : "") + v.toFixed(2) + "%");
+  function fmtAmt(v) {
+    if (v == null || v === 0) return "--";
+    if (v >= 1e8) return (v / 1e8).toFixed(1) + "亿";
+    if (v >= 1e4) return (v / 1e4).toFixed(1) + "万";
+    return String(v);
+  }
+  const fmtVol = (v) => (v == null ? "--" : String(v));
+  const toneClass = (v) => (v == null || v === 0 ? "flat" : v > 0 ? "up" : "down");
+
+  /* ---------------- 指数条：随分组 Tab 联动（一一对应） ---------------- */
+  const INDEX_SETS = {
+    all: [
+      { n: "上证指数", v: "3088.10", d: "+19.8 +0.64%", t: "up" },
+      { n: "深证成指", v: "9412.55", d: "-32.6 -0.35%", t: "down" },
+      { n: "创业板指", v: "1842.30", d: "+12.4 +0.68%", t: "up" },
+      { n: "科创50",  v: "912.08",  d: "+5.1 +0.56%",  t: "up" }
+    ],
+    fin: [
+      { n: "沪深300", v: "3712.44", d: "+8.9 +0.24%",  t: "up" },
+      { n: "上证50",  v: "2641.02", d: "-3.2 -0.12%",  t: "down" },
+      { n: "中证500", v: "5420.77", d: "+21.0 +0.39%", t: "up" }
+    ],
+    star: [
+      { n: "创业板指",  v: "1842.30", d: "+12.4 +0.68%", t: "up" },
+      { n: "科创50",   v: "912.08",  d: "+5.1 +0.56%",  t: "up" },
+      { n: "中证1000", v: "6012.35", d: "-9.8 -0.16%",  t: "down" },
+      { n: "北证50",   v: "1024.66", d: "+7.7 +0.76%",  t: "up" }
+    ]
+  };
+
+  function renderIndexBar() {
+    const list = INDEX_SETS[state.group] || [];
+    el("indexbar").innerHTML = list
+      .map((i) => `<div class="idx" data-idx="${i.n}">
+          <div class="n">${i.n}</div>
+          <div class="v ${i.t}">${i.v}</div>
+          <div class="d ${i.t}">${i.d}</div>
+        </div>`)
+      .join("");
+    el("stIndex").textContent = list.length + " 个";
+  }
+
+  /* ---------------- 过滤 / 排序 ---------------- */
+  function visibleStocks() {
+    let arr = state.stocks.filter((s) => {
+      if (state.group === "all") return true;
+      return (s.groups || []).indexOf(state.group) >= 0;
+      return true;
+    });
+    if (state.sortKey) {
+      const k = state.sortKey;
+      arr = arr.slice().sort((a, b) => {
+        const av = a[k], bv = b[k];
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        return (av - bv) * state.sortDir;
+      });
+    }
+    return arr;
+  }
+
+  /* ---------------- 渲染 ---------------- */
+  const COLS = [
+    { key: "",          label: "股票名称" },
+    { key: "price",     label: "最新价" },
+    { key: "change",    label: "涨跌" },
+    { key: "pct",       label: "涨跌幅" },
+    { key: "vol",       label: "总量" },
+    { key: "lastVol",   label: "现量" },
+    { key: "amt",       label: "成交额" },
+    { key: "amplitude", label: "振幅" },
+    { key: "turnover",  label: "换手" },
+    { key: "pe",        label: "市盈率" },
+    { key: "pb",        label: "市净率" }
+  ];
+
+  function renderHead() {
+    headEl.innerHTML = COLS
+      .map((c) => {
+        const sorted = state.sortKey && state.sortKey === c.key;
+        const arrow = sorted ? (state.sortDir > 0 ? "↑" : "↓") : "";
+        const late = c.key === "pct" ? '<span class="latebadge">延迟</span>' : "";
+        return `<div class="h ${sorted ? "sorted" : ""}" data-key="${c.key}">${c.label}${arrow}${late}</div>`;
+      })
+      .join("");
+  }
+
+  function rowHTML(s) {
+    const dim = s.status === "suspended" || s.status === "noquote";
+    const priceTxt = s.status === "suspended" ? "--" : fmtPrice(s.price);
+    const chgTxt = s.status === "suspended" || s.status === "noquote" ? "--" : fmtSigned(s.change, 2);
+    const pctTxt = s.status === "suspended" || s.status === "noquote" ? "--" : fmtPct(s.pct);
+    const tags = s.tags.map((t) =>
+      t === "fin" ? '<span class="tag fin">融</span>' : '<span class="tag star">创</span>'
+    ).join("");
+    const stopTag = s.status === "suspended" ? '<span class="tag stop">停牌</span>' : "";
+    const newTag = s.status === "noquote" ? '<span class="tag stop">新股</span>' : "";
+    const stopped = s.status === "suspended" || s.status === "noquote";
+    const ampTxt = stopped || s.amplitude == null ? "--" : s.amplitude.toFixed(2) + "%";
+    const turnTxt = stopped || s.turnover == null ? "--" : s.turnover.toFixed(2) + "%";
+    const peTxt = stopped || s.pe == null ? "--" : s.pe < 0 ? "亏损" : s.pe.toFixed(2);
+    const pbTxt = stopped || s.pb == null ? "--" : s.pb.toFixed(2);
+    const aria = `${s.name}，代码${s.code}，最新价${priceTxt}，涨跌${chgTxt}，涨跌幅${pctTxt}`;
+    return `<div class="row ${dim ? "is-suspended" : ""} ${state.selected === s.code ? "sel" : ""}"
+              data-code="${s.code}" role="button" aria-label="${aria}">
+      <div class="namecell">
+        <div class="nm">${s.name}</div>
+        <div class="meta"><span>${s.code}</span>${tags}${stopTag}${newTag}</div>
+      </div>
+      <div class="num price">${priceTxt}</div>
+      <div class="num chg ${stopped ? "dim" : toneClass(s.change)}">${chgTxt}</div>
+      <div class="num pct ${stopped ? "dim" : toneClass(s.change)}">${pctTxt}</div>
+      <div class="num vol">${fmtVol(s.vol)}</div>
+      <div class="num last">${fmtVol(s.lastVol)}</div>
+      <div class="num amt">${fmtAmt(s.amt)}</div>
+      <div class="num amp">${ampTxt}</div>
+      <div class="num turn">${turnTxt}</div>
+      <div class="num pe">${peTxt}</div>
+      <div class="num pb">${pbTxt}</div>
+    </div>`;
+  }
+
+  function renderList() {
+    const arr = visibleStocks();
+    refs = new Map();
+    listEl.innerHTML = arr.map(rowHTML).join("");
+    arr.forEach((s) => {
+      const row = listEl.querySelector(`.row[data-code="${CSS.escape(s.code)}"]`);
+      if (!row) return;
+      refs.set(s.code, {
+        row,
+        price: row.querySelector(".price"),
+        chg: row.querySelector(".chg"),
+        pct: row.querySelector(".pct")
+      });
+    });
+    el("stRows").textContent = arr.length;
+    el("stGroup").textContent = state.group === "all" ? "全部" : state.group === "fin" ? "融资融券" : "创业板";
+  }
+
+  function renderRight() {
+    const body = el("rightBody");
+    if (state.width !== "lg") return;
+    if (!state.selected) {
+      body.innerHTML = `<div class="dt">请选择股票</div>
+        <div class="dc">点击左侧列表任意一行</div>
+        <div class="tip">此区域用于验证 lg 断点下「列表-详情联动」：点击行只切换右栏内容，不发生页面跳转。</div>`;
+      return;
+    }
+    const s = state.stocks.find((x) => x.code === state.selected);
+    if (!s) return;
+    body.innerHTML = `
+      <div class="dt">${s.name}</div>
+      <div class="dc">${s.code} · ${s.status === "suspended" ? "停牌" : s.status === "noquote" ? "暂无行情" : "已收盘 15:03:03"}</div>
+      <div class="dprice ${toneClass(s.change)}">${fmtPrice(s.price)}</div>
+      <div class="dchg ${toneClass(s.change)}">${fmtSigned(s.change, 2)} ${fmtPct(s.pct)}</div>
+      <div class="grid">
+        <div><span>今开</span><b>${fmtPrice(s.price)}</b></div>
+        <div><span>昨收</span><b>${fmtPrice(s.prevClose)}</b></div>
+        <div><span>总量</span><b>${fmtVol(s.vol)}</b></div>
+        <div><span>成交额</span><b>${fmtAmt(s.amt)}</b></div>
+        <div><span>换手率</span><b>0.39%</b></div>
+        <div><span>市盈率</span><b>95.32</b></div>
+      </div>
+      <div class="tip">详情页为占位（FR-06 起）。此处仅验证 lg 断点「左列表 / 右详情」的选中联动。</div>`;
+  }
+
+  function renderAll() {
+    screenEl.dataset.width = state.width;
+    screenEl.dataset.state = state.view;
+    screenEl.dataset.late = state.conn === "delayed" ? "1" : "0";
+    screenEl.style.setProperty("--fs-scale", String(state.fs));
+    screenEl.classList.toggle("conn-offline", state.conn === "offline");
+    deviceEl.style.width = WIDTHS[state.width].w + "px";
+    deviceEl.style.height = WIDTHS[state.width].h + "px";
+
+    const normal = ["normal", "late", "offline"].indexOf(state.view) >= 0;
+    const bar = el("offlineBar");
+    const showBar = state.conn === "weak" || state.conn === "offline";
+    bar.classList.toggle("show", showBar);
+    bar.classList.toggle("strong", state.conn === "offline");
+    bar.textContent = state.conn === "weak" ? "网络较弱，行情更新较慢" : "行情连接中断，数据可能延迟";
+    el("tableWrap").style.display = normal ? "" : "none";
+    el("addwrap").style.display = normal ? "" : "none";
+    el("skeleton").style.display = state.view === "skeleton" ? "" : "none";
+    el("emptyState").style.display = state.view === "empty" ? "flex" : "none";
+    el("errorState").style.display = state.view === "error" ? "flex" : "none";
+    document.querySelector(".groupbar").style.display = normal ? "" : "none";
+
+    if (normal) {
+      renderHead();
+      renderList();
+      renderRight();
+    } else if (state.view === "skeleton") {
+      renderSkeleton();
+    }
+  }
+
+  function renderSkeleton() {
+    el("skeleton").innerHTML = Array.from({ length: 8 }, () =>
+      `<div class="sk-row">
+         <div class="sk" style="width:120px;height:16px"></div>
+         <div class="sk" style="width:52px;height:16px;margin-left:auto"></div>
+         <div class="sk" style="width:46px;height:16px"></div>
+         <div class="sk" style="width:52px;height:16px"></div>
+       </div>`
+    ).join("");
+  }
+
+  /* ---------------- 推送刷新（只更新变动行） ---------------- */
+  function pushTick() {
+    if (!state.push || (state.view !== "normal" && state.view !== "late")) return;
+    const pool = visibleStocks().filter((s) => !s.status && s.price != null);
+    if (!pool.length) return;
+    const picks = new Set();
+    const n = Math.min(1 + Math.floor(Math.random() * 2), pool.length);
+    while (picks.size < n) picks.add(pool[Math.floor(Math.random() * pool.length)]);
+
+    state.tick += 1;
+    state.updated = picks.size;
+    picks.forEach((s) => {
+      const drift = (Math.random() - 0.5) * 0.012;
+      const next = Math.max(0.01, s.price * (1 + drift));
+      s.price = +next.toFixed(2);
+      s.change = +(s.price - s.prevClose).toFixed(2);
+      s.pct = (s.change / s.prevClose) * 100;
+
+      const r = refs.get(s.code);
+      if (!r) return;
+      r.price.textContent = fmtPrice(s.price);
+      r.chg.textContent = fmtSigned(s.change, 2);
+      r.chg.className = "num chg " + toneClass(s.change);
+      r.pct.textContent = fmtPct(s.pct);
+      r.pct.className = "num pct " + toneClass(s.change);
+
+      r.row.classList.remove("flash-up", "flash-down");
+      void r.row.offsetWidth; // 重置动画
+      r.row.classList.add(s.change >= 0 ? "flash-up" : "flash-down");
+      setTimeout(() => r.row.classList.remove("flash-up", "flash-down"), 520);
+    });
+
+    el("stTick").textContent = state.tick;
+    el("stUpdated").textContent = state.updated;
+    el("tickInfo").textContent = `第 ${state.tick} 批 · 更新 ${state.updated} 行（其余行未重绘）`;
+  }
+
+  /* ---------------- 交互 ---------------- */
+  function toast(text) {
+    const t = el("toast");
+    t.textContent = text;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1600);
+  }
+
+  function setState(v) {
+    state.view = v;
+    document.querySelectorAll("#stateBtns .btn").forEach((b) => b.classList.toggle("on", b.dataset.state === v));
+    renderAll();
+  }
+
+  listEl.addEventListener("click", (e) => {
+    const row = e.target.closest(".row");
+    if (!row) return;
+    const code = row.dataset.code;
+    state.selected = code;
+    listEl.querySelectorAll(".row.sel").forEach((r) => r.classList.remove("sel"));
+    row.classList.add("sel");
+    const s = state.stocks.find((x) => x.code === code);
+    if (state.width === "lg") {
+      renderRight();
+    } else {
+      toast(`进入详情：${s ? s.name : code}（FR-06 占位）`);
+    }
+  });
+
+  headEl.addEventListener("click", (e) => {
+    const h = e.target.closest(".h");
+    if (!h || !h.dataset.key) return;
+    const key = h.dataset.key;
+    if (state.sortKey === key) state.sortDir *= -1;
+    else { state.sortKey = key; state.sortDir = -1; }
+    renderHead();
+    renderList();
+    toast(`按 ${h.textContent.replace(/[↑↓]/g, "")} 排序`);
+  });
+
+  document.querySelectorAll(".gtab").forEach((g) => {
+    g.addEventListener("click", () => {
+      document.querySelectorAll(".gtab").forEach((x) => x.classList.remove("on"));
+      g.classList.add("on");
+      state.group = g.dataset.group;
+      renderIndexBar();
+      renderList();
+      renderRight();
+    });
+  });
+
+  el("widthBtns").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    state.width = b.dataset.width;
+    document.querySelectorAll("#widthBtns .btn").forEach((x) => x.classList.toggle("on", x === b));
+    renderAll();
+  });
+
+  el("stateBtns").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    setState(b.dataset.state);
+  });
+
+  el("connBtns").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    state.conn = b.dataset.conn;
+    document.querySelectorAll("#connBtns .btn").forEach((x) => x.classList.toggle("on", x === b));
+    renderAll();
+  });
+
+  el("fsBtns").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    state.fs = Number(b.dataset.fs);
+    document.querySelectorAll("#fsBtns .btn").forEach((x) => x.classList.toggle("on", x === b));
+    renderAll();
+  });
+
+  el("pushBtns").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    state.push = b.dataset.push === "1";
+    document.querySelectorAll("#pushBtns .btn").forEach((x) => x.classList.toggle("on", x === b));
+    toast(state.push ? "推送已开启" : "推送已暂停");
+  });
+
+  el("countBtns").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    state.count = Number(b.dataset.count);
+    document.querySelectorAll("#countBtns .btn").forEach((x) => x.classList.toggle("on", x === b));
+    buildData();
+    renderAll();
+  });
+
+  el("sortBtns").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    state.sortKey = b.dataset.sort;
+    state.sortDir = state.sortKey === "price" ? 1 : -1;
+    document.querySelectorAll("#sortBtns .btn").forEach((x) => x.classList.toggle("on", x === b));
+    renderHead();
+    renderList();
+  });
+
+  /* ---------------- 验收清单 ---------------- */
+  const CHECKS = [
+    "进页 300ms 内出现骨架屏，数据到达后替换无闪白",
+    "200 行连续滚动无白块、无明显卡顿",
+    "价格推送时只有对应行更新，其余行不重绘",
+    "价格变动高亮一次，1s 内连续变动不重复闪烁",
+    "sm/md/lg 均渲染完整 11 列，超出部分横向滑动可看全，名称列冻结",
+    "切换分组 Tab 时，指数条与列表同步更新且一一对应",
+    "lg 下点击行只切换右栏，页面不跳转",
+    "空自选展示空态与「添加自选」入口",
+    "停牌行显示 -- 与「停牌」标，仍可点击",
+    "断网提示出现/消失符合预期",
+    "平盘显示中性灰 0.00，不出现红/绿"
+  ];
+
+  function renderChecklist() {
+    const box = el("checklist");
+    box.innerHTML = CHECKS.map((t, i) =>
+      `<label class="check" data-i="${i}"><input type="checkbox"><span>${t}</span></label>`
+    ).join("");
+    box.addEventListener("change", () => {
+      const done = box.querySelectorAll("input:checked").length;
+      el("progress").textContent = `${done} / ${CHECKS.length}`;
+      box.querySelectorAll(".check").forEach((l) => {
+        l.classList.toggle("done", l.querySelector("input").checked);
+      });
+    });
+    el("progress").textContent = `0 / ${CHECKS.length}`;
+  }
+
+  /* ---------------- 启动 ---------------- */
+  const q = new URLSearchParams(location.search);
+  if (["sm", "md", "lg", "xl"].includes(q.get("w"))) state.width = q.get("w");
+  if (["normal", "skeleton", "empty", "error", "offline", "late"].includes(q.get("s"))) state.view = q.get("s");
+  document.querySelectorAll("#widthBtns .btn").forEach((b) => b.classList.toggle("on", b.dataset.width === state.width));
+  document.querySelectorAll("#stateBtns .btn").forEach((b) => b.classList.toggle("on", b.dataset.state === state.view));
+
+  buildData();
+  renderIndexBar();
+  renderChecklist();
+  renderAll();
+  pushTimer = setInterval(pushTick, 1000);
+})();
+</script>
+</body>
+</html>

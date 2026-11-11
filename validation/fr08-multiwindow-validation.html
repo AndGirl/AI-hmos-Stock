@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FR-08 多窗 / 比价 · 验证台</title>
+<style>
+  :root{
+    --bg:#f3f4f6; --card:#fff; --ink:#15171c; --ink2:#5b6270; --ink3:#8d95a3;
+    --line:#e6e8ec; --line2:#eef0f3;
+    --up:#e8402a; --down:#12a150; --flat:#7a828f;
+    --blue:#2b6cff; --bluebg:#eaf0ff;
+    --green:#2f8a52; --greenbg:#f2f8f3;
+    --red:#c2452f; --redbg:#fdf0ed;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:13px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .bench{max-width:1280px;margin:0 auto;padding:34px 24px 60px}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .kicker{font:600 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--ink3)}
+  h1{font-size:26px;margin:8px 0 6px;letter-spacing:-.01em}
+  h1 em{font-style:normal;color:var(--blue)}
+  .sub{font-size:12px;color:var(--ink2);margin:0;max-width:700px}
+  .note{font-size:11px;color:var(--ink3);background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;white-space:nowrap}
+
+  .stagewrap{display:flex;flex-direction:column;align-items:center;margin-top:18px}
+  .devlabel{width:100%;font:10.5px ui-monospace,Menlo,monospace;color:var(--ink3);margin-bottom:8px;display:flex;justify-content:space-between;gap:12px}
+  .qcard{width:990px;max-width:100%;background:#0b0d12;border-radius:24px;padding:6px;box-shadow:0 16px 40px rgba(16,22,36,.16);transition:width .22s ease}
+  .qscreen{background:#eef0f4;border-radius:19px;overflow:hidden;position:relative;--k:1;height:560px}
+
+  .stage{display:flex;flex-direction:column;height:100%;padding:12px 16px 14px;gap:8px}
+  .stagebar{display:flex;align-items:center;gap:10px;font-size:10px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .stagebar b{color:var(--ink);font-size:11px}
+  .stagebar .sp{flex:1}
+  .addbtn{width:26px;height:26px;border-radius:8px;border:1px solid #d5dae2;background:#fff;color:#3a4150;font-size:15px;line-height:1;cursor:pointer}
+  .addbtn.off{color:#c2c8d2;border-color:#e4e7ec}
+
+  .dots{display:flex;gap:5px;justify-content:center;padding:2px 0}
+  .dots i{width:6px;height:6px;border-radius:50%;background:#c9cfda;cursor:pointer;display:block}
+  .dots i.on{background:var(--blue);width:16px;border-radius:3px}
+
+  .deck{flex:1;display:flex;min-height:0;gap:8px;overflow:hidden}
+  .deck.c3{gap:0}
+  .win{background:#fff;border-radius:14px;display:flex;flex-direction:column;min-width:0;position:relative;
+    border:1.5px solid transparent;box-shadow:0 6px 18px rgba(16,22,36,.10);cursor:pointer;overflow:hidden;flex:1}
+  .deck.c3 .win{flex:0 0 calc(33.3333% + 6px);margin-left:-12px;border-radius:16px}
+  .deck.c3 .win:first-child{margin-left:0}
+  .win.on{border-color:var(--blue);box-shadow:0 14px 34px rgba(43,108,255,.20)}
+  .win.failed{background:#fffafa}
+  .win.offline{filter:grayscale(.85);opacity:.62}
+
+  .wh{display:flex;align-items:center;gap:6px;padding:9px 10px 4px}
+  .widx{width:17px;height:17px;border-radius:5px;background:#eef1f6;color:#6b7382;font:600 9.5px/17px ui-monospace,monospace;text-align:center;flex:none}
+  .win.on .widx{background:var(--bluebg);color:var(--blue)}
+  .wname{font-size:calc(11.5px * var(--k));font-weight:650;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .wname em{font-style:normal;color:var(--ink3);font-weight:400;margin-left:3px;font-size:calc(9.5px * var(--k))}
+  .wx{width:20px;height:20px;border-radius:50%;border:0;background:#f2f3f6;color:#8d95a3;font-size:10px;line-height:1;cursor:pointer;flex:none}
+  .wx:hover{background:#e8ebf1;color:#5b6270}
+
+  .wp{display:flex;align-items:baseline;gap:6px;padding:0 10px 6px;flex-wrap:wrap}
+  .wp b{font-size:calc(21px * var(--k));font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;line-height:1.15}
+  .wp span{font-size:calc(10px * var(--k));font-weight:600;font-variant-numeric:tabular-nums}
+  .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--flat)}
+
+  .wtabs{display:flex;gap:10px;padding:0 10px 6px;overflow:hidden}
+  .wtabs button{border:0;background:none;padding:0;font:inherit;font-size:calc(9.5px * var(--k));color:var(--ink3);cursor:pointer;white-space:nowrap}
+  .wtabs button.on{color:var(--ink);font-weight:650;border-bottom:1.5px solid var(--up);padding-bottom:2px}
+
+  .wchart{flex:1;min-height:40px;margin:0 8px;position:relative;border-radius:6px;
+    background:linear-gradient(to bottom,rgba(0,0,0,.03) 1px,transparent 1px) 0 0/100% 25%,#fbfcfd}
+  .wchart svg{position:absolute;inset:0;width:100%;height:100%}
+  .wchart .fail{position:absolute;inset:0;display:grid;place-items:center;gap:6px;background:#fffaf9;color:var(--red);font-size:10px}
+  .wchart .fail button{border:1px solid #f0c4ba;background:#fff;border-radius:7px;font-size:10px;padding:3px 9px;color:var(--red);cursor:pointer}
+
+  .wob{padding:4px 10px;border-top:1px solid var(--line2);display:flex;justify-content:space-between;font-size:calc(9px * var(--k));color:var(--ink2);font-variant-numeric:tabular-nums}
+  .wob i{font-style:normal;color:var(--ink3)}
+
+  .wf{display:flex;align-items:center;gap:8px;padding:7px 10px 9px;border-top:1px solid var(--line2)}
+  .badge{font-size:calc(8.5px * var(--k));border-radius:999px;padding:1px 7px;background:var(--greenbg);color:var(--green);white-space:nowrap}
+  .badge.dim{background:#f4f5f7;color:#98a0ad}
+  .zoom{font-size:calc(9px * var(--k));color:var(--ink3);font-variant-numeric:tabular-nums}
+  .wf .sp{flex:1}
+  .wtrade{border:0;border-radius:999px;background:var(--up);color:#fff;font:600 calc(10px * var(--k))/1 inherit;padding:7px 14px;cursor:pointer}
+  .wmenu{border:1px solid var(--line);background:#fff;border-radius:8px;font-size:11px;color:var(--ink2);padding:4px 9px;cursor:pointer}
+
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    border:1.5px dashed #cfd5de;border-radius:14px;background:#fafbfc;text-align:center;padding:20px}
+  .empty .ei{width:38px;height:38px;border-radius:11px;background:#eef1f6;display:grid;place-items:center;font-size:16px;color:#8d95a3}
+  .empty h3{margin:2px 0 0;font-size:13px}
+  .empty p{margin:0;font-size:11px;color:var(--ink3);max-width:260px;line-height:1.5}
+  .erow{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+  .erow button{border:1px solid var(--line);background:#fff;border-radius:8px;font:inherit;font-size:11px;color:var(--ink2);padding:6px 11px;cursor:pointer}
+  .erow button:hover{border-color:#c9cfda;color:var(--ink)}
+
+  .toast{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:20;
+    background:rgba(20,22,28,.92);color:#fff;font-size:11px;padding:7px 13px;border-radius:999px;
+    max-width:84%;text-align:center;line-height:1.4}
+
+  .lower{display:grid;grid-template-columns:520px 1fr;gap:22px;margin-top:20px;align-items:start}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card + .card{margin-top:12px}
+  h3.ct{margin:0 0 8px;font-size:12px;color:var(--ink2);display:flex;justify-content:space-between;align-items:center;gap:8px}
+  h3.ct span{font-size:10px;color:var(--ink3);font-weight:400}
+  .crow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line2);flex-wrap:wrap}
+  .crow:last-child{border-bottom:0}
+  .crow>span.k{width:46px;flex:none;font-size:11px;color:var(--ink3)}
+  .seg{display:flex;gap:5px;flex-wrap:wrap}
+  .seg button{border:1px solid var(--line);background:#fff;border-radius:7px;font:inherit;font-size:11px;color:var(--ink2);padding:4px 9px;cursor:pointer}
+  .seg button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .ops{display:flex;gap:6px;flex-wrap:wrap}
+  .ops button{border:1px solid var(--line);background:#fff;border-radius:7px;font:inherit;font-size:11px;color:var(--ink2);padding:5px 10px;cursor:pointer}
+  .ops button:hover{border-color:#c9cfda;color:var(--ink)}
+  .ops button.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+  .ops button:disabled{opacity:.4;cursor:not-allowed}
+  .dsel{border:1px solid var(--line);border-radius:7px;padding:4px 6px;font:inherit;font-size:11px;color:var(--ink2);background:#fff;max-width:132px}
+  .dsel:disabled{opacity:.45}
+
+  .srow{display:grid;grid-template-columns:1fr 74px 74px;gap:8px;align-items:center;padding:4px 0;font-size:11px;color:var(--ink2)}
+  .srow b{font-weight:600;color:var(--ink);font-size:11px}
+  .srow input{width:100%;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit;font-size:11px;font-variant-numeric:tabular-nums}
+  .srow em{font-style:normal;color:var(--ink3);font-size:9.5px}
+
+  .side{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .tests{display:flex;flex-direction:column;gap:5px;max-height:398px;overflow:auto}
+  .cas{display:grid;grid-template-columns:64px 1fr 50px;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line2);border-radius:8px;cursor:pointer;font-size:11px}
+  .cas:hover{background:#fafbfc;border-color:var(--line)}
+  .cas .cid{font:600 9.5px ui-monospace,Menlo,monospace;color:var(--ink3)}
+  .cas .cn{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cas .stt{font-size:9.5px;text-align:right;color:var(--ink3)}
+  .cas.pass{border-color:#d7ebdd;background:var(--greenbg)} .cas.pass .stt{color:var(--green)}
+  .cas.fail{border-color:#f2cfc7;background:var(--redbg)} .cas.fail .stt{color:var(--red)}
+  .cas.run{border-color:#cfdcff;background:var(--bluebg)} .cas.run .stt{color:var(--blue)}
+  .msg{grid-column:2/4;font-size:10px;color:var(--red);line-height:1.5;word-break:break-all}
+  .runbar{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .runbar button{flex:1;height:32px;border-radius:8px;border:1px solid var(--line);background:#fff;font:inherit;font-size:11.5px;cursor:pointer;color:var(--ink2)}
+  .runbar button.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+  .runbar span{font-size:10.5px;color:var(--ink3);white-space:nowrap}
+
+  .funnel{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+  .funnel i{font-style:normal;font-size:9.5px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--ink3)}
+  .funnel i.on{border-color:#cfdcff;background:var(--bluebg);color:var(--blue)}
+  .log{max-height:140px;overflow:auto;font:10px/1.65 ui-monospace,Menlo,monospace;color:var(--ink3)}
+  .log div{border-bottom:1px dashed var(--line2);padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  @media (max-width:1010px){
+    .lower{grid-template-columns:1fr}
+    .bench{padding:28px 16px 52px}
+  }
+</style>
+</head>
+<body>
+<div class="bench">
+
+  <div class="top">
+    <div>
+      <div class="kicker">FR-08 · 多窗 / 比价 / 子需求 08.1–08.12 · 验证台</div>
+      <h1>多窗比价：<em>组窗、布局、换股与降级</em></h1>
+      <p class="sub">覆盖 1/2/3 窗布局、360vp 紧凑阈值、焦点唯一、换股交换语义、周期同步与缩放独立、降频、上限与内存降级、组合恢复。标的与价格可改，右侧 20 条用例可单跑或全跑。</p>
+    </div>
+    <div class="note">验证件，不计入需求文档</div>
+  </div>
+
+  <div class="stagewrap">
+    <div class="devlabel"><span id="devLabel">折叠展开 · 990vp · 字号 1.00×</span><span id="hostLabel">宿主：应用内窗格（DEC-08-01）</span></div>
+    <div class="qcard" id="qcard"><div class="qscreen" id="qscreen"></div></div>
+  </div>
+
+  <div class="lower">
+
+    <div>
+      <div class="card">
+        <h3 class="ct">入口与场景</h3>
+        <div class="crow"><span class="k">入口</span>
+          <div class="ops">
+            <button data-entry="watch">自选多选建组</button>
+            <button data-entry="detail">详情 ⧉ 建组</button>
+            <button data-entry="pk">动作栏「股票PK」</button>
+          </div>
+        </div>
+        <div class="crow"><span class="k">设备</span>
+          <div class="seg" id="segDev"><button data-k="dev" data-v="phone">直板 375</button><button data-k="dev" data-v="fold" class="on">折叠 990</button><button data-k="dev" data-v="tablet">平板 1180</button></div>
+        </div>
+        <div class="crow"><span class="k">字号</span>
+          <div class="seg" id="segFs"><button data-k="fs" data-v="1" class="on">1.0×</button><button data-k="fs" data-v="1.3">1.3×</button><button data-k="fs" data-v="1.45">1.45×</button></div>
+        </div>
+        <div class="crow"><span class="k">宿主</span>
+          <div class="seg" id="segHost"><button data-k="host" data-v="pane" class="on">应用内窗格</button><button data-k="host" data-v="window">系统窗口</button></div>
+        </div>
+        <div class="crow"><span class="k">网络</span>
+          <div class="seg" id="segNet"><button data-k="net" data-v="online" class="on">在线</button><button data-k="net" data-v="offline">断线</button></div>
+        </div>
+        <div class="crow"><span class="k">操作</span>
+          <div class="ops">
+            <button id="btnAdd">新建窗</button>
+            <button id="btnSync">同步周期</button>
+            <button id="btnZoom">放大焦点图表</button>
+            <button id="btnFail">焦点窗故障</button>
+            <button id="btnMem">内存不足</button>
+          </div>
+        </div>
+        <div class="crow"><span class="k">焦点窗</span>
+          <select id="selCode" class="dsel" title="换股"></select>
+          <select id="selPeriod" class="dsel" title="周期"></select>
+          <span style="font-size:10px;color:var(--ink3)">换到已占用标的会自动交换两窗</span>
+        </div>
+        <div class="crow"><span class="k">恢复</span>
+          <div class="ops">
+            <button id="btnKill">模拟杀进程</button>
+            <button id="btnRestore">恢复上次组合</button>
+            <button id="btnReset" class="pri">重置</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="ct">标的与数据 <span>改价格 / 昨收后立即生效</span></h3>
+        <div id="stockEditor"></div>
+        <div class="crow" style="border-bottom:0"><span class="k">说明</span>
+          <span style="font-size:10.5px;color:var(--ink3);line-height:1.6">窗宽 &lt;360vp 自动紧凑（隐藏盘口与动作栏）；三窗为叠放，顶部指示点可切换焦点。</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h3 class="ct">用例 <span id="sumTxt">0 / 20 通过</span></h3>
+        <div class="tests" id="testlist"></div>
+        <div class="runbar">
+          <button class="pri" id="btnRunAll">全部执行</button>
+          <button id="btnClear">清空结果</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="ct">埋点漏斗 <span>FR-08.12</span></h3>
+        <div class="funnel" id="funnel"></div>
+        <h3 class="ct" style="margin-top:6px">事件日志 <span>本地，不上报</span></h3>
+        <div class="log" id="logbox"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   FR-08 验证台：PK 组 → 窗口宿主 → 布局 → 换股 / 同步 / 降级
+   数据全部本地。
+   ============================================================ */
+
+const STOCKS = [
+  { code:'603103', name:'某某科技', price:20.01, prev:19.84 },
+  { code:'000001', name:'平安银行', price:11.24, prev:11.10 },
+  { code:'600519', name:'贵州茅台', price:1685.00, prev:1690.00 },
+  { code:'300750', name:'宁德时代', price:188.60, prev:186.20 }
+];
+const PERIODS = ['分时','五日','日K','周K'];
+const DEV = { phone:{w:375,label:'直板机'}, fold:{w:990,label:'折叠展开'}, tablet:{w:1180,label:'平板'} };
+const FUNNEL = ['pk_entry','group_created','window_open','window_close','code_swap','period_sync','degrade','exit_pk'];
+
+const $ = s => document.querySelector(s);
+const qs = $('#qscreen');
+const logbox = $('#logbox');
+let toastTimer = null;
+let GEN = 0;
+
+const f2 = n => (Number.isFinite(n) ? n : 0).toFixed(2);
+const dec = n => Math.round(n*100)/100;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const stockOf = c => STOCKS.find(s => s.code === c) || STOCKS[0];
+const mask = c => c ? c.slice(0,1) + '****' + c.slice(-1) : '';
+
+function base(){
+  return {
+    dev:'fold', fs:1, host:'pane',
+    wins:[], focus:0, snapshot:null,
+    net:'online', mem:'ok', synced:false,
+    toast:'', events:[], logs:[]
+  };
+}
+let S = base();
+
+/* ---------- 布局度量 ---------- */
+function deckWidth(){ return DEV[S.dev].w - 32; }
+function cardWidth(n){
+  const W = deckWidth();
+  if (n <= 1) return W;
+  if (n === 2) return (W - 8) / 2;
+  return W / 3 + 6;
+}
+const isCompact = n => cardWidth(n) < 360;
+
+/* ---------- 日志 / 埋点 / toast ---------- */
+function log(msg){
+  const t = new Date().toLocaleTimeString('zh-CN',{hour12:false});
+  S.logs.push(t + ' ' + msg);
+  const d = document.createElement('div');
+  d.textContent = t + '  ' + msg;
+  logbox.prepend(d);
+  while (logbox.children.length > 140) logbox.lastChild.remove();
+}
+function pushEvent(name){
+  S.events.push(name);
+  renderFunnel();
+  log('埋点 ' + name);
+}
+function renderFunnel(){
+  $('#funnel').innerHTML = FUNNEL.map(k => {
+    const n = S.events.filter(x => x === k).length;
+    return `<i class="${n?'on':''}">${k}${n?' ×'+n:''}</i>`;
+  }).join('');
+}
+function toast(msg){
+  S.toast = msg;
+  render();
+  const g = GEN;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { if (g !== GEN) return; S.toast = ''; render(); }, 1800);
+}
+
+/* ---------- PK 组与窗口 ---------- */
+function enterPk(codes, entry){
+  pushEvent('pk_entry');
+  const uniq = [];
+  codes.forEach(c => { if (!uniq.includes(c)) uniq.push(c); });
+  const hadDup = uniq.length !== codes.length;
+  let list = uniq.slice(), truncated = false;
+  if (list.length > 3){ list = list.slice(0,3); truncated = true; }
+  if (list.length < 2){
+    log('建组失败：不足 2 只');
+    toast('至少选择 2 只对比');
+    return false;
+  }
+  S.wins = list.map(c => ({ code:c, period:'分时', zoom:1, failed:false }));
+  S.focus = 0; S.synced = false;
+  pushEvent('group_created');
+  log(`建立 PK 组（${entry}）· ${list.map(c => stockOf(c).name).join(' / ')}${truncated?'（已截断）':''}`);
+  if (truncated) toast('最多 3 只，已截断');
+  else if (hadDup) toast('已去除重复标的');
+  render();
+  return true;
+}
+function addWindow(){
+  if (S.wins.length === 0){ toast('请先发起比价'); return; }
+  if (S.wins.length >= 3){ pushEvent('degrade'); log('新建被拦：达上限 3 窗'); toast('最多 3 只对比'); return; }
+  const used = S.wins.map(w => w.code);
+  const free = STOCKS.find(s => !used.includes(s.code));
+  if (!free){ toast('无可添加的标的'); return; }
+  S.wins.push({ code:free.code, period:'分时', zoom:1, failed:false });
+  S.focus = S.wins.length - 1;
+  pushEvent('window_open');
+  log(`新建窗口 · ${free.name}（${S.wins.length} 窗）`);
+  render();
+}
+function focusWindow(i){
+  if (i < 0 || i >= S.wins.length || i === S.focus) return;
+  S.focus = i;
+  log(`焦点 → 第 ${i+1} 窗`);
+  render();
+}
+function closeWindow(i){
+  if (i < 0 || i >= S.wins.length) return;
+  const removed = S.wins.splice(i, 1)[0];
+  pushEvent('window_close');
+  log(`关闭窗口 · ${stockOf(removed.code).name}`);
+  if (S.wins.length === 0){
+    S.focus = 0;
+    pushEvent('exit_pk');
+    log('退出 PK');
+    toast('已退出比价');
+    render();
+    return;
+  }
+  S.focus = Math.min(i, S.wins.length - 1);
+  if (S.wins.length === 1) toast('仅剩 1 窗，已退化为单窗');
+  render();
+}
+function changeCode(i, code){
+  const w = S.wins[i];
+  if (!w || w.code === code) return;
+  const j = S.wins.findIndex((x, k) => k !== i && x.code === code);
+  if (j >= 0){
+    const tmp = S.wins[i].code;
+    S.wins[i].code = S.wins[j].code;
+    S.wins[j].code = tmp;
+    pushEvent('code_swap');
+    log(`换股冲突 → 第 ${i+1} 窗与第 ${j+1} 窗交换`);
+    toast('该标的已在本组，两窗已互换');
+  } else {
+    S.wins[i].code = code;
+    log(`第 ${i+1} 窗换股 → ${stockOf(code).name}`);
+  }
+  render();
+}
+function setPeriod(i, p){
+  if (!S.wins[i]) return;
+  S.wins[i].period = p;
+  log(`第 ${i+1} 窗周期 → ${p}`);
+  render();
+}
+function zoomFocused(){
+  const w = S.wins[S.focus];
+  if (!w){ toast('当前无窗口'); return; }
+  w.zoom = w.zoom >= 3 ? 1 : dec(w.zoom + 0.5);
+  log(`第 ${S.focus+1} 窗图表缩放 ×${w.zoom}`);
+  render();
+}
+function toggleFail(){
+  const w = S.wins[S.focus];
+  if (!w){ toast('当前无窗口'); return; }
+  w.failed = !w.failed;
+  log(`第 ${S.focus+1} 窗${w.failed?'数据失败':'恢复'}`);
+  render();
+}
+function syncPeriod(){
+  if (S.wins.length < 2){ toast('至少 2 窗才可同步'); return; }
+  const p = S.wins[S.focus].period;
+  S.wins.forEach(w => { w.period = p; });
+  S.synced = true;
+  pushEvent('period_sync');
+  log(`同步周期 → ${p}（缩放不变）`);
+  render();
+}
+function degradeMemory(){
+  S.mem = 'low';
+  if (S.wins.length > 1){
+    const i = S.focus === S.wins.length - 1 ? S.wins.length - 2 : S.wins.length - 1;
+    const removed = S.wins.splice(i, 1)[0];
+    pushEvent('degrade');
+    log(`内存不足 → 关闭非焦点窗「${stockOf(removed.code).name}」，剩 ${S.wins.length} 窗`);
+    toast('内存不足，已关闭一窗');
+    S.focus = Math.min(S.focus, S.wins.length - 1);
+  } else {
+    pushEvent('degrade');
+    log('内存不足 → 单窗降频');
+    toast('内存不足，已降频');
+  }
+  render();
+}
+function killProcess(){
+  if (!S.wins.length){ toast('当前没有组合'); return; }
+  S.snapshot = { codes:S.wins.map(w => w.code), periods:S.wins.map(w => w.period), focus:S.focus };
+  S.wins = []; S.focus = 0;
+  log('模拟杀进程 · 窗口全部销毁');
+  toast('已模拟杀进程');
+  render();
+}
+function restoreSession(){
+  if (!S.snapshot){ toast('没有可恢复的组合'); return; }
+  const { codes, periods, focus } = S.snapshot;
+  S.wins = codes.map((c, i) => ({ code:c, period:periods[i] || '分时', zoom:1, failed:false }));
+  S.focus = Math.min(focus || 0, S.wins.length - 1);
+  log(`恢复上次组合 · ${S.wins.length} 窗`);
+  toast('已恢复上次组合');
+  render();
+}
+
+/* ---------- 渲染 ---------- */
+function render(){
+  const d = DEV[S.dev];
+  $('#qcard').style.width = d.w + 'px';
+  qs.style.setProperty('--k', S.fs);
+  $('#devLabel').textContent = `${d.label} · ${d.w}vp · 字号 ${S.fs.toFixed(2)}×`;
+  $('#hostLabel').textContent = '宿主：' + (S.host === 'pane' ? '应用内窗格（DEC-08-01）' : '系统窗口（预留）');
+  qs.innerHTML = stageHTML() + (S.toast ? `<div class="toast">${esc(S.toast)}</div>` : '');
+  syncPanel();
+}
+
+function stageHTML(){
+  const n = S.wins.length;
+  const offline = S.net === 'offline';
+  if (!n){
+    return `<div class="stage">
+      <div class="stagebar"><b>PK</b><span>未发起</span><span class="sp"></span></div>
+      <div class="empty">
+        <div class="ei">⧉</div>
+        <h3>发起比价</h3>
+        <p>选择 2–3 只标的，同屏对比行情与走势。</p>
+        <div class="erow">
+          <button data-act="entry" data-entry="watch">自选多选</button>
+          <button data-act="entry" data-entry="detail">详情 ⧉</button>
+          <button data-act="entry" data-entry="pk">股票 PK</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  const dots = n === 3
+    ? `<div class="dots">${S.wins.map((w,i) => `<i data-act="dot" data-i="${i}" class="${i===S.focus?'on':''}"></i>`).join('')}</div>`
+    : '';
+  return `<div class="stage">
+    <div class="stagebar">
+      <b>PK</b><span>${n} 窗</span><span>${offline?'断线':'在线'}</span>
+      <span class="sp"></span>
+      <button class="addbtn ${n>=3?'off':''}" data-act="add">+</button>
+    </div>
+    ${dots}
+    <div class="deck ${n===3?'c3':''}">${S.wins.map((w,i) => winHTML(w,i,n,offline)).join('')}</div>
+  </div>`;
+}
+
+function spark(i, zoom){
+  const base = [70,62,66,58,60,48,54,40,46,38,52,44,58,50,64,56];
+  const pts = base.map((y,k) => `${(k*300/(base.length-1)).toFixed(1)},${(y + (i*6) - (zoom-1)*8).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true">
+    <line x1="0" y1="52" x2="300" y2="52" stroke="#d7dce4" stroke-width=".7" stroke-dasharray="3 3"/>
+    <polyline points="${pts}" fill="none" stroke="#dfa03c" stroke-width="1.1" vector-effect="non-scaling-stroke"/>
+  </svg>`;
+}
+
+function winHTML(w, i, n, offline){
+  const st = stockOf(w.code);
+  const chg = dec(st.price - st.prev);
+  const pct = st.prev ? dec(chg / st.prev * 100) : 0;
+  const cls = chg > 0 ? 'up' : chg < 0 ? 'down' : 'flat';
+  const focused = i === S.focus;
+  const compact = isCompact(n);
+  const dim = n > 1 && !focused;
+  return `<div class="win ${focused?'on':''} ${compact?'compact':''} ${w.failed?'failed':''} ${offline?'offline':''}"
+      data-act="focus" data-i="${i}" style="z-index:${focused?9:1+i}">
+    <div class="wh">
+      <span class="widx">${i+1}</span>
+      <span class="wname">${esc(st.name)}<em>${mask(st.code)}</em></span>
+      <button class="wx" data-act="close" data-i="${i}" title="关闭该窗">✕</button>
+    </div>
+    <div class="wp"><b class="${cls}">${f2(st.price)}</b>
+      <span class="${cls}">${chg>=0?'+':''}${f2(chg)}</span>
+      <span class="${cls}">${pct>=0?'+':''}${f2(pct)}%</span>
+    </div>
+    <div class="wtabs">${PERIODS.map(p => `<button class="${w.period===p?'on':''}" data-act="period" data-i="${i}" data-p="${p}">${p}</button>`).join('')}</div>
+    <div class="wchart">
+      ${w.failed
+        ? `<div class="fail">该窗数据失败<button data-act="retry" data-i="${i}">重试</button></div>`
+        : spark(i, w.zoom)}
+    </div>
+    ${compact ? '' : `<div class="wob"><span>买1 <i>${f2(dec(st.price-0.01))}</i></span><span>卖1 <i>${f2(dec(st.price+0.01))}</i></span></div>`}
+    <div class="wf">
+      <span class="badge ${dim?'dim':''}">${dim?'降频 5s':'实时 1s'}</span>
+      <span class="zoom">×${w.zoom.toFixed(1)}</span>
+      <span class="sp"></span>
+      ${compact
+        ? `<button class="wmenu" data-act="noop">⋯</button>`
+        : `<button class="wtrade" data-act="trade" data-i="${i}">去交易</button>`}
+    </div>
+  </div>`;
+}
+
+/* ---------- 交互 ---------- */
+qs.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const i = Number(el.dataset.i);
+  switch (el.dataset.act){
+    case 'entry': enterPk(preset(el.dataset.entry), el.dataset.entry); return;
+    case 'add': addWindow(); return;
+    case 'dot': focusWindow(i); return;
+    case 'focus': focusWindow(i); return;
+    case 'close': e.stopPropagation(); closeWindow(i); return;
+    case 'period': e.stopPropagation(); setPeriod(i, el.dataset.p); return;
+    case 'retry': e.stopPropagation(); S.wins[i].failed = false; log(`第 ${i+1} 窗重试`); render(); return;
+    case 'trade': e.stopPropagation(); toast(`去交易归属第 ${i+1} 窗（FR-07 弹窗，全局单例）`); return;
+    case 'noop': return;
+  }
+});
+
+function preset(kind){
+  const c = STOCKS.map(s => s.code);
+  if (kind === 'watch') return [c[0], c[1]];
+  if (kind === 'detail') return [c[0], c[1], c[2]];
+  return [c[1], c[2]];
+}
+
+/* ---------- 控制面板 ---------- */
+function bindSeg(sel){
+  const seg = $(sel);
+  if (!seg) return;
+  seg.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const k = b.dataset.k;
+    let v = b.dataset.v;
+    S[k] = k === 'fs' ? Number(v) : v;
+    if (k === 'net'){ log('网络 → ' + (v === 'offline' ? '断线（全窗冻结置灰）' : '在线')); }
+    render(); syncSegs();
+  });
+}
+['#segDev','#segFs','#segHost','#segNet'].forEach(bindSeg);
+
+function syncSegs(){
+  document.querySelectorAll('.seg').forEach(seg => {
+    seg.querySelectorAll('button').forEach(b => {
+      const k = b.dataset.k;
+      b.classList.toggle('on', String(S[k]) === b.dataset.v);
+    });
+  });
+}
+
+document.querySelectorAll('[data-entry]').forEach(btn => {
+  if (btn.closest('#qscreen')) return;   // 舞台内的入口由委托处理
+  btn.addEventListener('click', () => enterPk(preset(btn.dataset.entry), btn.dataset.entry));
+});
+
+function syncPanel(){
+  const sel = $('#selCode'), per = $('#selPeriod');
+  if (!sel || !per) return;
+  const w = S.wins[S.focus];
+  sel.disabled = per.disabled = !w;
+  if (w){ sel.value = w.code; per.value = w.period; }
+  $('#btnSync').disabled = S.wins.length < 2;
+}
+
+function buildEditor(){
+  $('#stockEditor').innerHTML =
+    `<div class="srow" style="color:var(--ink3);font-size:9.5px;padding:0 0 4px">
+      <span>标的</span><span>价格</span><span>昨收</span>
+    </div>` +
+    STOCKS.map((s, i) =>
+    `<div class="srow">
+      <div><b>${esc(s.name)}</b> <em>${s.code}</em></div>
+      <input data-i="${i}" data-f="price" value="${f2(s.price)}" title="价格">
+      <input data-i="${i}" data-f="prev" value="${f2(s.prev)}" title="昨收">
+    </div>`).join('');
+  $('#stockEditor').addEventListener('change', e => {
+    const inp = e.target.closest('input');
+    if (!inp) return;
+    const s = STOCKS[Number(inp.dataset.i)];
+    const v = Number(inp.value);
+    if (!Number.isFinite(v) || v <= 0){ inp.value = f2(s[inp.dataset.f]); return; }
+    s[inp.dataset.f] = dec(v);
+    render();
+  });
+
+  const selCode = $('#selCode'), selPeriod = $('#selPeriod');
+  if (selCode){
+    selCode.innerHTML = STOCKS.map(s => `<option value="${s.code}">${esc(s.name)}</option>`).join('');
+    selCode.onchange = e => { if (S.wins.length) changeCode(S.focus, e.target.value); };
+  }
+  if (selPeriod){
+    selPeriod.innerHTML = PERIODS.map(p => `<option>${p}</option>`).join('');
+    selPeriod.onchange = e => { if (S.wins.length) setPeriod(S.focus, e.target.value); };
+  }
+}
+
+$('#btnAdd').onclick = addWindow;
+$('#btnSync').onclick = syncPeriod;
+$('#btnZoom').onclick = zoomFocused;
+$('#btnFail').onclick = toggleFail;
+$('#btnMem').onclick = degradeMemory;
+$('#btnKill').onclick = killProcess;
+$('#btnRestore').onclick = restoreSession;
+$('#btnReset').onclick = () => { resetState(); log('已重置'); };
+
+/* ---------- 用例 ---------- */
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const ok = (cond, msg) => { if (!cond) throw new Error(msg); };
+const q = sel => qs.querySelector(sel);
+const qa = sel => [...qs.querySelectorAll(sel)];
+const click = sel => { const el = q(sel); if (!el) throw new Error('找不到元素 ' + sel); el.click(); };
+
+function resetState(patch){
+  GEN++;
+  S = Object.assign(base(), patch || {});
+  render(); syncSegs(); renderFunnel();
+}
+const codes = () => S.wins.map(w => w.code);
+
+const CASES = [
+{ id:'TC-08-01', ac:'AC-77', name:'三入口均可建组', async fn(){
+    resetState({});
+    click('[data-act="entry"][data-entry="watch"]');
+    ok(S.wins.length === 2, '自选多选应开 2 窗，实际 ' + S.wins.length);
+    resetState({});
+    click('[data-act="entry"][data-entry="detail"]');
+    ok(S.wins.length === 3, '详情 ⧉ 应开 3 窗，实际 ' + S.wins.length);
+    resetState({});
+    click('[data-act="entry"][data-entry="pk"]');
+    ok(S.wins.length === 2, '股票PK 应开 2 窗，实际 ' + S.wins.length);
+}},
+{ id:'TC-08-02', ac:'AC-77', name:'单只不进 PK', async fn(){
+    resetState({});
+    enterPk(['603103'], '自选');
+    ok(S.wins.length === 0, '单只不应进入 PK');
+    ok(/至少/.test(S.toast), '应提示至少 2 只，实际：' + S.toast);
+}},
+{ id:'TC-08-03', ac:'AC-77', name:'超 3 只截断并提示', async fn(){
+    resetState({});
+    enterPk(['603103','000001','600519','300750'], '自选');
+    ok(S.wins.length === 3, '应截断为 3，实际 ' + S.wins.length);
+    ok(/最多|截断/.test(S.toast), '应提示上限，实际：' + S.toast);
+}},
+{ id:'TC-08-04', ac:'AC-77', name:'重复标的先去重', async fn(){
+    resetState({});
+    enterPk(['603103','603103','000001'], '自选');
+    ok(S.wins.length === 2, '去重后应 2 窗，实际 ' + S.wins.length);
+    ok(new Set(codes()).size === 2, '不应存在重复标的');
+}},
+{ id:'TC-08-05', ac:'AC-77', name:'窗序等于选择顺序', async fn(){
+    resetState({});
+    enterPk(['000001','603103','600519'], '自选');
+    ok(codes().join() === '000001,603103,600519', '窗序应等于选择顺序，实际 ' + codes().join());
+}},
+{ id:'TC-08-06', ac:'AC-79', name:'双窗左右等分', async fn(){
+    resetState({ dev:'fold' });
+    enterPk(['603103','000001'], 'pk');
+    const c = qa('.win').map(el => el.getBoundingClientRect());
+    ok(Math.abs(c[0].width - c[1].width) < 2, '双窗应等宽');
+    ok(Math.abs(c[0].top - c[1].top) < 2, '双窗应同顶');
+    ok(Math.abs(c[0].bottom - c[1].bottom) < 2, '双窗应同高');
+}},
+{ id:'TC-08-07', ac:'AC-79', name:'三窗叠放 + 指示器', async fn(){
+    resetState({ dev:'fold' });
+    enterPk(['603103','000001','600519'], 'detail');
+    const c = qa('.win').map(el => el.getBoundingClientRect());
+    ok(c.length === 3, '应有 3 窗');
+    ok(c[1].left < c[0].right - 1, '相邻窗应重叠，实际 ' + Math.round(c[0].right - c[1].left) + 'vp');
+    ok(qa('.dots i').length === 3, '应有 3 个指示点');
+    ok(qa('.dots i.on').length === 1, '当前点应唯一高亮');
+}},
+{ id:'TC-08-08', ac:'AC-79', name:'360vp 紧凑阈值', async fn(){
+    resetState({ dev:'tablet' });
+    enterPk(['603103','000001','600519'], 'detail');
+    ok(qa('.win.compact').length === 0, `平板 3 窗不应紧凑（窗宽 ${Math.round(cardWidth(3))}vp）`);
+    resetState({ dev:'fold' });
+    enterPk(['603103','000001','600519'], 'detail');
+    ok(qa('.win.compact').length === 3, `折叠 3 窗应紧凑（窗宽 ${Math.round(cardWidth(3))}vp）`);
+    ok(!q('.wob'), '紧凑版应隐藏盘口');
+}},
+{ id:'TC-08-09', ac:'AC-81', name:'焦点唯一且置顶', async fn(){
+    resetState({ dev:'fold' });
+    enterPk(['603103','000001','600519'], 'detail');
+    click('[data-act="focus"][data-i="1"]');
+    ok(S.focus === 1, '焦点应切到第 2 窗，实际 ' + S.focus);
+    ok(qa('.win.on').length === 1, '高亮应唯一，实际 ' + qa('.win.on').length);
+    ok(Number(q('.win.on').style.zIndex) === 9, '焦点窗应置顶');
+}},
+{ id:'TC-08-10', ac:'AC-81', name:'关窗后焦点移交相邻', async fn(){
+    resetState({ dev:'fold' });
+    enterPk(['603103','000001','600519'], 'detail');
+    click('[data-act="focus"][data-i="1"]');
+    click('[data-act="close"][data-i="1"]');
+    ok(S.wins.length === 2, '应剩 2 窗，实际 ' + S.wins.length);
+    ok(S.focus === 1 && qa('.win')[1].classList.contains('on'), '焦点应移交到相邻窗');
+}},
+{ id:'TC-08-11', ac:'AC-81', name:'关最后一窗即退出 PK', async fn(){
+    resetState({ dev:'fold' });
+    enterPk(['603103','000001'], 'pk');
+    click('[data-act="close"][data-i="0"]');
+    click('[data-act="close"][data-i="0"]');
+    ok(S.wins.length === 0, '应退出 PK');
+    ok(!!q('.empty'), '应回到发起比价空态');
+    ok(S.events.includes('exit_pk'), '应记录退出埋点');
+}},
+{ id:'TC-08-12', ac:'AC-85', name:'第 4 窗被上限拦截', async fn(){
+    resetState({ dev:'fold' });
+    enterPk(['603103','000001','600519'], 'detail');
+    click('[data-act="add"]');
+    ok(S.wins.length === 3, '不应超过 3 窗，实际 ' + S.wins.length);
+    ok(/最多/.test(S.toast), '应提示上限，实际：' + S.toast);
+}},
+{ id:'TC-08-13', ac:'AC-80', name:'换股保留本窗周期与缩放', async fn(){
+    resetState({ dev:'fold' });
+    enterPk(['603103','000001'], 'pk');
+    click('[data-act="period"][data-i="0"][data-p="日K"]');
+    S.wins[0].zoom = 2; render();
+    changeCode(0, '300750');
+    ok(S.wins[0].code === '300750', '应换到宁德时代');
+    ok(S.wins[0].period === '日K', '周期应保留，实际 ' + S.wins[0].period);
+    ok(S.wins[0].zoom === 2, '缩放应保留');
+}},
+{ id:'TC-08-14', ac:'AC-80', name:'换到已占用标的 → 两窗交换', async fn(){
+    resetState({ dev:'fold' });
+    enterPk(['603103','000001'], 'pk');
+    changeCode(0, '000001');
+    ok(S.wins[0].code === '000001' && S.wins[1].code === '603103', '两窗应互换，实际 ' + codes().join());
+    ok(new Set(codes()).size === 2, '不应出现重复标的');
+    ok(S.events.includes('code_swap'), '应记录交换埋点');
+}},
+{ id:'TC-08-15', ac:'AC-82', name:'同步周期不动缩放', async fn(){
+    resetState({ dev:'fold' });
+    enterPk(['603103','000001'], 'pk');
+    click('[data-act="period"][data-i="0"][data-p="日K"]');
+    S.wins[0].zoom = 2; S.wins[1].zoom = 1; render();
+    click('[data-act="focus"][data-i="0"]');
+    $('#btnSync').click();
+    ok(S.wins.every(w => w.period === '日K'), '两窗周期应一致，实际 ' + S.wins.map(w => w.period).join('/'));
+    ok(S.wins[0].zoom === 2 && S.wins[1].zoom === 1, '同步不应改动缩放');
+}},
+{ id:'TC-08-16', ac:'AC-83', name:'非焦点窗降频标记', async fn(){
+    resetState({ dev:'fold' });
+    enterPk(['603103','000001','600519'], 'detail');
+    ok(qa('.badge.dim').length === 2, '非焦点窗应降频，实际 ' + qa('.badge.dim').length);
+    click('[data-act="focus"][data-i="2"]');
+    ok(qa('.badge.dim').length === 2, '切换焦点后仍应 2 窗降频');
+    ok(!qa('.win.on .badge')[0].classList.contains('dim'), '焦点窗应为实时');
+}},
+{ id:'TC-08-17', ac:'AC-85', name:'内存不足先关非焦点窗', async fn(){
+    resetState({ dev:'fold' });
+    enterPk(['603103','000001','600519'], 'detail');
+    click('[data-act="focus"][data-i="0"]');
+    $('#btnMem').click();
+    ok(S.wins.length === 2, '应关掉一窗，实际 ' + S.wins.length + ' 窗');
+    ok(codes()[0] === '603103', '焦点窗应保留');
+    ok(/内存/.test(S.toast), '应说明降级原因，实际：' + S.toast);
+}},
+{ id:'TC-08-18', ac:'AC-84', name:'杀进程后可恢复组合', async fn(){
+    resetState({ dev:'fold' });
+    enterPk(['603103','000001','600519'], 'detail');
+    click('[data-act="period"][data-i="2"][data-p="周K"]');
+    const before = { codes:codes().join(), focus:S.focus, p2:S.wins[2].period };
+    $('#btnKill').click();
+    ok(S.wins.length === 0, '杀进程后应清空');
+    $('#btnRestore').click();
+    ok(codes().join() === before.codes, '窗序与标的应恢复，实际 ' + codes().join());
+    ok(S.wins[2].period === before.p2, '周期应恢复，实际 ' + S.wins[2].period);
+    ok(S.focus === before.focus, '焦点应恢复');
+}},
+{ id:'TC-08-19', ac:'AC-86', name:'1.45× 字号窗内不溢出', async fn(){
+    resetState({ dev:'fold', fs:1.45 });
+    enterPk(['603103','000001','600519'], 'detail');
+    const el = q('.win');
+    ok(el.scrollWidth <= el.clientWidth + 2, `窗内不应横向溢出（${el.scrollWidth} > ${el.clientWidth}）`);
+}},
+{ id:'TC-08-20', ac:'AC-86', name:'PK 漏斗埋点齐全', async fn(){
+    resetState({ dev:'fold' });
+    enterPk(['603103','000001'], 'pk');
+    $('#btnAdd').click();
+    $('#btnSync').click();
+    click('[data-act="close"][data-i="2"]');
+    click('[data-act="close"][data-i="0"]');
+    click('[data-act="close"][data-i="0"]');
+    ['pk_entry','group_created','window_open','window_close','period_sync','exit_pk']
+      .forEach(k => ok(S.events.includes(k), '缺少埋点 ' + k));
+}}
+];
+
+/* ---------- 用例渲染与执行 ---------- */
+const listEl = $('#testlist');
+function renderCases(){
+  listEl.innerHTML = CASES.map(c =>
+    `<div class="cas" data-id="${c.id}" title="${esc(c.name)} · ${c.ac}"><span class="cid">${c.id}</span><span class="cn" title="${esc(c.name)}">${esc(c.name)}</span><span class="stt">待跑</span></div>`
+  ).join('');
+}
+function mark(id, cls, text, msg){
+  const el = listEl.querySelector(`[data-id="${id}"]`);
+  if (!el) return;
+  el.className = 'cas ' + (cls || '');
+  el.querySelector('.stt').textContent = text;
+  const old = el.querySelector('.msg');
+  if (old) old.remove();
+  if (msg){
+    const d = document.createElement('div');
+    d.className = 'msg';
+    d.textContent = msg;
+    el.appendChild(d);
+  }
+}
+function summary(){
+  const pass = CASES.filter(c => {
+    const el = listEl.querySelector(`[data-id="${c.id}"]`);
+    return el && el.classList.contains('pass');
+  }).length;
+  $('#sumTxt').textContent = pass + ' / ' + CASES.length + ' 通过';
+}
+async function runCase(c){
+  mark(c.id, 'run', '执行中');
+  try {
+    await c.fn();
+    mark(c.id, 'pass', '通过');
+    return true;
+  } catch (e){
+    mark(c.id, 'fail', '失败', e.message || '断言失败');
+    return false;
+  } finally {
+    summary();
+  }
+}
+async function runAll(){
+  const btn = $('#btnRunAll');
+  btn.disabled = true; btn.textContent = '执行中…';
+  for (const c of CASES) await runCase(c);
+  btn.disabled = false; btn.textContent = '全部执行';
+  log('用例执行完毕：' + $('#sumTxt').textContent);
+}
+listEl.addEventListener('click', async e => {
+  const row = e.target.closest('.cas');
+  if (!row) return;
+  const c = CASES.find(x => x.id === row.dataset.id);
+  if (c) await runCase(c);
+});
+$('#btnRunAll').onclick = runAll;
+$('#btnClear').onclick = () => { renderCases(); summary(); };
+
+/* ---------- 启动 ---------- */
+buildEditor();
+renderCases();
+render();
+syncSegs();
+renderFunnel();
+log('验证台就绪 · FR-08');
+
+/* 深链：?dev=fold&n=3&focus=1&runall=1 */
+(function boot(){
+  const p = new URLSearchParams(location.search);
+  if (p.get('dev') && DEV[p.get('dev')]) S.dev = p.get('dev');
+  if (p.get('fs')) S.fs = Number(p.get('fs')) || 1;
+  render(); syncSegs();
+  const n = Number(p.get('n') || 0);
+  if (n >= 2){
+    enterPk(STOCKS.slice(0, Math.min(n, 3)).map(s => s.code), 'deepLink');
+    if (p.get('focus')) focusWindow(Math.min(Number(p.get('focus')), S.wins.length - 1));
+    if (p.get('period')){ const i = S.focus; setPeriod(i, p.get('period')); }
+  }
+  if (p.get('runall')) setTimeout(runAll, 60);
+})();
+</script>
+</body>
+</html>

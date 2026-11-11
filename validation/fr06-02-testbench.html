@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FR-06.2 验证台 · 入口 / 返回 / 状态恢复</title>
+<style>
+  :root{
+    --bg:#f3f4f6; --card:#fff; --ink:#15171c; --ink2:#5b6270; --ink3:#8d95a3;
+    --line:#e6e8ec; --line2:#eef0f3;
+    --up:#e8402a; --down:#12a150; --flat:#7a828f;
+    --blue:#2b6cff; --bluebg:#eaf0ff;
+    --green:#2f8a52; --greenbg:#f2f8f3;
+    --red:#c2452f; --redbg:#fdf0ed;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:13px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .bench{max-width:1160px;margin:0 auto;padding:36px 24px 64px}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .kicker{font:600 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--ink3)}
+  h1{font-size:26px;margin:8px 0 6px;letter-spacing:-.01em}
+  h1 em{font-style:normal;color:var(--blue)}
+  .sub{font-size:12px;color:var(--ink2);margin:0}
+  .note{font-size:11px;color:var(--ink3);background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+
+  .layout{display:grid;grid-template-columns:540px 1fr;gap:24px;margin-top:22px;align-items:start}
+
+  .stagebar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .seg{display:flex;background:#fff;border:1px solid var(--line);border-radius:10px;padding:3px}
+  .seg button{border:0;background:transparent;font:inherit;font-size:11.5px;color:var(--ink2);padding:5px 11px;border-radius:7px;cursor:pointer}
+  .seg button.on{background:var(--ink);color:#fff}
+  .quick{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .quick button{border:1px solid var(--line);background:#fff;border-radius:8px;font:inherit;font-size:11px;color:var(--ink2);padding:5px 9px;cursor:pointer}
+  .quick button:hover{border-color:#c9cfda;color:var(--ink)}
+
+  .stage{position:relative}
+  .devwrap{width:375px;height:700px;margin:0 auto;transition:none}
+  .stage.lg .devwrap{width:520px;height:364px;overflow:hidden}
+  .dev{width:375px;height:700px;background:#0b0d12;border-radius:38px;padding:8px;box-shadow:0 20px 48px rgba(16,22,36,.18)}
+  .stage.lg .dev{width:1000px;height:700px;transform:scale(.52);transform-origin:top left;border-radius:24px;padding:6px}
+  .screen{width:100%;height:100%;background:#fff;border-radius:30px;overflow:hidden;position:relative}
+  .stage.lg .screen{border-radius:18px}
+  .stage.lg .page.detail{max-width:520px;margin:0 auto;border-left:1px solid var(--line2);border-right:1px solid var(--line2)}
+
+  .page{height:100%;display:flex;flex-direction:column;background:#fff;position:relative}
+  .phead{height:50px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--line2)}
+  .ptitle{font-size:17px;font-weight:700;letter-spacing:-.01em}
+  .ptitle span{font-size:10px;color:var(--ink3);font-weight:400;margin-left:4px}
+  .pbtn{border:1px solid var(--line);background:#fff;border-radius:8px;font:inherit;font-size:11px;color:var(--ink2);padding:5px 10px;cursor:pointer}
+  .gtabs{height:38px;flex:none;display:flex;align-items:center;gap:18px;padding:0 14px;border-bottom:1px solid var(--line2);font-size:12px;color:var(--ink2)}
+  .gtabs button{border:0;background:transparent;font:inherit;color:inherit;padding:0;cursor:pointer;position:relative;height:100%}
+  .gtabs button.on{color:var(--up);font-weight:700}
+  .gtabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--up);border-radius:2px}
+
+  .tablewrap{flex:1;overflow:auto;position:relative}
+  .tbl{width:100%;min-width:858px;min-height:100%}
+  .thead,.row{display:grid;grid-template-columns:150px 72px 72px 82px 78px 66px 78px 62px 62px 70px minmax(66px,1fr);align-items:center}
+  .thead{position:sticky;top:0;z-index:3;height:32px;background:#fafbfc;border-bottom:1px solid var(--line2);font-size:9.5px;color:var(--ink3)}
+  .thead>div,.row>div{padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .thead>div:not(:first-child),.row .c:not(.name){text-align:right;font-variant-numeric:tabular-nums}
+  .thead>div:first-child{position:sticky;left:0;z-index:4;background:#fafbfc}
+  .row{height:46px;border-bottom:1px solid var(--line2);cursor:pointer;font-size:11.5px;color:var(--ink2)}
+  .row:hover{background:#f8f9fb}
+  .row.sel{background:#f3f6ff}
+  .row .c.name{position:sticky;left:0;z-index:2;background:#fff;display:flex;flex-direction:column;justify-content:center;gap:1px;line-height:1.25}
+  .row:hover .c.name{background:#f8f9fb}
+  .row.sel .c.name{background:#f3f6ff;box-shadow:inset 2px 0 0 var(--blue)}
+  .row .c.name b{font-size:12px;font-weight:600;color:var(--ink)}
+  .row .c.name span{font-size:9px;color:var(--ink3);display:flex;align-items:center;gap:4px}
+  .tg{font-style:normal;font-size:8px;border-radius:3px;padding:0 3px}
+  .tg.fin{background:#f1e9ff;color:#7a4ddb}
+  .tg.gem{background:#fff2e3;color:#c07918}
+  .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--flat)}
+
+  .searchhead{height:50px;flex:none;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--line2)}
+  .dback{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;font-size:16px;color:var(--ink2);cursor:pointer;line-height:1;flex:none}
+  .q{flex:1;height:32px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font:inherit;font-size:12px;outline:none;min-width:0}
+  .q:focus{border-color:#b9ccff;box-shadow:0 0 0 2px rgba(43,108,255,.12)}
+  .cancel{border:0;background:transparent;font:inherit;font-size:12px;color:var(--ink2);cursor:pointer;padding:4px}
+  .results{flex:1;overflow:auto}
+  .rrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;height:50px;padding:0 14px;border-bottom:1px solid var(--line2);cursor:pointer}
+  .rrow:hover{background:#f8f9fb}
+  .rrow .rn{font-size:12px;font-weight:600;color:var(--ink)}
+  .rrow .rc{font-size:9px;color:var(--ink3)}
+  .rrow .rp{text-align:right;font-size:11.5px;font-variant-numeric:tabular-nums}
+  .rrow .rp small{display:block;font-size:9.5px}
+  .empty{padding:60px 20px;text-align:center;color:var(--ink3);font-size:11.5px;line-height:1.8}
+
+  .detail{height:100%;display:flex;flex-direction:column;overflow:auto;background:#fff}
+  .dhead{flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px 6px;position:relative}
+  .dt{flex:1;text-align:center;line-height:1.3}
+  .dt b{font-size:14px;font-weight:650}
+  .dt span{font-size:10px;color:var(--ink3);margin-left:4px}
+  .dsub{font-size:9px;color:var(--ink3);margin-top:2px}
+  .mk{font-style:normal;background:#eaf0ff;color:#2b6cff;border-radius:3px;font-size:8px;padding:0 3px;margin-right:3px}
+  .dmore{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink2);font-size:13px;flex:none}
+  .dprice{padding:4px 16px 2px;font-size:30px;font-weight:700;color:var(--up);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .dprice.dn{color:var(--down)}
+  .dprice em{font-style:normal;font-size:11px;margin-left:5px}
+  .dmetrics{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;padding:6px 16px 4px}
+  .dc{display:flex;justify-content:space-between;font-size:9.5px;color:var(--ink3);border-bottom:1px solid var(--line2);padding:3px 0}
+  .dc b{font-size:10px;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .dtabs{display:flex;gap:14px;padding:10px 16px 4px;font-size:10.5px;color:var(--ink2);border-bottom:1px solid var(--line2);flex:none}
+  .dtabs span.on{color:var(--ink);font-weight:700;position:relative}
+  .dtabs span.on::after{content:"";position:absolute;left:0;right:0;bottom:-5px;height:2px;background:var(--up)}
+  .dchart{height:96px;flex:none;padding:8px 12px 0}
+  .dchart svg{width:100%;height:100%;display:block;background:#fafbfc;border-radius:6px}
+  .dbook{flex:1;min-height:0;padding:6px 16px 4px;overflow:auto}
+  .brow{display:flex;justify-content:space-between;font-size:9.5px;color:var(--ink2);padding:2px 0;font-variant-numeric:tabular-nums}
+  .brow b{font-weight:600}
+  .brow i{font-style:normal;color:var(--ink3)}
+  .dbar{flex:none;display:flex;align-items:center;gap:12px;padding:8px 14px 12px;border-top:1px solid var(--line2)}
+  .dbar .ia{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:8px;color:var(--ink2)}
+  .dbar .ia i{font-style:normal;font-size:13px}
+  .buy{margin-left:auto;height:32px;padding:0 22px;border-radius:16px;background:var(--up);color:#fff;font-size:11.5px;font-weight:600;display:grid;place-items:center}
+
+  .compact .dprice{font-size:24px}
+  .compact .dmetrics{gap:0 12px}
+  .compact .dhead{padding:8px 12px 4px}
+  .compact .dchart{height:78px}
+
+  .paneEmpty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--ink3);font-size:11.5px;text-align:center;padding:20px;line-height:1.8}
+  .paneEmpty b{color:var(--ink2);font-size:12.5px}
+
+  .lgwrap{display:flex;height:100%}
+  .lcol{flex:1;min-width:0;display:flex;flex-direction:column}
+  .rcol{width:45%;flex:none;border-left:1px solid var(--line);background:#fff;overflow:hidden}
+
+  .err404{padding:50px 22px;text-align:center}
+  .err404 .ic{width:44px;height:44px;border-radius:50%;background:var(--redbg);color:var(--red);display:grid;place-items:center;margin:0 auto 12px;font-size:20px}
+  .err404 h3{margin:0 0 6px;font-size:14px}
+  .err404 p{margin:0 0 16px;font-size:11px;color:var(--ink2)}
+  .err404 .row2{display:flex;gap:8px;justify-content:center}
+  .err404 button{height:32px;padding:0 14px;border-radius:16px;border:1px solid var(--line);background:#fff;font:inherit;font-size:11.5px;color:var(--ink2);cursor:pointer}
+  .err404 button.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+
+  .skel{padding:14px 16px}
+  .skel i{display:block;height:12px;border-radius:6px;background:#eef0f4;margin-bottom:10px}
+  .skel i:nth-child(1){width:40%;height:16px}
+  .skel i:nth-child(2){width:55%}
+  .skel i:nth-child(3){width:100%;height:80px}
+  .skel i:nth-child(4){width:90%}
+  .skel i:nth-child(5){width:70%}
+
+  .side{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card h3{margin:0 0 10px;font-size:12px;color:var(--ink2);display:flex;justify-content:space-between;align-items:center}
+  .card h3 span{font-size:10px;color:var(--ink3);font-weight:400}
+  .chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px}
+  .chip{border:1px solid var(--line);background:#fafbfc;border-radius:6px;padding:3px 8px;color:var(--ink2)}
+  .chip.on{border-color:#cfdcff;background:var(--bluebg);color:var(--blue);font-weight:600}
+  .chips .ar{color:#c2c8d2}
+  .kv2{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:11px}
+  .kv2 div{display:flex;justify-content:space-between;gap:8px;color:var(--ink3);border-bottom:1px dashed var(--line2);padding:2px 0}
+  .kv2 b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+
+  .tests{display:flex;flex-direction:column;gap:6px}
+  .cas{display:grid;grid-template-columns:34px 1fr 44px;gap:8px;align-items:center;padding:7px 8px;border:1px solid var(--line2);border-radius:8px;cursor:pointer;font-size:11px}
+  .cas:hover{background:#fafbfc;border-color:var(--line)}
+  .cas .cid{font:600 9.5px ui-monospace,Menlo,monospace;color:var(--ink3)}
+  .cas .cn{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cas .st{font-size:9.5px;text-align:right;color:var(--ink3)}
+  .cas.pass{border-color:#d7ebdd;background:var(--greenbg)}
+  .cas.pass .st{color:var(--green)}
+  .cas.fail{border-color:#f2cfc7;background:var(--redbg)}
+  .cas.fail .st{color:var(--red)}
+  .cas.run{border-color:#cfdcff;background:var(--bluebg)}
+  .cas.run .st{color:var(--blue)}
+  .msg{grid-column:2/4;font-size:10px;color:var(--red);line-height:1.5;word-break:break-all}
+  .runbar{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .runbar button{flex:1;height:32px;border-radius:8px;border:1px solid var(--line);background:#fff;font:inherit;font-size:11.5px;cursor:pointer;color:var(--ink2)}
+  .runbar button.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+  .runbar span{font-size:10.5px;color:var(--ink3);white-space:nowrap}
+
+  .log{max-height:150px;overflow:auto;font:10px/1.6 ui-monospace,Menlo,monospace;color:var(--ink3)}
+  .log div{border-bottom:1px dashed var(--line2);padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  @media (max-width:1080px){
+    .layout{grid-template-columns:1fr}
+    .devwrap{margin:0 auto}
+  }
+</style>
+</head>
+<body>
+<div class="bench">
+
+  <div class="top">
+    <div>
+      <div class="kicker">FR-06 · 个股详情 / 子需求 06.2 · 验证台</div>
+      <h1>进得去，也<em>回得来</em></h1>
+      <p class="sub">模拟 6 个入口、3 种载体、5 个返回来源。点行进入、点返回回退，右侧实时显示路由栈与状态；下方 15 条用例可单跑或全跑。</p>
+    </div>
+    <div class="note">验证用，不计入需求文档</div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="stagebar">
+        <div class="seg">
+          <button data-w="sm" class="on">sm · 375</button>
+          <button data-w="lg">lg · 1000</button>
+        </div>
+        <div class="quick">
+          <button data-action="deep">深链 60**39</button>
+          <button data-action="deep404">深链 无效码</button>
+          <button data-action="reset">重置</button>
+        </div>
+      </div>
+
+      <div class="stage" id="stage">
+        <div class="devwrap">
+          <div class="dev">
+            <div class="screen" id="screen"></div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:10.5px;color:var(--ink3);margin-top:10px">
+        点击行进入详情 / 右栏预览；详情左上角返回；lg 下点行不跳转
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="card">
+        <h3>路由栈 <span id="depth"></span></h3>
+        <div class="chips" id="route"></div>
+      </div>
+
+      <div class="card">
+        <h3>状态快照</h3>
+        <div class="kv2" id="snapshot"></div>
+      </div>
+
+      <div class="card">
+        <h3>用例 <span id="summary"></span></h3>
+        <div class="tests" id="tests"></div>
+        <div class="runbar">
+          <button class="pri" id="runAll">运行全部</button>
+          <button id="runReset">重置</button>
+          <span id="runState"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>日志</h3>
+        <div class="log" id="log"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+/* ================= 数据 ================= */
+const FIRST = ['某某科技','某某地产','某某药业','某某银行','某某重工','某某芯片','某某汽车','某某能源','某某医药','某某材料'];
+const stocks = Array.from({length:50}, (_, i) => {
+  const price = 8 + (i * 7) % 80 + (i % 10) / 10;
+  const chg = ((i * 13) % 21 - 10) / 10;
+  const pct = chg / price * 100;
+  return {
+    i,
+    name: FIRST[i % 10] + (i >= 10 ? '·' + (Math.floor(i / 10) + 1) : ''),
+    code: '6' + String(100000 + i * 137).slice(-5),
+    tag: i % 4 === 0 ? 'gem' : 'fin',
+    price: price.toFixed(2),
+    chg: (chg >= 0 ? '+' : '') + chg.toFixed(2),
+    pct: (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%',
+    up: chg > 0, down: chg < 0,
+    vol: (1000 + (i * 137) % 9000).toString(),
+    cur: (100 + (i * 37) % 900).toString(),
+    amt: (1 + (i * 7) % 90) / 10 + '亿',
+    amp: ((i * 3) % 40 / 10 + 0.5).toFixed(2) + '%',
+    turn: ((i * 3) % 30 / 10 + 0.2).toFixed(2) + '%',
+    pe: (8 + (i * 11) % 60).toFixed(2),
+    pb: (1 + (i * 7) % 90 / 10).toFixed(2)
+  };
+});
+const byCode = {};
+stocks.forEach(s => byCode[s.code] = s);
+
+/* ================= 状态 ================= */
+let seq = 0, paneTimer = null, epoch = 0;
+const S = {
+  width: 'sm',
+  page: 'home',
+  route: [{name:'home'}],
+  group: 'all',
+  scrollTop: 0,
+  hscroll: 0,
+  selected: null,
+  paneCode: null,
+  search: { term:'', results:[], scrollTop:0 },
+  detail: { code:null, from:null, state:'idle', token:0 },
+  stats: { pushes:0, pops:0, ignored:0, requests:0, cancels:0, merges:0 },
+  lastNav: 0
+};
+
+const $ = sel => document.querySelector(sel);
+const screenEl = $('#screen');
+const logEl = $('#log');
+const logs = [];
+
+function log(msg){
+  const t = new Date().toLocaleTimeString('zh-CN', {hour12:false});
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  logs.unshift(t + '  ' + msg);
+  if (logs.length > 60) logs.pop();
+  logEl.innerHTML = logs.map(l => '<div>' + esc(l) + '</div>').join('');
+}
+
+/* ================= 列表 ================= */
+function currentList(){
+  return S.group === 'all' ? stocks : stocks.filter(s => s.tag === S.group);
+}
+function numClass(s){ return s.up ? 'up' : (s.down ? 'down' : 'flat'); }
+
+function homeHTML(){
+  const list = currentList();
+  const cnt = g => g === 'all' ? stocks.length : stocks.filter(s => s.tag === g).length;
+  const rows = list.map(s => `
+    <div class="row ${S.selected === s.code ? 'sel' : ''}" data-row="${s.i}">
+      <div class="c name"><b>${s.name}</b><span>${s.code}<i class="tg ${s.tag}">${s.tag === 'gem' ? '创' : '融'}</i></span></div>
+      <div class="c ${numClass(s)}">${s.price}</div>
+      <div class="c ${numClass(s)}">${s.chg}</div>
+      <div class="c ${numClass(s)}">${s.pct}</div>
+      <div class="c">${s.vol}</div>
+      <div class="c">${s.cur}</div>
+      <div class="c">${s.amt}</div>
+      <div class="c">${s.amp}</div>
+      <div class="c">${s.turn}</div>
+      <div class="c">${s.pe}</div>
+      <div class="c">${s.pb}</div>
+    </div>`).join('');
+
+  return `<div class="page">
+    <div class="phead">
+      <div class="ptitle">自选股 <span>${stocks.length}</span></div>
+      <button class="pbtn" data-action="search">搜索</button>
+    </div>
+    <div class="gtabs">
+      <button class="${S.group === 'all' ? 'on' : ''}" data-group="all">全部 ${cnt('all')}</button>
+      <button class="${S.group === 'fin' ? 'on' : ''}" data-group="fin">融资融券 ${cnt('fin')}</button>
+      <button class="${S.group === 'gem' ? 'on' : ''}" data-group="gem">创业板 ${cnt('gem')}</button>
+    </div>
+    <div class="tablewrap" data-scroll="list">
+      <div class="tbl">
+        <div class="thead">
+          <div>股票名称</div><div>最新价</div><div>涨跌</div><div>涨跌幅</div><div>总量</div>
+          <div>现量</div><div>成交额</div><div>振幅</div><div>换手</div><div>市盈率</div><div>市净率</div>
+        </div>
+        ${rows}
+      </div>
+    </div>
+  </div>`;
+}
+
+function resultsHTML(){
+  const q = S.search.term.trim();
+  if (!q) return '<div class="empty">输入名称或代码开始搜索<br>例：某某 / 600</div>';
+  const hits = stocks.filter(s => s.name.includes(q) || s.code.includes(q)).slice(0, 20);
+  if (!hits.length) return '<div class="empty">没有找到「' + q + '」<br>试试其它关键词</div>';
+  return hits.map((s, i) => `
+    <div class="rrow" data-result="${s.i}" data-rank="${i + 1}">
+      <div><div class="rn">${s.name}</div><div class="rc">${s.code} · ${s.tag === 'gem' ? '创业板' : '融资融券'}</div></div>
+      <div class="rp ${numClass(s)}">${s.price}<small>${s.pct}</small></div>
+    </div>`).join('');
+}
+
+function searchHTML(){
+  return `<div class="page">
+    <div class="searchhead">
+      <button class="dback" data-action="back">‹</button>
+      <input class="q" id="q" placeholder="搜索名称 / 代码" value="${S.search.term.replace(/"/g,'&quot;')}">
+      <button class="cancel" data-action="cancelSearch">取消</button>
+    </div>
+    <div class="results" data-scroll="results" data-list="results">${resultsHTML()}</div>
+  </div>`;
+}
+
+/* ================= 详情 ================= */
+function detailHTML(compact, code){
+  const d = S.detail;
+  const s = byCode[code || d.code];
+
+  if (!compact && d.state === 'loading') {
+    return `<div class="page detail ${compact ? 'compact' : ''}">
+      <div class="dhead">${compact ? '' : '<button class="dback" data-action="back">‹</button>'}<div class="dt"><b>加载中</b><div class="dsub">${d.code || ''}</div></div>${compact ? '<span class="dmore">⋯</span>' : '<span style="width:28px"></span>'}</div>
+      <div class="skel"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>`;
+  }
+
+  if (!compact && d.state === '404') {
+    return `<div class="page detail">
+      <div class="dhead"><button class="dback" data-action="back">‹</button><div class="dt"><b>个股详情</b></div><span style="width:28px"></span></div>
+      <div class="err404">
+        <div class="ic">!</div>
+        <h3>未找到该股票</h3>
+        <p>代码 ${d.code} 不存在或已退市<br>不会显示骨架，也不会留在栈里</p>
+        <div class="row2">
+          <button data-action="back">返回</button>
+          <button class="pri" data-action="toSearch">去搜索</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const q = s || stocks[0];
+  const pts = '0,64 12,58 24,62 36,54 48,58 60,50 72,55 84,48 96,52 108,45 120,50 132,47 144,53 156,49 168,56 180,51 192,47 204,54 216,50 228,56 240,52 252,49 264,55 276,51 288,53';
+  return `<div class="page detail ${compact ? 'compact' : ''}">
+    <div class="dhead">
+      ${compact ? '' : '<button class="dback" data-action="back">‹</button>'}
+      <div class="dt">
+        <b>${q.name}</b><span>${q.code}</span>
+        <div class="dsub"><i class="mk">深</i>已收盘 10-19 15:03:03</div>
+      </div>
+      ${compact ? '<span class="dmore">⋯</span>' : '<span style="width:26px"></span>'}
+    </div>
+    <div class="dprice ${q.down ? 'dn' : ''}">${q.price}<em>${q.chg}</em><em>${q.pct}</em></div>
+    <div class="dmetrics">
+      <div class="dc"><span>今开</span><b class="${q.up ? 'up' : 'down'}">${q.price}</b></div>
+      <div class="dc"><span>最高</span><b class="up">${(parseFloat(q.price) * 1.02).toFixed(2)}</b></div>
+      <div class="dc"><span>昨收</span><b>${(parseFloat(q.price) - 0.16).toFixed(2)}</b></div>
+      <div class="dc"><span>最低</span><b class="down">${(parseFloat(q.price) * 0.985).toFixed(2)}</b></div>
+      <div class="dc"><span>换手率</span><b>${q.turn}</b></div>
+      <div class="dc"><span>市盈率</span><b>${q.pe}</b></div>
+    </div>
+    <div class="dtabs"><span class="on">分时</span><span>五日</span><span>日K</span><span>周K</span><span>月K</span></div>
+    <div class="dchart">
+      <svg viewBox="0 0 288 72" preserveAspectRatio="none">
+        <line x1="0" y1="53" x2="288" y2="53" stroke="#e2e6ec" stroke-width="1" stroke-dasharray="3 3"/>
+        <polyline points="${pts}" fill="none" stroke="${q.up ? '#e8402a' : '#12a150'}" stroke-width="1.4"/>
+      </svg>
+    </div>
+    <div class="dbook">
+      <div class="brow"><span>卖5</span><b class="up">${(parseFloat(q.price) + 0.24).toFixed(2)}</b><i>12</i></div>
+      <div class="brow"><span>卖4</span><b class="up">${(parseFloat(q.price) + 0.18).toFixed(2)}</b><i>66</i></div>
+      <div class="brow"><span>卖3</span><b class="up">${(parseFloat(q.price) + 0.12).toFixed(2)}</b><i>33</i></div>
+      <div class="brow"><span>卖2</span><b class="up">${(parseFloat(q.price) + 0.06).toFixed(2)}</b><i>55</i></div>
+      <div class="brow"><span>卖1</span><b class="up">${(parseFloat(q.price) + 0.02).toFixed(2)}</b><i>21</i></div>
+      <div class="brow"><span>买1</span><b class="up">${(parseFloat(q.price) - 0.02).toFixed(2)}</b><i>66</i></div>
+      <div class="brow"><span>买2</span><b class="up">${(parseFloat(q.price) - 0.06).toFixed(2)}</b><i>22</i></div>
+      <div class="brow"><span>买3</span><b class="down">${(parseFloat(q.price) - 0.12).toFixed(2)}</b><i>33</i></div>
+      <div class="brow"><span>买4</span><b class="down">${(parseFloat(q.price) - 0.18).toFixed(2)}</b><i>55</i></div>
+      <div class="brow"><span>买5</span><b class="down">${(parseFloat(q.price) - 0.24).toFixed(2)}</b><i>11</i></div>
+    </div>
+    <div class="dbar">
+      <div class="ia"><i>⠿</i><span>自选设置</span></div>
+      <div class="ia"><i>▥</i><span>股票PK</span></div>
+      <div class="ia"><i>▦</i><span>更多</span></div>
+      <div class="buy">去交易</div>
+    </div>
+  </div>`;
+}
+
+function paneHTML(){
+  if (!S.paneCode) {
+    return '<div class="paneEmpty"><b>右栏预览</b><span>点击左侧任意一行</span><span>只切换右栏，不产生路由跳转</span></div>';
+  }
+  return detailHTML(true, S.paneCode);
+}
+
+/* ================= 渲染 ================= */
+function restoreScroll(){
+  const l = screenEl.querySelector('[data-scroll="list"]');
+  if (l) { l.scrollTop = S.scrollTop; l.scrollLeft = S.hscroll; }
+  const r = screenEl.querySelector('[data-scroll="results"]');
+  if (r) r.scrollTop = S.search.scrollTop;
+}
+
+function render(){
+  const st = $('#stage');
+  st.className = 'stage ' + S.width;
+
+  if (S.page === 'detail') {
+    screenEl.innerHTML = detailHTML(false);
+  } else if (S.width === 'lg') {
+    const left = S.page === 'search' ? searchHTML() : homeHTML();
+    screenEl.innerHTML = '<div class="lgwrap"><div class="lcol">' + left + '</div><div class="rcol">' + paneHTML() + '</div></div>';
+  } else {
+    screenEl.innerHTML = S.page === 'search' ? searchHTML() : homeHTML();
+  }
+
+  restoreScroll();
+  renderInspector();
+}
+
+function renderInspector(){
+  const r = $('#route');
+  r.innerHTML = S.route.map((n, i) =>
+    `<span class="chip ${i === S.route.length - 1 ? 'on' : ''}">${n.name === 'home' ? '自选首页' : n.name === 'search' ? '搜索' : '详情 ' + (S.detail.code || '')}</span>`
+  ).join('<span class="ar">→</span>');
+  $('#depth').textContent = '栈深 ' + S.route.length;
+
+  const s = $('#snapshot');
+  s.innerHTML = `
+    <div>页面 <b>${S.page}</b></div>
+    <div>宽度 <b>${S.width}</b></div>
+    <div>分组 <b>${S.group}</b></div>
+    <div>选中 <b>${S.selected || '-'}</b></div>
+    <div>右栏 <b>${S.paneCode || '-'}</b></div>
+    <div>详情态 <b>${S.detail.state}</b></div>
+    <div>scrollTop <b>${Math.round(S.scrollTop)}</b></div>
+    <div>横滑 <b>${Math.round(S.hscroll)}</b></div>
+    <div>push <b>${S.stats.pushes}</b></div>
+    <div>pop <b>${S.stats.pops}</b></div>
+    <div>丢弃 <b>${S.stats.ignored}</b></div>
+    <div>请求 <b>${S.stats.requests}</b></div>
+    <div>取消 <b>${S.stats.cancels}</b></div>
+    <div>合并 <b>${S.stats.merges}</b></div>`;
+}
+
+/* ================= 行为 ================= */
+function setWidth(w){
+  S.width = w;
+  document.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.w === w));
+  render();
+}
+
+function setGroup(g){
+  S.group = g;
+  S.scrollTop = 0;
+  S.hscroll = 0;
+  log('切换分组 ' + g);
+  render();
+}
+
+function attemptNav(fn){
+  const now = Date.now();
+  if (now - S.lastNav < 300) {
+    S.stats.ignored++;
+    log('去抖丢弃：距上次进入 < 300ms');
+    renderInspector();
+    return false;
+  }
+  S.lastNav = now;
+  fn();
+  return true;
+}
+
+function onRow(i){
+  const s = stocks[i];
+  if (!s) return;
+  if (S.width === 'lg') { panePick(s.code); return; }
+  if (S.page === 'search') {
+    attemptNav(() => openDetail(s.code, 'search', 1));
+    return;
+  }
+  attemptNav(() => openDetail(s.code, 'watchlist'));
+}
+
+function panePick(code){
+  S.selected = code;
+  if (paneTimer) { clearTimeout(paneTimer); S.stats.merges++; log('右栏合并：只保留最后一次'); }
+  paneTimer = setTimeout(() => {
+    paneTimer = null;
+    S.paneCode = code;
+    S.stats.requests++;
+    log('右栏切换到 ' + code);
+    render();
+  }, 150);
+  render();
+}
+
+function openDetail(code, from, rank){
+  S.route.push({ name:'detail' });
+  S.stats.pushes++;
+  enterDetail(code, from, rank);
+}
+
+function enterDetail(code, from, rank){
+  S.page = 'detail';
+  S.selected = code;
+  const token = ++seq;
+  const myEpoch = epoch;
+
+  if (!byCode[code]) {
+    S.detail = { code, from, rank, state:'404', token };
+    log('进入详情失败：' + code + ' 不存在');
+    render();
+    return;
+  }
+
+  S.detail = { code, from, rank, state:'loading', token };
+  S.stats.requests++;
+  log('进入详情 ' + code + ' · from=' + from);
+
+  setTimeout(() => {
+    if (myEpoch !== epoch) return;
+    if (S.detail.token !== token) { S.stats.cancels++; log('请求已取消，丢弃回包'); return; }
+    S.detail.state = 'ok';
+    if (S.page === 'detail') render();
+  }, 420);
+
+  render();
+}
+
+function back(){
+  if (S.route.length <= 1) return;
+  S.route.pop();
+  S.stats.pops++;
+  S.page = S.route[S.route.length - 1].name;
+  if (S.detail.state === 'loading') {
+    S.detail.token = ++seq;
+    log('返回时取消在途请求');
+  }
+  log('pop → ' + S.page);
+  render();
+}
+
+function openSearch(){
+  S.page = 'search';
+  S.route.push({ name:'search' });
+  render();
+  setTimeout(() => { const q = $('#q'); if (q) q.focus(); }, 0);
+}
+
+function simulateDeepLink(code){
+  S.route = [{ name:'home' }];
+  S.page = 'home';
+  S.paneCode = null;
+  S.stats.pushes++;
+  S.route.push({ name:'detail' });
+  enterDetail(code, 'deeplink');
+  log('外部深链唤起 ' + code);
+}
+
+function onAction(a){
+  if (a === 'back') return back();
+  if (a === 'search') return openSearch();
+  if (a === 'cancelSearch') return back();
+  if (a === 'deep') return simulateDeepLink(stocks[0].code);
+  if (a === 'deep404') return simulateDeepLink('000000');
+  if (a === 'toSearch') { S.route = [{name:'home'}]; S.page='home'; openSearch(); return; }
+  if (a === 'reset') { resetBench(); render(); log('已重置'); return; }
+}
+
+/* ================= 事件 ================= */
+screenEl.addEventListener('click', e => {
+  const row = e.target.closest('[data-row]');
+  if (row) return onRow(+row.dataset.row);
+
+  const res = e.target.closest('[data-result]');
+  if (res) {
+    const s = stocks[+res.dataset.result];
+    const rank = +(res.dataset.rank || 1);
+    if (S.width === 'lg') { panePick(s.code); return; }
+    return attemptNav(() => openDetail(s.code, 'search', rank));
+  }
+
+  const g = e.target.closest('[data-group]');
+  if (g) return setGroup(g.dataset.group);
+
+  const a = e.target.closest('[data-action]');
+  if (a) return onAction(a.dataset.action);
+});
+
+screenEl.addEventListener('scroll', e => {
+  const t = e.target;
+  if (!t || !t.dataset) return;
+  if (t.dataset.scroll === 'list') { S.scrollTop = t.scrollTop; S.hscroll = t.scrollLeft; renderInspector(); }
+  if (t.dataset.scroll === 'results') { S.search.scrollTop = t.scrollTop; }
+}, true);
+
+screenEl.addEventListener('input', e => {
+  if (e.target.id !== 'q') return;
+  S.search.term = e.target.value;
+  S.search.scrollTop = 0;
+  const list = screenEl.querySelector('[data-list="results"]');
+  if (list) list.innerHTML = resultsHTML();
+});
+
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => setWidth(b.dataset.w)));
+document.querySelectorAll('.quick button').forEach(b => b.addEventListener('click', () => onAction(b.dataset.action)));
+
+/* ================= 用例 ================= */
+const CASES = [];
+function def(id, name, fn){ CASES.push({ id, name, fn, status:'idle', msg:'' }); }
+function assert(cond, msg){ if (!cond) throw new Error(msg); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function resetBench(){
+  if (paneTimer) { clearTimeout(paneTimer); paneTimer = null; }
+  seq++; epoch++;
+  S.width = 'sm';
+  S.page = 'home';
+  S.route = [{ name:'home' }];
+  S.group = 'all';
+  S.scrollTop = 0;
+  S.hscroll = 0;
+  S.selected = null;
+  S.paneCode = null;
+  S.search = { term:'', results:[], scrollTop:0 };
+  S.detail = { code:null, from:null, state:'idle', token:0 };
+  S.stats = { pushes:0, pops:0, ignored:0, requests:0, cancels:0, merges:0 };
+  S.lastNav = 0;
+  document.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.w === 'sm'));
+  render();
+}
+
+function el(sel){ const e = screenEl.querySelector(sel); if (!e) throw new Error('找不到元素 ' + sel); return e; }
+function clickRow(i){ el('[data-row="' + i + '"]').click(); }
+function click(sel){ el(sel).click(); }
+function scrollList(top, left){
+  const e = el('[data-scroll="list"]');
+  e.scrollTop = top; e.scrollLeft = left;
+  e.dispatchEvent(new Event('scroll', { bubbles:false }));
+  return e;
+}
+function setTerm(t){
+  const q = el('#q');
+  q.value = t;
+  q.dispatchEvent(new Event('input', { bubbles:true }));
+}
+
+def('C01', 'E1 · sm 列表进入详情，栈深 2', async () => {
+  resetBench(); clickRow(5); await sleep(30);
+  assert(S.page === 'detail', '页面应为 detail');
+  assert(S.route.length === 2, '栈深应为 2，实际 ' + S.route.length);
+  assert(S.detail.from === 'watchlist', 'from 应为 watchlist');
+});
+
+def('C02', '返回恢复 scrollTop', async () => {
+  resetBench();
+  scrollList(1400, 0);
+  const before = S.scrollTop;
+  assert(before > 0, '滚动未生效');
+  clickRow(30); await sleep(30);
+  back(); await sleep(30);
+  assert(S.scrollTop === before, 'scrollTop 未恢复：' + S.scrollTop + ' ≠ ' + before);
+  assert(Math.abs(el('[data-scroll="list"]').scrollTop - before) < 1, 'DOM 滚动未恢复');
+});
+
+def('C03', '返回恢复选中行', async () => {
+  resetBench();
+  clickRow(7); await sleep(30);
+  back(); await sleep(30);
+  const row = el('[data-row="7"]');
+  assert(row.classList.contains('sel'), '选中行未恢复');
+});
+
+def('C04', '返回恢复分组', async () => {
+  resetBench();
+  click('[data-group="gem"]'); await sleep(20);
+  assert(S.group === 'gem', '分组未切换');
+  clickRow(4); await sleep(30);
+  back(); await sleep(30);
+  assert(S.group === 'gem', '分组未恢复');
+  assert(el('[data-group="gem"]').classList.contains('on'), 'Tab 高亮未恢复');
+});
+
+def('C05', '返回恢复横滑偏移', async () => {
+  resetBench();
+  scrollList(0, 260);
+  assert(S.hscroll === 260, '横滑未生效：' + S.hscroll);
+  clickRow(9); await sleep(30);
+  back(); await sleep(30);
+  assert(S.hscroll === 260, '横滑未恢复：' + S.hscroll);
+});
+
+def('C06', 'E2 · lg 右栏切换不产生导航', async () => {
+  resetBench(); setWidth('lg');
+  clickRow(3); await sleep(250);
+  assert(S.route.length === 1, 'lg 不应 push，栈深=' + S.route.length);
+  assert(S.paneCode === stocks[3].code, '右栏 code 不对');
+  assert(S.page === 'home', '页面应仍为 home');
+});
+
+def('C07', 'E6 · lg 搜索点结果只换右栏', async () => {
+  resetBench(); setWidth('lg');
+  click('[data-action="search"]'); await sleep(20);
+  setTerm('某某'); await sleep(20);
+  assert(S.route.length === 2, '搜索页栈深应为 2');
+  click('[data-result="' + stocks[1].i + '"]'); await sleep(250);
+  assert(S.route.length === 2, '点结果不应再 push');
+  assert(S.paneCode === stocks[1].code, '右栏未更新');
+});
+
+def('C08', 'E5 · sm 搜索进详情，返回保留词与滚动', async () => {
+  resetBench();
+  click('[data-action="search"]'); await sleep(20);
+  setTerm('某某'); await sleep(20);
+  const r = el('[data-scroll="results"]');
+  r.scrollTop = 60; r.dispatchEvent(new Event('scroll'));
+  click('[data-result="' + stocks[2].i + '"]'); await sleep(30);
+  assert(S.page === 'detail', '应进入详情');
+  back(); await sleep(30);
+  assert(S.page === 'search', '应回到搜索');
+  assert(el('#q').value === '某某', '搜索词未保留');
+  assert(S.search.scrollTop === 60, '结果滚动未保留：' + S.search.scrollTop);
+});
+
+def('C09', '300ms 内连点 3 次只产生 1 次 push', async () => {
+  resetBench();
+  S.lastNav = 0;
+  onRow(1); onRow(2); onRow(3);
+  assert(S.stats.pushes === 1, 'push 次数应为 1，实际 ' + S.stats.pushes);
+  assert(S.stats.ignored === 2, '丢弃次数应为 2，实际 ' + S.stats.ignored);
+  assert(S.route.length === 2, '栈深应为 2');
+});
+
+def('C10', '同一行连点只认第一次', async () => {
+  resetBench(); S.lastNav = 0;
+  onRow(6); onRow(6);
+  assert(S.stats.pushes === 1, 'push 应为 1');
+  assert(S.stats.ignored === 1, '丢弃应为 1');
+});
+
+def('C11', '深链进入：栈 [home, detail]，返回落 home', async () => {
+  resetBench();
+  click('[data-action="deep"]'); await sleep(30);
+  assert(S.route.length === 2, '深链栈深应为 2');
+  assert(S.detail.from === 'deeplink', 'from 应为 deeplink');
+  back(); await sleep(30);
+  assert(S.page === 'home', '返回应落 home');
+  assert(S.route.length === 1, '返回后栈深应为 1');
+});
+
+def('C12', '404：进入即错误态，可返回', async () => {
+  resetBench();
+  click('[data-action="deep404"]'); await sleep(30);
+  assert(S.detail.state === '404', '应为 404 态');
+  assert(S.page === 'detail', '应仍为详情页');
+  back(); await sleep(30);
+  assert(S.page === 'home', '返回后应回 home');
+});
+
+def('C13', '加载中返回：取消请求、不回填', async () => {
+  resetBench();
+  clickRow(11); await sleep(20);
+  assert(S.detail.state === 'loading', '应为 loading');
+  back(); await sleep(600);
+  assert(S.stats.cancels >= 1, '应记录一次取消，实际 ' + S.stats.cancels);
+  assert(S.page === 'home', '应回到 home');
+});
+
+def('C14', '返回不重新请求', async () => {
+  resetBench();
+  clickRow(12); await sleep(500);
+  assert(S.detail.state === 'ok', '详情应已加载');
+  const req = S.stats.requests;
+  back(); await sleep(200);
+  assert(S.stats.requests === req, '返回不应新增请求：' + req + ' → ' + S.stats.requests);
+});
+
+def('C15', 'lg 快速切换右栏：合并 + 只请求一次', async () => {
+  resetBench(); setWidth('lg');
+  clickRow(1); clickRow(2); clickRow(3);
+  await sleep(300);
+  assert(S.paneCode === stocks[3].code, '应只保留最后一次');
+  assert(S.stats.merges === 2, '合并次数应为 2，实际 ' + S.stats.merges);
+  assert(S.stats.requests === 1, '请求应为 1，实际 ' + S.stats.requests);
+});
+
+/* ================= 用例面板 ================= */
+function renderTests(){
+  const wrap = $('#tests');
+  wrap.innerHTML = CASES.map((c, idx) => `
+    <div class="cas ${c.status === 'run' ? 'run' : c.status}" data-case="${idx}">
+      <span class="cid">${c.id}</span>
+      <span class="cn" title="${c.name}">${c.name}</span>
+      <span class="st">${c.status === 'pass' ? '通过' : c.status === 'fail' ? '失败' : c.status === 'run' ? '运行中' : '待运行'}</span>
+      ${c.msg ? '<div class="msg">' + c.msg + '</div>' : ''}
+    </div>`).join('');
+  const pass = CASES.filter(c => c.status === 'pass').length;
+  const fail = CASES.filter(c => c.status === 'fail').length;
+  $('#summary').textContent = CASES.length + ' 条 · 通过 ' + pass + ' / 失败 ' + fail;
+  wrap.querySelectorAll('.cas').forEach(el => el.addEventListener('click', () => runOne(+el.dataset.case)));
+}
+
+async function runOne(idx){
+  const c = CASES[idx];
+  c.status = 'run'; c.msg = '';
+  renderTests();
+  try {
+    await c.fn();
+    c.status = 'pass';
+  } catch (e) {
+    c.status = 'fail';
+    c.msg = e.message;
+    log('用例失败 ' + c.id + '：' + e.message);
+  }
+  renderTests();
+  renderInspector();
+}
+
+let running = false;
+async function runAll(){
+  if (running) return;
+  running = true;
+  $('#runState').textContent = '运行中…';
+  CASES.forEach(c => { c.status = 'idle'; c.msg = ''; });
+  renderTests();
+  for (let i = 0; i < CASES.length; i++) {
+    await runOne(i);
+  }
+  running = false;
+  $('#runState').textContent = '完成';
+  const fail = CASES.filter(c => c.status === 'fail').length;
+  log(fail ? '全部完成，失败 ' + fail + ' 条' : '全部通过');
+}
+
+$('#runAll').addEventListener('click', runAll);
+$('#runReset').addEventListener('click', () => {
+  CASES.forEach(c => { c.status = 'idle'; c.msg = ''; });
+  resetBench(); renderTests(); log('用例与场景已重置');
+});
+
+/* ================= 启动 ================= */
+resetBench();
+renderTests();
+log('验证台就绪：先点「运行全部」，或手动点行体验');
+</script>
+</body>
+</html>
