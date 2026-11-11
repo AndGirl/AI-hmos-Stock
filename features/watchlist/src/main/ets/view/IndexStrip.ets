@@ -5,10 +5,15 @@ import { DIR_DOWN, DIR_FLAT, DIR_UP, WatchRowVM } from '../viewmodel/WatchRowVM'
 /** 单个条目宽度：名称 + 涨跌幅两行，超出后横向滚动。 */
 const ITEM_WIDTH: number = 96;
 const STRIP_HEIGHT: number = 56;
+/** 推荐卡片：与指数条平级、固定在右侧，宽度固定不参与横滑。 */
+const CARD_WIDTH: number = 88;
+const CARD_HEIGHT: number = 48;
 
 /**
- * 指数条：与自选列表逐股票一一对应（同序），横向 List + LazyForEach，
- * 超出可视宽度横向滚动；切分组/排序时随列表行整体变化。
+ * 指数条 + 推荐卡片（平级）：
+ * - 指数条与自选列表逐股票一一对应（同序），横向 List + LazyForEach，超出横向滚动；
+ * - 推荐卡片固定在页面最右侧，与指数条同一水平带、垂直居中，不随横滑移动；
+ * - 本期为样式占位（系统 token 定义），内容与点击行为后续再定。
  */
 @ComponentV2
 export struct IndexStrip {
@@ -36,8 +41,30 @@ export struct IndexStrip {
     return AppColor.priceFlat;
   }
 
+  @Builder
+  recommendCard() {
+    Row() {
+      Text($r('app.string.watch_recommend'))
+        .fontSize(12)
+        .fontColor(AppColor.accent)
+        .maxLines(1)
+      Text('›')
+        .fontSize(12)
+        .fontColor(AppColor.accent)
+        .margin({ left: 2 })
+    }
+    .width(CARD_WIDTH)
+    .height(CARD_HEIGHT)
+    .justifyContent(FlexAlign.Center)
+    .backgroundColor(AppColor.bgSurface)
+    .borderRadius(AppDim.gap8)
+    .border({ width: 0.5, color: AppColor.divider })
+    .margin({ left: AppDim.gap8 })
+    .accessibilityText($r('app.string.watch_recommend'))
+  }
+
   build() {
-    Column() {
+    Row() {
       List({ scroller: this.scroller }) {
         LazyForEach(this.source, (row: WatchRowVM) => {
           ListItem() {
@@ -68,10 +95,14 @@ export struct IndexStrip {
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.None)
       .cachedCount(3)
-      .width('100%')
+      .layoutWeight(1)
       .height(STRIP_HEIGHT)
-      .padding({ left: AppDim.gap8, right: AppDim.gap8 })
+
+      this.recommendCard()
     }
     .width('100%')
+    .height(STRIP_HEIGHT)
+    .alignItems(VerticalAlign.Center)
+    .padding({ left: AppDim.gap8, right: AppDim.gap8 })
   }
 }
