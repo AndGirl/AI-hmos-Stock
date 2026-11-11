@@ -1,0 +1,21 @@
+name: gate
+
+# 仅跑不依赖 HarmonyOS SDK 的静态门禁。
+# CodeLinter / 构建 / Hypium 需要 DevEco Studio 或 Command Line Tools，本地执行 scripts/gate.ps1。
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  static-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 占位文案门禁
+        run: node scripts/check-coming-soon.mjs
+      - name: 分层架构门禁（R-01~R-09）
+        run: node scripts/check-architecture.mjs
