@@ -71,6 +71,7 @@ export struct QuoteHeader {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
+      .accessibilityGroup(true)
 
       Row() {
         Stack() {
@@ -101,6 +102,7 @@ export struct QuoteHeader {
       .width('100%')
       .alignItems(VerticalAlign.Bottom)
       .margin({ top: AppDim.gap8 })
+      .accessibilityGroup(true)
 
       if (this.vm.tags.length > 0) {
         Row() {
@@ -116,6 +118,7 @@ export struct QuoteHeader {
         }
         .width('100%')
         .margin({ top: AppDim.gap8 })
+        .accessibilityGroup(true)
       }
     }
     .width('100%')

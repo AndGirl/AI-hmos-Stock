@@ -145,7 +145,17 @@ export struct ChartArea {
   }
 
   private chartA11y(): string {
-    return 'chart ' + this.vm.name + ' ' + this.period + ' ' + this.vm.priceText + ' ' + this.vm.pctText;
+    // FR-06.13：图表提供替代文本摘要（不逐点朗读 K 线）。
+    return this.textOf($r('app.string.detail_chart_desc')) + ' ' + this.vm.name + ' ' +
+      this.textOf(periodLabel(this.period)) + ' ' + this.vm.priceText + ' ' + this.vm.pctText;
+  }
+
+  private textOf(res: Resource): string {
+    const context: common.Context | undefined = this.getUIContext().getHostContext();
+    if (context === undefined) {
+      return '';
+    }
+    return context.resourceManager.getStringSync(res);
   }
 
   @Builder

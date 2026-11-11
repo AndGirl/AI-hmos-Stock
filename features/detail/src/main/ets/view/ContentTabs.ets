@@ -38,6 +38,7 @@ struct ContentTabItem {
     }
     .padding({ left: AppDim.gap12, right: AppDim.gap12, top: AppDim.gap8, bottom: AppDim.gap4 })
     .justifyContent(FlexAlign.Center)
+    .accessibilityGroup(true)
   }
 }
 

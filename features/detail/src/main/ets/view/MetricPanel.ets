@@ -68,6 +68,7 @@ export struct MetricPanel {
           .width(this.itemWidth())
           .alignItems(HorizontalAlign.Start)
           .padding({ top: AppDim.gap4, bottom: AppDim.gap4 })
+          .accessibilityGroup(true)
         }, (metric: MetricVM) => metric.key)
       }
       .width('100%')

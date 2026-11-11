@@ -27,6 +27,7 @@ export struct ActionBar {
     .width(66)
     .height(48)
     .justifyContent(FlexAlign.Center)
+    .accessibilityGroup(true)
     .onClick(() => {
       this.onAction(action);
     })

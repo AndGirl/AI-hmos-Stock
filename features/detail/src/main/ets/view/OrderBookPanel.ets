@@ -57,6 +57,7 @@ struct OrderLevelRow {
     }
     .width('100%')
     .height(18)
+    .accessibilityGroup(true)
   }
 }
 
@@ -195,6 +196,7 @@ export struct OrderBookPanel {
             .width('100%')
             .height(16)
             .padding({ left: 4, right: 4 })
+            .accessibilityGroup(true)
           }
         }, (tick: TickVM) => tick.key)
       }
