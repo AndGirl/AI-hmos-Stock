@@ -14,6 +14,36 @@ export {
   QuoteSubscription,
   TradeStatus
 } from './src/main/ets/model/QuoteModels';
+export {
+  CHART_PERIODS,
+  ChartPeriod,
+  ChartPoint,
+  ChartSeries,
+  DetailError,
+  DetailErrorReason,
+  DetailListener,
+  DetailNews,
+  DetailPatch,
+  DetailProvider,
+  DetailSnapshot,
+  DetailSubscription,
+  KLINE_MAX_COUNT,
+  KLINE_PAGE_SIZE,
+  OrderBook,
+  OrderLevel,
+  StockTag,
+  Tick,
+  TickDirection,
+  TIMELINE_POINT_COUNT,
+  isKlinePeriod
+} from './src/main/ets/model/DetailModels';
+export {
+  ChartEngine,
+  ChartSelectionListener,
+  ChartStyle,
+  MpChartEngine,
+  createChartEngine
+} from './src/main/ets/chart/ChartEngine';
 export { GroupType, WatchGroup, WatchItem } from './src/main/ets/entities/WatchEntities';
 export { QuoteSink, QuoteBus, SinkSubscription } from './src/main/ets/bus/QuoteBus';
 export { WatchlistProvider, WatchlistRaw } from './src/main/ets/provider/WatchlistProvider';

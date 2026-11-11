@@ -1,5 +1,7 @@
 import { QuoteProvider } from './model/QuoteModels';
+import { DetailProvider } from './model/DetailModels';
 import { MockQuoteProvider } from './provider/MockQuoteProvider';
+import { MockDetailProvider } from './provider/MockDetailProvider';
 import { MockWatchlistProvider, WatchlistProvider } from './provider/WatchlistProvider';
 import { QuoteBus } from './bus/QuoteBus';
 
@@ -10,6 +12,7 @@ import { QuoteBus } from './bus/QuoteBus';
 export class DataServices {
   private static quote: QuoteProvider | undefined = undefined;
   private static watch: WatchlistProvider | undefined = undefined;
+  private static detail: DetailProvider | undefined = undefined;
   private static bus: QuoteBus | undefined = undefined;
 
   static quoteProvider(): QuoteProvider {
@@ -24,6 +27,14 @@ export class DataServices {
       DataServices.watch = new MockWatchlistProvider();
     }
     return DataServices.watch;
+  }
+
+  /** 详情源与自选同源行情：共用同一个 quote provider 实例。 */
+  static detailProvider(): DetailProvider {
+    if (DataServices.detail === undefined) {
+      DataServices.detail = new MockDetailProvider(DataServices.quoteProvider());
+    }
+    return DataServices.detail;
   }
 
   static quoteBus(): QuoteBus {

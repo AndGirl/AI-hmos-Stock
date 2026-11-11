@@ -7,9 +7,15 @@ export class MockFaults {
   static emptyWatchlist: boolean = false;
   /** 自选加载失败（验证失败态与重试）。 */
   static failWatchlist: boolean = false;
+  /** 详情首屏失败（验证首屏错误态与重试）。 */
+  static failDetail: boolean = false;
+  /** 图表失败（验证图表局部错误 + 重试，盘口/动作栏保留）。 */
+  static failChart: boolean = false;
 
   static reset(): void {
     MockFaults.emptyWatchlist = false;
     MockFaults.failWatchlist = false;
+    MockFaults.failDetail = false;
+    MockFaults.failChart = false;
   }
 }

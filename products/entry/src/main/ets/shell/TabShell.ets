@@ -35,6 +35,9 @@ export struct TabShell {
           WatchlistPage({
             onOpenDetail: (code: string): void => {
               AppServices.get().pushDetail(code, 'list');
+            },
+            onOpenPk: (codes: string[]): void => {
+              AppServices.get().pushPk(codes, 0);
             }
           })
         }

@@ -1,4 +1,5 @@
 import { promptAction } from '@kit.ArkUI';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppColor, AppDim, showComingSoon, StateMode, StateView } from 'commons_ui';
 import {
   BreakpointHost,
@@ -9,6 +10,7 @@ import {
   LayoutConst,
   PerfMeter
 } from 'commons_basic';
+import { DetailAction, DetailContent, showDetailActionMenu } from 'detail';
 import { DEBUG } from '../../../../BuildProfile';
 import { WatchlistVM } from '../viewmodel/WatchlistVM';
 import { SortKey } from '../viewmodel/WatchlistVM';
@@ -30,10 +32,14 @@ const DEBUG_BTN_COLOR: string = '#E84026';
 export struct WatchlistPage {
   @Param onOpenDetail: (code: string) => void = () => {
   };
+  @Param onOpenPk: (codes: string[]) => void = () => {
+  };
   @Local vm: WatchlistVM = new WatchlistVM();
   @Local breakpoint: BreakpointService = BreakpointHost.getService();
   @Local config: ConfigService = ConfigHost.getService();
   @Local perfRunning: boolean = false;
+  /** xl 分栏右栏当前标的（M2：详情 pane 形态，点行只换 code 不路由）。 */
+  @Local paneCode: string = '';
 
   aboutToAppear(): void {
     this.syncLayout();
@@ -119,6 +125,46 @@ export struct WatchlistPage {
     const screenWidth: number = this.breakpoint.viewportWidth > 0 ? this.breakpoint.viewportWidth : 360;
     const width: number = this.breakpoint.isSplit ? 523 : Math.max(200, screenWidth - 32);
     this.vm.updateLayout(width, this.config.fontScale);
+  }
+
+  private paneWidth(): number {
+    const screenWidth: number = this.breakpoint.viewportWidth > 0 ? this.breakpoint.viewportWidth : 1180;
+    return Math.max(320, screenWidth - 523);
+  }
+
+  /** 右栏标的：用户点过的优先，否则取列表首行（xl 默认有内容）。 */
+  private effectivePaneCode(): string {
+    if (this.paneCode.length > 0) {
+      return this.paneCode;
+    }
+    return this.vm.rows.length > 0 ? this.vm.rows[0].code : '';
+  }
+
+  private openRow(code: string): void {
+    if (this.breakpoint.isSplit) {
+      this.paneCode = code;
+      return;
+    }
+    this.onOpenDetail(code);
+  }
+
+  private handlePaneAction(code: string, action: DetailAction): void {
+    if (action === 'watchlist') {
+      showComingSoon(this.getUIContext(), ComingSoonText.ADD_WATCHLIST);
+      return;
+    }
+    if (action === 'pk') {
+      this.onOpenPk([code]);
+      return;
+    }
+    if (action === 'more') {
+      showDetailActionMenu(this.getUIContext(), (picked: DetailAction): void => {
+        this.handlePaneAction(code, picked);
+      });
+      return;
+    }
+    // M3 接入买入弹层前只做入口埋点（不新增占位文案，ADR-08 锁 5 条）。
+    hilog.info(0x0001, 'WatchlistPane', 'trade_entry code=%{public}s', code);
   }
 
   @Builder
@@ -221,7 +267,7 @@ export struct WatchlistPage {
             this.vm.cycleSort(key);
           },
           onRowTap: (code: string): void => {
-            this.onOpenDetail(code);
+            this.openRow(code);
           },
           onScrollY: (offset: number): void => {
             this.vm.onVerticalOffset(offset);
@@ -236,11 +282,30 @@ export struct WatchlistPage {
         .height('100%')
 
         if (this.breakpoint.isSplit) {
-          // xl 右栏：M2 详情区挂点（本期仅留分隔线）
-          Column()
-            .layoutWeight(1)
-            .height('100%')
-            .border({ width: { left: 0.5 }, color: AppColor.divider })
+          // xl 右栏：详情 pane 形态（与 page 共用 DetailContent，compact 打开）。
+          Column() {
+            if (this.effectivePaneCode().length > 0) {
+              DetailContent({
+                code: this.effectivePaneCode(),
+                compact: true,
+                contentWidth: this.paneWidth(),
+                bottomInset: 0,
+                onAction: (action: DetailAction): void => {
+                  this.handlePaneAction(this.effectivePaneCode(), action);
+                }
+              })
+            } else {
+              StateView({
+                mode: StateMode.EMPTY,
+                stateDesc: $r('app.string.empty_watchlist_desc')
+              })
+                .width('100%')
+                .height('100%')
+            }
+          }
+          .height('100%')
+          .layoutWeight(1)
+          .border({ width: { left: 0.5 }, color: AppColor.divider })
         }
       }
       .width('100%')

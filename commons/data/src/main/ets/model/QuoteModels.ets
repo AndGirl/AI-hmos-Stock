@@ -29,6 +29,15 @@ export interface QuoteSnapshot {
   turnover: number | null;
   pe: number | null;
   pb: number | null;
+  /** M2 详情新增（列表不消费）：今开 / 最高 / 最低。 */
+  open?: number | null;
+  high?: number | null;
+  low?: number | null;
+  limitUp?: number | null;
+  limitDown?: number | null;
+  volumeRatio?: number | null;
+  marketCap?: number | null;
+  floatCap?: number | null;
 }
 
 /** 增量 patch：只带变化的字段，消费方按字段合并（设计 §4.4）。 */

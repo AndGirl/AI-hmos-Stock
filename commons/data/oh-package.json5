@@ -6,6 +6,7 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "commons_basic": "file:../basic"
+    "commons_basic": "file:../basic",
+    "@ohos/mpchart": "3.0.31"
   }
 }

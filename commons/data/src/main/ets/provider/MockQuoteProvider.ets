@@ -23,6 +23,7 @@ class QuoteState {
   floatShares: number = 2000000000;
   last: number = 0;
   prevClose: number = 0;
+  open: number = 0;
   high: number = 0;
   low: number = 0;
   volume: number = 0;
@@ -30,6 +31,8 @@ class QuoteState {
   amount: number = 0;
   pe: number = 0;
   pb: number = 0;
+  volumeRatio: number = 1;
+  totalShares: number = 2000000000;
   snapshotTime: number = 0;
 
   buildSnapshot(): QuoteSnapshot {
@@ -60,7 +63,15 @@ class QuoteState {
       amplitude: amplitude,
       turnover: turnover,
       pe: suspended || this.pe === 0 ? null : this.pe,
-      pb: suspended || this.pb === 0 ? null : this.pb
+      pb: suspended || this.pb === 0 ? null : this.pb,
+      open: suspended ? null : this.open,
+      high: suspended ? null : this.high,
+      low: suspended ? null : this.low,
+      limitUp: suspended ? null : this.prevClose * (1 + LIMIT_RATIO),
+      limitDown: suspended ? null : this.prevClose * (1 - LIMIT_RATIO),
+      volumeRatio: suspended ? null : this.volumeRatio,
+      marketCap: suspended ? null : this.last * this.totalShares,
+      floatCap: suspended ? null : this.last * this.floatShares
     };
   }
 
@@ -152,12 +163,15 @@ export class MockQuoteProvider implements QuoteProvider {
       state.volatility = seed.volatility;
       state.last = seed.base;
       state.prevClose = seed.base * (1 - (((i % 11) - 5) / 100));
-      state.high = Math.max(seed.base, state.prevClose);
-      state.low = Math.min(seed.base, state.prevClose);
+      state.open = state.prevClose * (1 + (((i % 5) - 2) / 200));
+      state.high = Math.max(seed.base, state.prevClose, state.open);
+      state.low = Math.min(seed.base, state.prevClose, state.open);
       state.floatShares = 800000000 + (i % 7) * 400000000;
+      state.totalShares = state.floatShares * (1.2 + (i % 5) * 0.1);
       state.volume = 1200000 + (i * 37000) % 9000000;
       state.lastVolume = 1000 + (i * 137) % 20000;
       state.amount = state.volume * seed.base;
+      state.volumeRatio = 0.6 + (i % 17) / 10;
       state.pe = seed.pe;
       state.pb = seed.pb;
       state.snapshotTime = Date.now();
@@ -174,6 +188,7 @@ export class MockQuoteProvider implements QuoteProvider {
       state.volatility = 0.6;
       state.last = seed.base;
       state.prevClose = seed.base * (1 - 0.004);
+      state.open = seed.base * 0.998;
       state.high = seed.base * 1.006;
       state.low = seed.base * 0.996;
       state.floatShares = 1000000000000;

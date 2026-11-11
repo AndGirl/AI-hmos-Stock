@@ -9,6 +9,7 @@
     "trade": "file:../trade",
     "commons_data": "file:../../commons/data",
     "commons_ui": "file:../../commons/ui",
-    "commons_basic": "file:../../commons/basic"
+    "commons_basic": "file:../../commons/basic",
+    "@ohos/mpchart": "3.0.31"
   }
 }
