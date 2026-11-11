@@ -265,12 +265,12 @@ export struct FrozenTable {
           }
           .width(this.metrics.numericWidth)
           .height('100%')
-          // 底部留 8vp 给横滑条，避免遮挡最后一行（设计 §5.2.5）
+          // 滑动条已隐藏（产品要求），底部仅保留 8vp 呼吸位
           .padding({ bottom: AppDim.gap8 })
           .backgroundColor(AppColor.bgSurface)
         }
         .scrollable(ScrollDirection.Horizontal)
-        .scrollBar(BarState.On)
+        .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.None)
         .width('100%')
         .height('100%')

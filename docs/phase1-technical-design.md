@@ -1094,7 +1094,7 @@ Column() {
       .height('100%')
     }
     .scrollable(ScrollDirection.Horizontal)
-    .scrollBar(BarState.On)
+    .scrollBar(BarState.Off)
     .edgeEffect(EdgeEffect.None)
     .layoutWeight(1)
   }.layoutWeight(1)
@@ -1148,7 +1148,7 @@ export function computeTableMetrics(viewport: number, fontScale: number): TableM
 | 行高一致 | 名称行与数据行共用 `metrics.rowHeight`，**禁止**任一列自适应撑高（否则错位） |
 | 回弹 | 两侧 `edgeEffect(EdgeEffect.None)`，避免回弹期间两列错位；如需回弹只允许数据区，名称列按 clamp 跟随 |
 | 右侧渐隐 | 数据区上层叠 `Row().width(20)` 渐变；`xOffset = hScroller.currentOffset().xOffset`，`opacity = overflow > 0 && xOffset < overflow - 8 ? 1 : 0` |
-| 横滑条 | `scrollBar(BarState.On)`、宽 4vp、圆角；不遮挡最后一行（列表底部留 8vp） |
+| 横滑条 | **隐藏**（`scrollBar(BarState.Off)`，2026-11-12 产品要求）；底部保留 8vp 呼吸位，最后一行不被裁 |
 | 列头点击 | 表头数字列可点（`sortableKeys` 内），点击循环 `desc → asc → none`；名称列点击不做排序 |
 | 排序指示 | 表头右侧三角 + 色值 accent；`none` 时隐藏 |
 | 横滑位置保持 | `xOffset` 存 `WatchlistVM`，切分组/进详情返回后恢复；分栏切换按「比例」恢复（AC-53） |
