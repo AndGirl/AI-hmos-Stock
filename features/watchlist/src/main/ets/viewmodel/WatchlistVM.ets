@@ -2,7 +2,8 @@ import { ConnectionState, MockFaults, QuotePatch, QuoteSink, QuoteSnapshot, Sink
 import { compareRows, nextSortDir, SortDir, SortKey } from '../repository/SortRules';
 import { computeTableMetrics, TableMetrics } from '../repository/TableMetrics';
 import { WatchlistData, WatchlistRepository } from '../repository/WatchlistRepository';
-import { DIR_DOWN, DIR_FLAT, DIR_UP, WatchRowVM } from './WatchRowVM';
+import { IndexBarDataSource } from './IndexBarDataSource';
+import { WatchRowVM } from './WatchRowVM';
 
 export type WatchPageState = 'loading' | 'content' | 'empty' | 'error';
 
@@ -15,25 +16,6 @@ export class GroupTabVM {
 
   constructor(id: string) {
     this.id = id;
-  }
-}
-
-/** 指数条单项。 */
-@ObservedV2
-export class IndexItemVM {
-  code: string = '';
-  @Trace name: string = '';
-  @Trace pctText: string = '--';
-  @Trace dir: number = DIR_FLAT;
-
-  constructor(code: string) {
-    this.code = code;
-  }
-
-  update(name: string, pct: number | null): void {
-    this.name = name;
-    this.pctText = pct === null ? '--' : `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`;
-    this.dir = pct === null ? DIR_FLAT : (pct > 0 ? DIR_UP : (pct < 0 ? DIR_DOWN : DIR_FLAT));
   }
 }
 
@@ -65,7 +47,6 @@ export class WatchlistVM {
   @Trace state: WatchPageState = 'loading';
   @Trace rows: WatchRowVM[] = [];
   @Trace groups: GroupTabVM[] = [];
-  @Trace indexItems: IndexItemVM[] = [];
   @Trace selectedGroupId: string = 'all';
   @Trace sortKey: SortKey | null = null;
   @Trace sortDir: SortDir = 'none';
@@ -73,41 +54,34 @@ export class WatchlistVM {
   @Trace hOffset: number = 0;
   @Trace vOffset: number = 0;
   @Trace rowCount: number = 0;
+  /** 指数条数据版本：集合/顺序/布局变化时 +1，视图侧据此把横向 List 复位到首项。 */
+  @Trace stripVersion: number = 0;
 
   private repo: WatchlistRepository = new WatchlistRepository();
   private allRows: WatchRowVM[] = [];
   private rowByCode: Map<string, WatchRowVM> = new Map<string, WatchRowVM>();
-  private indexByCode: Map<string, IndexItemVM> = new Map<string, IndexItemVM>();
-  private indexSet: Map<string, string[]> = new Map<string, string[]>();
-  private indexSnapshots: Map<string, QuoteSnapshot> = new Map<string, QuoteSnapshot>();
+  private indexBar: IndexBarDataSource = new IndexBarDataSource();
   private sub: SinkSubscription | undefined = undefined;
   private viewport: number = 360;
   private fontScale: number = 1;
-  private indexCount: number = 3;
   private loading: boolean = false;
   private loaded: boolean = false;
   private frozen: boolean = false;
 
-  updateLayout(viewport: number, fontScale: number, indexCount: number): void {
+  /** 指数条数据源：与 rows 同序、同集合（逐股票）。 */
+  indexBarSource(): IndexBarDataSource {
+    return this.indexBar;
+  }
+
+  updateLayout(viewport: number, fontScale: number): void {
     const width: number = Math.max(0, Math.round(viewport));
-    let changed: boolean = false;
-    if (width !== this.viewport) {
-      this.viewport = width;
-      this.metrics = computeTableMetrics(this.viewport, this.fontScale);
-      changed = true;
+    if (width === this.viewport && fontScale === this.fontScale) {
+      return;
     }
-    if (fontScale !== this.fontScale) {
-      this.fontScale = fontScale;
-      this.metrics = computeTableMetrics(this.viewport, this.fontScale);
-      changed = true;
-    }
-    if (indexCount !== this.indexCount) {
-      this.indexCount = indexCount;
-      changed = true;
-    }
-    if (changed) {
-      this.rebuildIndex();
-    }
+    this.viewport = width;
+    this.fontScale = fontScale;
+    this.metrics = computeTableMetrics(this.viewport, this.fontScale);
+    this.stripVersion++;
   }
 
   async load(): Promise<void> {
@@ -174,7 +148,6 @@ export class WatchlistVM {
     this.selectedGroupId = id;
     this.updateGroupSelection();
     this.rebuild();
-    this.rebuildIndex();
     // 横滑/竖向偏移保留（设计 §5.2.5：切分组、进详情返回后恢复原位置）。
   }
 
@@ -203,7 +176,6 @@ export class WatchlistVM {
     const previousRows: Map<string, WatchRowVM> = this.rowByCode;
     this.allRows = [];
     this.rowByCode = new Map<string, WatchRowVM>();
-    this.indexSnapshots = new Map<string, QuoteSnapshot>();
     for (let i = 0; i < data.items.length; i++) {
       const item: WatchItem = data.items[i];
       // 复用已有行对象：ForEach 以 code 为 key，替换实例会让旧 key 的节点继续读旧对象（表现为数据不刷新）。
@@ -217,11 +189,6 @@ export class WatchlistVM {
       this.allRows.push(row);
       this.rowByCode.set(row.code, row);
     }
-    data.quotes.forEach((snapshot: QuoteSnapshot): void => {
-      if (!this.rowByCode.has(snapshot.code)) {
-        this.indexSnapshots.set(snapshot.code, snapshot);
-      }
-    });
     const previousGroups: GroupTabVM[] = this.groups;
     this.groups = [];
     for (let i = 0; i < data.groups.length; i++) {
@@ -235,11 +202,9 @@ export class WatchlistVM {
       }
       this.groups.push(group !== undefined ? group : new GroupTabVM(id));
     }
-    this.indexSet = data.indexSet;
     this.updateGroupCounts();
     this.updateGroupSelection();
     this.rebuild();
-    this.rebuildIndex();
   }
 
   private subscribe(): void {
@@ -248,13 +213,6 @@ export class WatchlistVM {
     for (let i = 0; i < this.allRows.length; i++) {
       codes.push(this.allRows[i].code);
     }
-    this.indexSet.forEach((list: string[]): void => {
-      for (let i = 0; i < list.length; i++) {
-        if (codes.indexOf(list[i]) < 0) {
-          codes.push(list[i]);
-        }
-      }
-    });
     const sink: QuoteSink = new VmSink(
       (patch: QuotePatch): void => {
         this.onPatch(patch);
@@ -269,15 +227,8 @@ export class WatchlistVM {
 
   private onPatch(patch: QuotePatch): void {
     const row: WatchRowVM | undefined = this.rowByCode.get(patch.code);
-    if (row !== undefined) {
-      if (!this.frozen) {
-        row.applyPatch(patch);
-      }
-      return;
-    }
-    const index: IndexItemVM | undefined = this.indexByCode.get(patch.code);
-    if (index !== undefined && patch.pct !== undefined) {
-      index.update(index.name, patch.pct);
+    if (row !== undefined && !this.frozen) {
+      row.applyPatch(patch);
     }
   }
 
@@ -320,25 +271,9 @@ export class WatchlistVM {
     this.rows = source;
     this.rowCount = source.length;
     this.state = source.length === 0 ? 'empty' : 'content';
-  }
-
-  private rebuildIndex(): void {
-    const codes: string[] = this.indexSet.get(this.selectedGroupId) ?? [];
-    const previous: Map<string, IndexItemVM> = this.indexByCode;
-    const items: IndexItemVM[] = [];
-    this.indexByCode = new Map<string, IndexItemVM>();
-    const limit: number = Math.min(this.indexCount, codes.length);
-    for (let i = 0; i < limit; i++) {
-      const reused: IndexItemVM | undefined = previous.get(codes[i]);
-      const item: IndexItemVM = reused !== undefined ? reused : new IndexItemVM(codes[i]);
-      const snapshot: QuoteSnapshot | undefined = this.indexSnapshots.get(codes[i]);
-      if (snapshot !== undefined) {
-        item.update(snapshot.name, snapshot.pct);
-      }
-      items.push(item);
-      this.indexByCode.set(codes[i], item);
-    }
-    this.indexItems = items;
+    // 指数条与列表逐股票一一对应：集合与顺序都由 rows 驱动。
+    this.indexBar.setItems(source);
+    this.stripVersion++;
   }
 }
 

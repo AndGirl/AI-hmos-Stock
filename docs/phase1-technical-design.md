@@ -1215,11 +1215,14 @@ export class SortStore {
 |---|---|
 | 分组 Tab | 「全部」+ 系统组（融/创）+ 用户组；显示只数；选中红色下划线 3vp |
 | 无组股票 | 不出现（INV-1/INV-3）；Mock 数据保证 |
-| 指数条 | `IndexSet[groupId]`：sm 3 / md 5 / lg 5 / xl 3（基线 C2）；无配置隐藏并收缩高度 |
-| 排序影响 | **不作用**于指数条（CC-4.5） |
-| 指数条滚动 | 只取前 N 项，**不做横向滚动**；N 由断点决定，超出的指数不渲染 |
+| 指数条条目 | **与当前 Tab 的列表行逐股票一一对应**：条数与顺序均与列表一致，每条展示「名称 + 涨跌幅」 |
+| 指数条实现 | `List`（`listDirection: Axis.Horizontal`）+ `LazyForEach`（`IndexBarDataSource`）；可视宽度内平铺，**超出部分横向滚动** |
+| 分组切换 | 条目集合与顺序随分组重建（如切「创业板」只剩该组 3 条） |
+| 排序影响 | 逐股票对应，**随列表排序同步变化**（CC-4.5「排序不影响指数条」不再适用） |
+| 数据刷新 | 条目复用列表的 `WatchRowVM`，推送只改该条目的 `@Trace` 字段，不整体重建 |
 
-> 设计稿指数条含 1 张运营卡片，基线未定义该卡片 → 本期不实现运营位，只做纯指数 N 项（§11-Q7）。
+> **2026-11-12 产品口径调整**：原「`IndexSet[groupId]` 固定 3/5/5/3 项、不做横向滚动」方案废弃，`BreakpointService.indexCount` 一并移除。
+> 设计稿指数条含 1 张运营卡片，本期仍不实现运营位（§11-Q7）。
 
 #### 5.2.9 四形态与字号
 
@@ -1729,18 +1732,17 @@ export class BreakpointService {
   @Trace viewportWidth: number = 0;      // vp
   @Trace isSplit: boolean = false;       // xl：列表 + 右栏
   @Trace listColumns: number = 11;       // 固定 11，保留字段便于二期
-  @Trace indexCount: number = 3;         // 3/5/5/3
 
   apply(widthVp: number): void {
     this.viewportWidth = widthVp;
     if (widthVp < 600) {
-      this.widthBp = 'sm'; this.isSplit = false; this.indexCount = 3;
+      this.widthBp = 'sm'; this.isSplit = false;
     } else if (widthVp < 840) {
-      this.widthBp = 'md'; this.isSplit = false; this.indexCount = 5;
+      this.widthBp = 'md'; this.isSplit = false;
     } else if (widthVp < 1180) {
-      this.widthBp = 'lg'; this.isSplit = false; this.indexCount = 5;
+      this.widthBp = 'lg'; this.isSplit = false;
     } else {
-      this.widthBp = 'xl'; this.isSplit = true; this.indexCount = 3;
+      this.widthBp = 'xl'; this.isSplit = true;
     }
   }
 }
@@ -1748,7 +1750,7 @@ export class BreakpointService {
 
 **规则**：
 
-1. 每个断点分支**显式赋值全部派生状态**（`isSplit`/`indexCount`/…），不依赖初始值——避免宽→窄残留。
+1. 每个断点分支**显式赋值全部派生状态**（`isSplit` 等），不依赖初始值——避免宽→窄残留。
 2. 断点只驱动布局与显隐，**不在回调里发请求**。
 3. 尺寸监听 100–200ms 防抖；`windowSizeChange` 注册在 `loadContent` 回调内，`onWindowStageDestroy` 反注册。
 4. `px → vp` 用 `UIContext.px2vp`，不用全局 `px2vp`（已废弃）。
@@ -2043,7 +2045,7 @@ export class BreakpointService {
 | 行高 / 表头高 | 56 / 40（× fontScale） | 表格 |
 | 自选上限 / Mock 数据集 | 50 只 / ≥12 只 | 列表 |
 | 断点 | 600 / 840 / 1180 | 四形态 |
-| 指数条项数 | sm 3 / md 5 / lg 5 / xl 3 | 指数条 |
+| 指数条条目 | 与当前 Tab 的列表行数一致（逐股票），超出可视宽度横向滚动 | 指数条 |
 | 骨架 / 首屏 | 300ms / 1s | 启动 |
 | 图表周期数 | 8 | 详情 |
 | 分时点数 / K 线默认 / 上限 | 241 / 120 / 500 | 图表 |

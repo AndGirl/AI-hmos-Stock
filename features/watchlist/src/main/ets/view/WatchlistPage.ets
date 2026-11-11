@@ -118,7 +118,7 @@ export struct WatchlistPage {
   private syncLayout(): void {
     const screenWidth: number = this.breakpoint.viewportWidth > 0 ? this.breakpoint.viewportWidth : 360;
     const width: number = this.breakpoint.isSplit ? 523 : Math.max(200, screenWidth - 32);
-    this.vm.updateLayout(width, this.config.fontScale, this.breakpoint.indexCount);
+    this.vm.updateLayout(width, this.config.fontScale);
   }
 
   @Builder
@@ -170,7 +170,10 @@ export struct WatchlistPage {
 
       Row() {
         Column() {
-          IndexStrip({ items: this.vm.indexItems })
+          IndexStrip({
+            source: this.vm.indexBarSource(),
+            version: this.vm.stripVersion
+          })
 
       GroupTabs({
         groups: this.vm.groups,

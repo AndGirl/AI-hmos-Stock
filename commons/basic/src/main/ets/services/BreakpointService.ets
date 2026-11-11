@@ -25,14 +25,12 @@ export class BreakpointService {
   @Trace viewportWidth: number = 0;
   @Trace isSplit: boolean = false;
   @Trace listColumns: number = Breakpoint.LIST_COLUMNS;
-  @Trace indexCount: number = 3;
 
   constructor() {
     this.widthBp = 'sm';
     this.viewportWidth = 0;
     this.isSplit = false;
     this.listColumns = Breakpoint.LIST_COLUMNS;
-    this.indexCount = 3;
   }
 
   apply(widthVp: number): void {
@@ -40,19 +38,15 @@ export class BreakpointService {
     if (widthVp < Breakpoint.SM_MAX) {
       this.widthBp = 'sm';
       this.isSplit = false;
-      this.indexCount = 3;
     } else if (widthVp < Breakpoint.MD_MAX) {
       this.widthBp = 'md';
       this.isSplit = false;
-      this.indexCount = 5;
     } else if (widthVp < Breakpoint.LG_MAX) {
       this.widthBp = 'lg';
       this.isSplit = false;
-      this.indexCount = 5;
     } else {
       this.widthBp = 'xl';
       this.isSplit = true;
-      this.indexCount = 3;
     }
   }
 }
