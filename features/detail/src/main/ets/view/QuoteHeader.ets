@@ -13,6 +13,9 @@ export struct QuoteHeader {
   @Param compact: boolean = false;
   @Event onMore: () => void = (): void => {
   };
+  /** debug 构建：长按名称开始/停止帧率采样（release 由调用方以 BuildProfile.DEBUG 关闭）。 */
+  @Event onLongPressName: () => void = (): void => {
+  };
   @Local flashAlpha: number = 0;
 
   @Monitor('vm.flashSeq')
@@ -32,6 +35,12 @@ export struct QuoteHeader {
           .fontColor(AppColor.textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .gesture(
+            LongPressGesture({ repeat: false })
+              .onAction(() => {
+                this.onLongPressName();
+              })
+          )
         Text(this.vm.code)
           .fontSize(13)
           .fontColor(AppColor.textSecondary)

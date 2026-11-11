@@ -1,5 +1,7 @@
 import { BarChart, CandleStickChart, LineChart } from '@ohos/mpchart';
+import { FrameCallback } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppColor, AppDim } from 'commons_ui';
 import {
   CHART_PERIODS,
@@ -36,6 +38,20 @@ class ReadoutBridge implements ChartSelectionListener {
 /** 空配色占位：真正配色在 aboutToAppear 由主题 token 解析后注入。 */
 function emptyStyle(): ChartStyle {
   return new ChartStyle(0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/** 图表首帧探针（AC-65：chart_frame 日志）。 */
+class FirstFrameCallback extends FrameCallback {
+  private handler: (ns: number) => void;
+
+  constructor(handler: (ns: number) => void) {
+    super();
+    this.handler = handler;
+  }
+
+  onFrame(frameTimeInNano: number): void {
+    this.handler(frameTimeInNano);
+  }
 }
 
 /**
@@ -90,6 +106,17 @@ export struct ChartArea {
     this.engine.setSeries(this.series);
     this.engine.setCrosshairEnabled(true);
     this.applyZoom();
+    this.measureFirstFrame();
+  }
+
+  /** 从「数据已就绪」到下一帧回调的耗时（含容器布局与绘制提交）。 */
+  private measureFirstFrame(): void {
+    const started: number = Date.now();
+    const period: ChartPeriod = this.period;
+    this.getUIContext().postFrameCallback(new FirstFrameCallback((): void => {
+      hilog.info(0x0001, 'DetailPerf', 'chart_frame period=%{public}s ms=%{public}d',
+        period, Date.now() - started);
+    }));
   }
 
   private applyZoom(): void {

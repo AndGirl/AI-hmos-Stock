@@ -1,5 +1,6 @@
 import { AppColor, AppDim, StateMode, StateView } from 'commons_ui';
-import { BreakpointHost, BreakpointService, ConfigHost, ConfigService } from 'commons_basic';
+import { BreakpointHost, BreakpointService, ConfigHost, ConfigService, PerfMeter } from 'commons_basic';
+import { DEBUG } from '../../../../BuildProfile';
 import { DetailAction, DetailMode, DetailVM } from '../viewmodel/DetailVM';
 import { QuoteHeader } from './QuoteHeader';
 import { MetricPanel } from './MetricPanel';
@@ -28,6 +29,7 @@ export struct DetailContent {
   @Local vm: DetailVM = new DetailVM('');
   @Local breakpoint: BreakpointService = BreakpointHost.getService();
   @Local config: ConfigService = ConfigHost.getService();
+  @Local perfRunning: boolean = false;
 
   aboutToAppear(): void {
     this.vm.attach(this.code);
@@ -36,7 +38,26 @@ export struct DetailContent {
   }
 
   aboutToDisappear(): void {
+    if (this.perfRunning) {
+      this.perfRunning = false;
+      PerfMeter.stop();
+    }
     this.vm.dispose();
+  }
+
+  /** debug 构建：长按股票名开始/停止帧率采样（命令见进度文档 §6）。 */
+  private togglePerf(): void {
+    if (!DEBUG) {
+      return;
+    }
+    if (this.perfRunning) {
+      this.perfRunning = false;
+      PerfMeter.stop();
+      return;
+    }
+    this.perfRunning = true;
+    PerfMeter.start(this.getUIContext(),
+      'detail-' + this.code + '-' + this.contentWidth.toFixed(0) + 'vp-' + this.mode);
   }
 
   @Monitor('code')
@@ -127,6 +148,9 @@ export struct DetailContent {
         compact: this.isCompact(),
         onMore: (): void => {
           this.onAction('more');
+        },
+        onLongPressName: (): void => {
+          this.togglePerf();
         }
       })
 

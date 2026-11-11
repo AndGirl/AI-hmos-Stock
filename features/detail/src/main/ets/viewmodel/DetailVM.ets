@@ -1,3 +1,4 @@
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
   ChartPeriod,
   ChartPoint,
@@ -199,6 +200,9 @@ export class DetailVM {
   private sub: DetailSubscription | undefined = undefined;
   private lastQuote: QuoteSnapshot | null = null;
   private frozen: boolean = false;
+  /** 性能采样起点（AC-65：快照/图表数据耗时，日志 grep DetailPerf）。 */
+  private loadStartMs: number = 0;
+  private chartStartMs: number = 0;
 
   constructor(code: string) {
     this.code = code;
@@ -233,18 +237,23 @@ export class DetailVM {
     this.loadToken++;
     const token: number = this.loadToken;
     this.uiState = 'loading';
+    this.loadStartMs = Date.now();
     this.repo.load(this.code).then((snapshot: DetailSnapshot): void => {
       if (token !== this.loadToken) {
         return;
       }
       this.applySnapshot(snapshot);
       this.uiState = 'ready';
+      hilog.info(0x0001, 'DetailPerf', 'snapshot code=%{public}s ms=%{public}d',
+        this.code, Date.now() - this.loadStartMs);
       this.loadChart(false);
       this.subscribe();
     }).catch((err: Error): void => {
       if (token !== this.loadToken) {
         return;
       }
+      hilog.info(0x0001, 'DetailPerf', 'snapshot_fail code=%{public}s ms=%{public}d',
+        this.code, Date.now() - this.loadStartMs);
       this.uiState = isNotFound(err) ? 'notFound' : 'firstLoadError';
     });
   }
@@ -492,11 +501,13 @@ export class DetailVM {
     if (!force && cached !== undefined && Date.now() - cached.at < CHART_TTL_MS) {
       this.chartSeries = cached.series;
       this.chartState = 'ready';
+      hilog.info(0x0001, 'DetailPerf', 'chart_cached period=%{public}s', this.period);
       return;
     }
     this.chartToken++;
     const token: number = this.chartToken;
     this.chartState = 'loading';
+    this.chartStartMs = Date.now();
     this.repo.loadChart(this.code, this.period).then((series: ChartSeries): void => {
       if (token !== this.chartToken) {
         return;
@@ -504,11 +515,15 @@ export class DetailVM {
       SERIES_CACHE.set(key, new ChartCacheEntry(series, Date.now()));
       this.chartSeries = series;
       this.chartState = 'ready';
+      hilog.info(0x0001, 'DetailPerf', 'chart period=%{public}s ms=%{public}d points=%{public}d',
+        this.period, Date.now() - this.chartStartMs, series.points.length);
     }).catch((): void => {
       if (token !== this.chartToken) {
         return;
       }
       this.chartState = 'error';
+      hilog.info(0x0001, 'DetailPerf', 'chart_fail period=%{public}s ms=%{public}d',
+        this.period, Date.now() - this.chartStartMs);
     });
   }
 }

@@ -25,6 +25,12 @@ const SKELETON_CELLS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const DEBUG_BTN_COLOR: string = '#E84026';
 
 /**
+ * 窄窗验证开关：>0 时把 xl 右栏宽度压到该 vp，用于复现 FR-06 §2.6 的 pane <360vp 布局。
+ * 真实窄窗由 M4 的多窗宿主创建，本期验证后保持 0。
+ */
+const NARROW_PANE_TEST_VP: number = 0;
+
+/**
  * 自选列表页（FR-02）：指数条 + 分组 Tab + 11 列冻结表。
  * 状态：骨架（加载）→ 内容 / 空态 / 失败可重试；单行刷新由 VM 的 @Trace 行对象驱动。
  */
@@ -128,6 +134,9 @@ export struct WatchlistPage {
   }
 
   private paneWidth(): number {
+    if (NARROW_PANE_TEST_VP > 0) {
+      return NARROW_PANE_TEST_VP;
+    }
     const screenWidth: number = this.breakpoint.viewportWidth > 0 ? this.breakpoint.viewportWidth : 1180;
     return Math.max(320, screenWidth - 523);
   }
@@ -304,7 +313,7 @@ export struct WatchlistPage {
             }
           }
           .height('100%')
-          .layoutWeight(1)
+          .width(this.paneWidth())
           .border({ width: { left: 0.5 }, color: AppColor.divider })
         }
       }
