@@ -34,6 +34,7 @@ export default class EntryAbility extends UIAbility {
     // 字号缩放要在首帧前就绪：表格列宽按 fontScale 等比放大（CC-6.5）。
     try {
       ConfigHost.update(this.context.config.fontSizeScale);
+      hilog.info(DOMAIN, 'testTag', 'fontSizeScale=%{public}s', `${this.context.config.fontSizeScale}`);
     } catch (err) {
       hilog.warn(DOMAIN, 'testTag', 'read fontSizeScale failed: %{public}s', JSON.stringify(err));
     }
@@ -43,7 +44,7 @@ export default class EntryAbility extends UIAbility {
 
   onConfigurationUpdate(newConfig: Configuration): void {
     ConfigHost.update(newConfig.fontSizeScale);
-    hilog.info(DOMAIN, 'testTag', 'Ability onConfigurationUpdate');
+    hilog.info(DOMAIN, 'testTag', 'onConfigurationUpdate fontSizeScale=%{public}s', `${newConfig.fontSizeScale}`);
   }
 
   onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
