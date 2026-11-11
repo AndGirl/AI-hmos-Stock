@@ -1,0 +1,32 @@
+# 依赖
+/node_modules
+**/oh_modules
+
+# 构建产物
+**/build
+/.hvigor
+/.preview
+*.hap
+*.hsp
+*.app
+*.har
+*.abc
+
+# IDE / 本地配置
+/.idea
+/local.properties
+*.iml
+
+# 原生
+.cxx
+/.clangd
+/.clang-format
+/.clang-tidy
+
+# 测试与扫描
+**/.test
+/.appanalyzer
+
+# 系统
+.DS_Store
+Thumbs.db

@@ -1,0 +1,56 @@
+{
+  app: {
+    signingConfigs: [
+      {
+        name: 'default',
+        type: 'HarmonyOS',
+        material: {
+          certpath: 'C:\\Users\\12480\\.ohos\\config\\default_xiaoyang-stock_PMTSE2oqJENZkTg2yHVZMarpIzXG9p6EFL8c9yP8=.cer',
+          keyAlias: 'debugKey',
+          keyPassword: '0000001b2bf27f0563fe6ac1d714909bc35828ec1b02e71cfb63bfe33d8b156fb45651a74ddd7c9b79bec9',
+          profile: 'C:\\Users\\12480\\.ohos\\config\\default_xiaoyang-stock_PMTSE2oqJENZkTg2yHVZMarpIzXG9p6EFL8c9yP8=.p7b',
+          signAlg: 'SHA256withECDSA',
+          storeFile: 'C:\\Users\\12480\\.ohos\\config\\default_xiaoyang-stock_PMTSE2oqJENZkTg2yHVZMarpIzXG9p6EFL8c9yP8=.p12',
+          storePassword: '0000001b2bf27f0563fe6ac1d714909bc35828ec1b02e71cfb63bfe33d8b156fb45651a74ddd7c9b79bec9',
+        },
+      },
+    ],
+    products: [
+      {
+        name: 'default',
+        signingConfig: 'default',
+        targetSdkVersion: '6.0.0(20)',
+        compatibleSdkVersion: '6.0.0(20)',
+        runtimeOS: 'HarmonyOS',
+        buildOption: {
+          strictMode: {
+            caseSensitiveCheck: true,
+            useNormalizedOHMUrl: true,
+          },
+        },
+      },
+    ],
+    buildModeSet: [
+      {
+        name: 'debug',
+      },
+      {
+        name: 'release',
+      },
+    ],
+  },
+  modules: [
+    {
+      name: 'entry',
+      srcPath: './entry',
+      targets: [
+        {
+          name: 'default',
+          applyToProducts: [
+            'default',
+          ],
+        },
+      ],
+    },
+  ],
+}
