@@ -18,6 +18,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { BreakpointHost } from 'commons_basic';
+import { DeepLinkHandler } from '../router/DeepLinkHandler';
 
 const DOMAIN = 0x0000;
 
@@ -30,6 +31,14 @@ export default class EntryAbility extends UIAbility {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
+    // 冷启动深链：先暂存，UI 就绪后由 AppRoot 消费（§3.2）。
+    DeepLinkHandler.handle(want.uri);
+  }
+
+  onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onNewWant');
+    // 热启动深链：UI 已就绪，直接分发。
+    DeepLinkHandler.handle(want.uri);
   }
 
   onDestroy(): void {

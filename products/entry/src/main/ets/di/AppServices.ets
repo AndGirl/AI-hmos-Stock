@@ -1,4 +1,5 @@
 import { DetailFrom, DetailParam, NotFoundParam, PkParam, RouteName } from '../router/AppRoutes';
+import { NavigationGuard } from '../router/NavigationGuard';
 
 /**
  * 页面装配点（products 层）：持有全局路由栈，并提供唯一的跳转入口。
@@ -24,6 +25,10 @@ export class AppServices {
   }
 
   pushDetail(code: string, from: DetailFrom, rank?: number): void {
+    // FR-06.2：同一标的 300ms 内只跳一次（列表/卡片/搜索/深链共用）。
+    if (!NavigationGuard.tryNavigate('detail:' + code)) {
+      return;
+    }
     const param: DetailParam = { code: code, from: from };
     if (rank !== undefined) {
       param.rank = rank;

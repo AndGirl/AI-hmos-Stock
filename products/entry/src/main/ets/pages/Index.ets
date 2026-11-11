@@ -2,6 +2,7 @@ import { AppColor } from 'commons_ui';
 import { TabShell } from '../shell/TabShell';
 import { AppServices } from '../di/AppServices';
 import { RouteName } from '../router/AppRoutes';
+import { DeepLinkHandler } from '../router/DeepLinkHandler';
 import { DetailPage } from './DetailPage';
 import { PkPage } from './PkPage';
 import { NotFoundPage } from './NotFoundPage';
@@ -31,6 +32,10 @@ struct Index {
       TabShell()
     }
     .navDestination(this.pageMap)
+    .onAppear(() => {
+      // UI 已挂载，消费冷启动暂存的深链（设计 §3.2）。
+      DeepLinkHandler.markReady();
+    })
     .mode(NavigationMode.Stack)
     .hideTitleBar(true)
     .backgroundColor(AppColor.bgPage)
