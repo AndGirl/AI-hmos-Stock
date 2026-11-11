@@ -1,4 +1,5 @@
 import { AppColor, AppDim } from 'commons_ui';
+import { SafeAreaHost, SafeAreaService } from 'commons_basic';
 import { PkParam } from '../router/AppRoutes';
 
 /**
@@ -9,6 +10,7 @@ import { PkParam } from '../router/AppRoutes';
 export struct PkPage {
   @Local pkCodes: string[] = [];
   @Local focusIndex: number = 0;
+  @Local safeArea: SafeAreaService = SafeAreaHost.getService();
 
   @Builder
   paneItem(code: string, index: number) {
@@ -55,7 +57,12 @@ export struct PkPage {
       }
       .width('100%')
       .height('100%')
-      .padding(AppDim.gap16)
+      .padding({
+        left: AppDim.gap16,
+        right: AppDim.gap16,
+        top: AppDim.gap16,
+        bottom: this.safeArea.bottomInset + 16
+      })
       .alignItems(HorizontalAlign.Start)
     }
     .title($r('app.string.route_pk_title'))

@@ -42,6 +42,8 @@ struct TabBarItem {
 export struct FloatingTabBar {
   @Param currentIndex: number = 2;
   @Param maxWidth: number = 640;
+  /** 底部安全区高度（vp），底栏与导航条间距 = inset + 8 */
+  @Param bottomInset: number = 0;
   @Event onSelect: (index: number) => void = (index: number) => {
   };
 
@@ -99,6 +101,10 @@ export struct FloatingTabBar {
       offsetX: 0,
       offsetY: 4
     })
-    .margin({ left: AppDim.gap16, right: AppDim.gap16, bottom: AppDim.gap12 })
+    .margin({
+      left: AppDim.gap16,
+      right: AppDim.gap16,
+      bottom: this.bottomInset + LayoutConst.TAB_BAR_BOTTOM_GAP
+    })
   }
 }

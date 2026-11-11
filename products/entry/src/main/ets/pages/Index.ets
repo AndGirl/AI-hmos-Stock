@@ -1,4 +1,5 @@
 import { AppColor } from 'commons_ui';
+import { SafeAreaHost, SafeAreaService } from 'commons_basic';
 import { TabShell } from '../shell/TabShell';
 import { AppServices } from '../di/AppServices';
 import { RouteName } from '../router/AppRoutes';
@@ -15,6 +16,7 @@ import { NotFoundPage } from './NotFoundPage';
 @ComponentV2
 struct Index {
   private navStack: NavPathStack = AppServices.get().pathStack();
+  @Local safeArea: SafeAreaService = SafeAreaHost.getService();
 
   @Builder
   pageMap(name: string) {
@@ -38,6 +40,7 @@ struct Index {
     })
     .mode(NavigationMode.Stack)
     .hideTitleBar(true)
+    .padding({ top: this.safeArea.topInset })
     .backgroundColor(AppColor.bgPage)
     .width('100%')
     .height('100%')

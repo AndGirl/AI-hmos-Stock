@@ -17,7 +17,7 @@ import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.Ab
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { BreakpointHost } from 'commons_basic';
+import { BreakpointHost, SafeAreaHost } from 'commons_basic';
 import { DeepLinkHandler } from '../router/DeepLinkHandler';
 
 const DOMAIN = 0x0000;
@@ -53,14 +53,23 @@ export default class EntryAbility extends UIAbility {
         hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
         return;
       }
-      // 首帧内容就绪后再挂断点监听，保证窗口尺寸与 UIContext 均可用（§3.2）。
+      // 首帧内容就绪后再挂断点/安全区监听，保证窗口尺寸与 UIContext 均可用（§3.2）。
       const mainWindow: window.Window = windowStage.getMainWindowSync();
       BreakpointHost.init(mainWindow, mainWindow.getUIContext());
+      // 全屏布局：页面背景延伸到状态栏/导航条，再由 SafeAreaService 做内容避让（§5.1.2）。
+      mainWindow.setWindowLayoutFullScreen(true).then(() => {
+        hilog.info(DOMAIN, 'testTag', 'Succeeded in setting full-screen layout.');
+        SafeAreaHost.init(mainWindow);
+      }).catch((error: BusinessError) => {
+        hilog.error(DOMAIN, 'testTag', 'Failed to set full screen. Cause: %{public}s', JSON.stringify(error));
+        SafeAreaHost.init(mainWindow);
+      });
       hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
     });
   }
 
   onWindowStageDestroy(): void {
+    SafeAreaHost.detach();
     BreakpointHost.detach();
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageDestroy');
   }

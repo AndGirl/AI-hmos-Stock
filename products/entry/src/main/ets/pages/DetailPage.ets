@@ -1,4 +1,5 @@
 import { AppColor, AppDim } from 'commons_ui';
+import { SafeAreaHost, SafeAreaService } from 'commons_basic';
 import { DetailParam } from '../router/AppRoutes';
 
 /**
@@ -8,6 +9,7 @@ import { DetailParam } from '../router/AppRoutes';
 @ComponentV2
 export struct DetailPage {
   @Local detailCode: string = '';
+  @Local safeArea: SafeAreaService = SafeAreaHost.getService();
 
   build() {
     NavDestination() {
@@ -40,7 +42,12 @@ export struct DetailPage {
       }
       .width('100%')
       .height('100%')
-      .padding(AppDim.gap16)
+      .padding({
+        left: AppDim.gap16,
+        right: AppDim.gap16,
+        top: AppDim.gap16,
+        bottom: this.safeArea.bottomInset + 16
+      })
       .alignItems(HorizontalAlign.Start)
     }
     .title($r('app.string.route_detail_title'))
