@@ -6,6 +6,9 @@ import { QuoteRow } from './QuoteRow';
 
 const CELL_INDEXES: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
+const SORT_ASC_RES: Resource = $r('app.string.watch_sort_asc');
+const SORT_DESC_RES: Resource = $r('app.string.watch_sort_desc');
+
 const COLUMN_TITLES: Resource[] = [
   $r('app.string.watch_col_last'),
   $r('app.string.watch_col_chg'),
@@ -32,6 +35,8 @@ export struct FrozenTable {
   @Param sortDir: SortDir = 'none';
   @Param initialVOffset: number = 0;
   @Param initialHOffset: number = 0;
+  /** 调试用：持续等速滚动（帧率采样时提供稳定负载）。 */
+  @Param autoScroll: boolean = false;
   @Event onSort: (key: SortKey) => void = () => {
   };
   @Event onRowTap: (code: string) => void = () => {
@@ -46,6 +51,63 @@ export struct FrozenTable {
   private vScroller: Scroller = new Scroller();
   private panX: number = 0;
   private panY: number = 0;
+  private driveTimer: number = -1;
+  private driveCycle: number = 0;
+  private driveDown: boolean = true;
+  private driveRight: boolean = true;
+
+  aboutToAppear(): void {
+    this.syncAutoScroll();
+  }
+
+  aboutToDisappear(): void {
+    this.stopAutoScroll();
+  }
+
+  @Monitor('autoScroll')
+  onAutoScrollChanged(): void {
+    this.syncAutoScroll();
+  }
+
+  private syncAutoScroll(): void {
+    if (this.autoScroll) {
+      if (this.driveTimer === -1) {
+        this.driveTimer = setInterval((): void => {
+          this.driveScrollStep();
+        }, 1600);
+      }
+    } else {
+      this.stopAutoScroll();
+    }
+  }
+
+  private stopAutoScroll(): void {
+    if (this.driveTimer !== -1) {
+      clearInterval(this.driveTimer);
+      this.driveTimer = -1;
+    }
+  }
+
+  private driveScrollStep(): void {
+    this.driveCycle++;
+    if (this.driveCycle % 2 === 1) {
+      const target: number = this.driveDown ? 2100 : 0;
+      this.driveDown = !this.driveDown;
+      this.vScroller.scrollTo({
+        xOffset: 0,
+        yOffset: target,
+        animation: { duration: 1400, curve: Curve.Linear }
+      });
+    } else {
+      const target: number = this.driveRight ? 700 : 0;
+      this.driveRight = !this.driveRight;
+      this.hScroller.scrollTo({
+        xOffset: target,
+        yOffset: 0,
+        animation: { duration: 1400, curve: Curve.Linear }
+      });
+    }
+  }
 
   private fadeOpacity(): number {
     if (this.metrics.overflow <= 0) {
@@ -59,6 +121,25 @@ export struct FrozenTable {
     return key !== null && this.sortKey === key && this.sortDir !== 'none';
   }
 
+  /** 表头朗读文本：列名 + 当前排序方向（设计 §5.2.10）。 */
+  private headerLabel(index: number): string {
+    const ctx = this.getUIContext().getHostContext();
+    if (ctx === undefined) {
+      return '';
+    }
+    try {
+      const title: string = ctx.resourceManager.getStringSync(COLUMN_TITLES[index].id);
+      if (!this.sortedBy(index)) {
+        return title;
+      }
+      const suffix: string = ctx.resourceManager.getStringSync(
+        this.sortDir === 'asc' ? SORT_ASC_RES.id : SORT_DESC_RES.id);
+      return `${title}，${suffix}`;
+    } catch (err) {
+      return '';
+    }
+  }
+
   @Builder
   nameHeader() {
     Text($r('app.string.watch_col_name'))
@@ -68,6 +149,7 @@ export struct FrozenTable {
       .fontColor(AppColor.textSecondary)
       .textAlign(TextAlign.Start)
       .padding({ left: AppDim.gap12 })
+      .accessibilityText($r('app.string.watch_col_name'))
       .border({ width: { bottom: 0.5 }, color: AppColor.divider })
   }
 
@@ -91,6 +173,7 @@ export struct FrozenTable {
         .height(this.metrics.headerHeight)
         .justifyContent(FlexAlign.End)
         .padding({ right: 2 })
+        .accessibilityText(this.headerLabel(index))
         .onClick(() => {
           const key: SortKey | null = NUMERIC_SORT_KEYS[index];
           if (key !== null) {

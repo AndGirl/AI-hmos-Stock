@@ -1,3 +1,4 @@
+import { promptAction } from '@kit.ArkUI';
 import { AppColor, AppDim, showComingSoon, StateMode, StateView } from 'commons_ui';
 import {
   BreakpointHost,
@@ -5,8 +6,10 @@ import {
   ComingSoonText,
   ConfigHost,
   ConfigService,
-  LayoutConst
+  LayoutConst,
+  PerfMeter
 } from 'commons_basic';
+import { DEBUG } from '../../../../BuildProfile';
 import { WatchlistVM } from '../viewmodel/WatchlistVM';
 import { SortKey } from '../viewmodel/WatchlistVM';
 import { IndexStrip } from './IndexStrip';
@@ -15,6 +18,9 @@ import { FrozenTable } from './FrozenTable';
 
 const SKELETON_ROWS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const SKELETON_CELLS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+/** 调试面板按钮色（非产品 UI，不走主题 token；面板本身 release 不展示）。 */
+const DEBUG_BTN_COLOR: string = '#E84026';
 
 /**
  * 自选列表页（FR-02）：指数条 + 分组 Tab + 11 列冻结表。
@@ -27,6 +33,7 @@ export struct WatchlistPage {
   @Local vm: WatchlistVM = new WatchlistVM();
   @Local breakpoint: BreakpointService = BreakpointHost.getService();
   @Local config: ConfigService = ConfigHost.getService();
+  @Local perfRunning: boolean = false;
 
   aboutToAppear(): void {
     this.syncLayout();
@@ -34,7 +41,67 @@ export struct WatchlistPage {
   }
 
   aboutToDisappear(): void {
+    if (this.perfRunning) {
+      this.perfRunning = false;
+      PerfMeter.stop();
+    }
     this.vm.dispose();
+  }
+
+  /**
+   * 调试面板（仅 debug 构建；长按标题触发）：
+   * 字号档位、空态/失败态注入、帧率采样。release 由 BuildProfile.DEBUG=false 关闭。
+   */
+  private openDebugMenu(): void {
+    if (!DEBUG) {
+      return;
+    }
+    const b0: promptAction.Button = {
+      text: this.perfRunning ? '停止帧率采样' : '开始帧率采样（自动滚动）',
+      color: DEBUG_BTN_COLOR
+    };
+    const b1: promptAction.Button = { text: '字号 1.3×', color: DEBUG_BTN_COLOR };
+    const b2: promptAction.Button = { text: '字号 1.45×', color: DEBUG_BTN_COLOR };
+    const b3: promptAction.Button = { text: '清空自选（空态）', color: DEBUG_BTN_COLOR };
+    const b4: promptAction.Button = { text: '模拟加载失败', color: DEBUG_BTN_COLOR };
+    const b5: promptAction.Button = { text: '重置（字号 1.0× + 恢复数据）', color: DEBUG_BTN_COLOR };
+    const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
+      promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4, b5];
+    this.getUIContext().getPromptAction().showActionMenu({
+      title: '调试面板（debug）',
+      buttons: buttons
+    }).then((res: promptAction.ActionMenuSuccessResponse): void => {
+      this.onDebugAction(res.index);
+    }).catch((): void => {
+    });
+  }
+
+  private onDebugAction(index: number): void {
+    if (index === 0) {
+      this.togglePerf();
+    } else if (index === 1) {
+      ConfigHost.getService().apply(1.3);
+    } else if (index === 2) {
+      ConfigHost.getService().apply(1.45);
+    } else if (index === 3) {
+      this.vm.applyMockFault(true, false);
+    } else if (index === 4) {
+      this.vm.applyMockFault(false, true);
+    } else if (index === 5) {
+      ConfigHost.getService().apply(1.0);
+      this.vm.applyMockFault(false, false);
+    }
+  }
+
+  private togglePerf(): void {
+    if (this.perfRunning) {
+      this.perfRunning = false;
+      PerfMeter.stop();
+      return;
+    }
+    this.perfRunning = true;
+    const label: string = `watchlist-${this.breakpoint.widthBp}-${this.vm.rowCount}rows-${this.config.fontScale}x`;
+    PerfMeter.start(this.getUIContext(), label);
   }
 
   @Monitor('breakpoint.viewportWidth')
@@ -94,8 +161,16 @@ export struct WatchlistPage {
       }
       .width('100%')
       .padding({ left: AppDim.gap16, right: AppDim.gap16, top: AppDim.gap16, bottom: AppDim.gap4 })
+      .gesture(
+        LongPressGesture({ repeat: false })
+          .onAction(() => {
+            this.openDebugMenu();
+          })
+      )
 
-      IndexStrip({ items: this.vm.indexItems })
+      Row() {
+        Column() {
+          IndexStrip({ items: this.vm.indexItems })
 
       GroupTabs({
         groups: this.vm.groups,
@@ -138,6 +213,7 @@ export struct WatchlistPage {
           sortDir: this.vm.sortDir,
           initialVOffset: this.vm.vOffset,
           initialHOffset: this.vm.hOffset,
+          autoScroll: this.perfRunning,
           onSort: (key: SortKey): void => {
             this.vm.cycleSort(key);
           },
@@ -151,7 +227,22 @@ export struct WatchlistPage {
             this.vm.onHorizontalOffset(offset);
           }
         })
+        }
+        }
+        .width(this.breakpoint.isSplit ? 523 : '100%')
+        .height('100%')
+
+        if (this.breakpoint.isSplit) {
+          // xl 右栏：M2 详情区挂点（本期仅留分隔线）
+          Column()
+            .layoutWeight(1)
+            .height('100%')
+            .border({ width: { left: 0.5 }, color: AppColor.divider })
+        }
       }
+      .width('100%')
+      .layoutWeight(1)
+      .alignItems(VerticalAlign.Top)
     }
     .width('100%')
     .height('100%')

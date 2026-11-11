@@ -17,4 +17,5 @@ export {
 export { GroupType, WatchGroup, WatchItem } from './src/main/ets/entities/WatchEntities';
 export { QuoteSink, QuoteBus, SinkSubscription } from './src/main/ets/bus/QuoteBus';
 export { WatchlistProvider, WatchlistRaw } from './src/main/ets/provider/WatchlistProvider';
+export { MockFaults } from './src/main/ets/mock/MockFaults';
 export { DataServices } from './src/main/ets/DataServices';

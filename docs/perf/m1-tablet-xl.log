@@ -1,0 +1,36 @@
+﻿11-12 00:32:26.497 11006 11006 I A00000/PerfMeter: PERF_START watchlist-xl-50rows-1x
+11-12 00:32:27.511 11006 11006 I A00000/PerfMeter: PERF_WIN fps=61.5 p95=16.0 jank=1 frames=62 win=1 avg=61.5
+11-12 00:32:28.521 11006 11006 I A00000/PerfMeter: PERF_WIN fps=58.5 p95=16.0 jank=1 frames=59 win=2 avg=60.0
+11-12 00:32:29.526 11006 11006 I A00000/PerfMeter: PERF_WIN fps=60.5 p95=16.0 jank=1 frames=61 win=3 avg=60.2
+11-12 00:32:30.535 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=4 avg=60.8
+11-12 00:32:31.543 11006 11006 I A00000/PerfMeter: PERF_WIN fps=59.5 p95=16.0 jank=2 frames=60 win=5 avg=60.5
+11-12 00:32:32.549 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=6 avg=60.8
+11-12 00:32:33.558 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=7 avg=61.1
+11-12 00:32:34.566 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=8 avg=61.3
+11-12 00:32:35.575 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=9 avg=61.4
+11-12 00:32:36.581 11006 11006 I A00000/PerfMeter: PERF_WIN fps=60.5 p95=16.0 jank=1 frames=61 win=10 avg=61.3
+11-12 00:32:37.591 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=11 avg=61.4
+11-12 00:32:38.598 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=12 avg=61.5
+11-12 00:32:39.606 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=13 avg=61.6
+11-12 00:32:40.614 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=14 avg=61.7
+11-12 00:32:41.622 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=15 avg=61.7
+11-12 00:32:42.630 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=16 avg=61.8
+11-12 00:32:43.638 11006 11006 I A00000/PerfMeter: PERF_WIN fps=61.5 p95=16.0 jank=1 frames=62 win=17 avg=61.7
+11-12 00:32:44.647 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=18 avg=61.8
+11-12 00:32:45.654 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=19 avg=61.8
+11-12 00:32:46.662 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=20 avg=61.9
+11-12 00:32:47.670 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=21 avg=61.9
+11-12 00:32:48.678 11006 11006 I A00000/PerfMeter: PERF_WIN fps=61.5 p95=16.0 jank=1 frames=62 win=22 avg=61.9
+11-12 00:32:49.686 11006 11006 I A00000/PerfMeter: PERF_WIN fps=61.5 p95=16.0 jank=1 frames=62 win=23 avg=61.9
+11-12 00:32:50.695 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=24 avg=61.9
+11-12 00:32:51.702 11006 11006 I A00000/PerfMeter: PERF_WIN fps=60.5 p95=16.0 jank=2 frames=61 win=25 avg=61.8
+11-12 00:32:52.711 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=26 avg=61.9
+11-12 00:32:53.718 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=27 avg=61.9
+11-12 00:32:54.727 11006 11006 I A00000/PerfMeter: PERF_WIN fps=61.5 p95=16.0 jank=1 frames=62 win=28 avg=61.9
+11-12 00:32:55.736 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=29 avg=61.9
+11-12 00:32:56.742 11006 11006 I A00000/PerfMeter: PERF_WIN fps=56.6 p95=16.0 jank=1 frames=57 win=30 avg=61.7
+11-12 00:32:57.749 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=31 avg=61.7
+11-12 00:32:58.760 11006 11006 I A00000/PerfMeter: PERF_WIN fps=60.5 p95=16.0 jank=2 frames=61 win=32 avg=61.7
+11-12 00:32:59.767 11006 11006 I A00000/PerfMeter: PERF_WIN fps=62.5 p95=16.0 jank=0 frames=63 win=33 avg=61.7
+11-12 00:33:00.774 11006 11006 I A00000/PerfMeter: PERF_WIN fps=61.5 p95=16.0 jank=1 frames=62 win=34 avg=61.7
+11-12 00:33:01.656 11006 11006 I A00000/PerfMeter: PERF_STOP watchlist-xl-50rows-1x frames=2166 avg=61.6 jank=17 windows=34

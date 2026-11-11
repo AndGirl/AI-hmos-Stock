@@ -40,6 +40,8 @@
     { "name": "watch_group_user", "value": "我的关注" },
     { "name": "watch_tag_suspended", "value": "停" },
     { "name": "watch_tag_new", "value": "新" },
-    { "name": "watch_list_failed", "value": "自选加载失败，请重试" }
+    { "name": "watch_list_failed", "value": "自选加载失败，请重试" },
+    { "name": "watch_sort_asc", "value": "升序" },
+    { "name": "watch_sort_desc", "value": "降序" }
   ]
 }

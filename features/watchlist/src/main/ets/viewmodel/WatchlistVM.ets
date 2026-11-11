@@ -1,4 +1,4 @@
-import { ConnectionState, QuotePatch, QuoteSink, QuoteSnapshot, SinkSubscription, WatchItem } from 'commons_data';
+import { ConnectionState, MockFaults, QuotePatch, QuoteSink, QuoteSnapshot, SinkSubscription, WatchItem } from 'commons_data';
 import { compareRows, nextSortDir, SortDir, SortKey } from '../repository/SortRules';
 import { computeTableMetrics, TableMetrics } from '../repository/TableMetrics';
 import { WatchlistData, WatchlistRepository } from '../repository/WatchlistRepository';
@@ -116,6 +116,7 @@ export class WatchlistVM {
     }
     this.loading = true;
     this.state = 'loading';
+    this.dispose();
     try {
       const data: WatchlistData = await this.repo.load();
       this.applyData(data);
@@ -133,6 +134,24 @@ export class WatchlistVM {
       return;
     }
     this.load();
+  }
+
+  /** 调试面板用：强制重新加载（空态/失败态/恢复数据）。 */
+  reload(): void {
+    if (this.state === 'loading') {
+      return;
+    }
+    this.load();
+  }
+
+  /**
+   * 调试面板用：注入 Mock 故障（空自选 / 加载失败）。
+   * 放在 VM 是为了让 view 不直接依赖 commons_data（R-07）。
+   */
+  applyMockFault(empty: boolean, fail: boolean): void {
+    MockFaults.emptyWatchlist = empty;
+    MockFaults.failWatchlist = fail;
+    this.reload();
   }
 
   resume(): void {
@@ -181,12 +200,16 @@ export class WatchlistVM {
   }
 
   private applyData(data: WatchlistData): void {
+    const previousRows: Map<string, WatchRowVM> = this.rowByCode;
     this.allRows = [];
     this.rowByCode = new Map<string, WatchRowVM>();
     this.indexSnapshots = new Map<string, QuoteSnapshot>();
     for (let i = 0; i < data.items.length; i++) {
       const item: WatchItem = data.items[i];
-      const row: WatchRowVM = new WatchRowVM(item.code, item.code, item.groups);
+      // 复用已有行对象：ForEach 以 code 为 key，替换实例会让旧 key 的节点继续读旧对象（表现为数据不刷新）。
+      const reused: WatchRowVM | undefined = previousRows.get(item.code);
+      const row: WatchRowVM = reused !== undefined ? reused : new WatchRowVM(item.code, item.code, item.groups);
+      row.groups = item.groups;
       const snapshot: QuoteSnapshot | undefined = data.quotes.get(item.code);
       if (snapshot !== undefined) {
         row.updateFromSnapshot(snapshot);
@@ -199,11 +222,20 @@ export class WatchlistVM {
         this.indexSnapshots.set(snapshot.code, snapshot);
       }
     });
-    this.indexSet = data.indexSet;
+    const previousGroups: GroupTabVM[] = this.groups;
     this.groups = [];
     for (let i = 0; i < data.groups.length; i++) {
-      this.groups.push(new GroupTabVM(data.groups[i].id));
+      const id: string = data.groups[i].id;
+      let group: GroupTabVM | undefined = undefined;
+      for (let j = 0; j < previousGroups.length; j++) {
+        if (previousGroups[j].id === id) {
+          group = previousGroups[j];
+          break;
+        }
+      }
+      this.groups.push(group !== undefined ? group : new GroupTabVM(id));
     }
+    this.indexSet = data.indexSet;
     this.updateGroupCounts();
     this.updateGroupSelection();
     this.rebuild();
@@ -292,11 +324,13 @@ export class WatchlistVM {
 
   private rebuildIndex(): void {
     const codes: string[] = this.indexSet.get(this.selectedGroupId) ?? [];
+    const previous: Map<string, IndexItemVM> = this.indexByCode;
     const items: IndexItemVM[] = [];
     this.indexByCode = new Map<string, IndexItemVM>();
     const limit: number = Math.min(this.indexCount, codes.length);
     for (let i = 0; i < limit; i++) {
-      const item: IndexItemVM = new IndexItemVM(codes[i]);
+      const reused: IndexItemVM | undefined = previous.get(codes[i]);
+      const item: IndexItemVM = reused !== undefined ? reused : new IndexItemVM(codes[i]);
       const snapshot: QuoteSnapshot | undefined = this.indexSnapshots.get(codes[i]);
       if (snapshot !== undefined) {
         item.update(snapshot.name, snapshot.pct);

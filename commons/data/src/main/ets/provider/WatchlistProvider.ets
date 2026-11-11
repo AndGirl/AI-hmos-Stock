@@ -1,5 +1,7 @@
 import { WatchGroup, WatchItem } from '../entities/WatchEntities';
 import { buildIndexSet, buildStockSeeds, buildWatchGroups, buildWatchItems } from '../mock/MarketSeeds';
+import { MockFaults } from '../mock/MockFaults';
+import { StockSeed } from '../mock/MarketSeeds';
 
 /** 自选列表原始数据（分组 + 条目），由仓储归一化为 VM 实体。 */
 export class WatchlistRaw {
@@ -23,7 +25,10 @@ export interface WatchlistProvider {
 
 export class MockWatchlistProvider implements WatchlistProvider {
   load(): Promise<WatchlistRaw> {
-    const seeds = buildStockSeeds();
+    if (MockFaults.failWatchlist) {
+      return Promise.reject(new Error('mock watchlist failure'));
+    }
+    const seeds: StockSeed[] = MockFaults.emptyWatchlist ? [] : buildStockSeeds();
     return Promise.resolve(new WatchlistRaw(buildWatchGroups(), buildWatchItems(seeds)));
   }
 
