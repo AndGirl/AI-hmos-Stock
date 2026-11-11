@@ -70,9 +70,12 @@ export function buildStockSeeds(): StockSeed[] {
   for (let i = 0; i < seeds.length; i++) {
     const seed: StockSeed = seeds[i];
     seed.groups.push('all');
-    const onStar: boolean = seed.code.startsWith('30') || seed.code.startsWith('68');
+    const onStar: boolean = seed.code.startsWith('30');
     if (onStar) {
       seed.groups.push('star');
+    }
+    if (seed.code.startsWith('68')) {
+      seed.groups.push('kcb');
     }
     if (i % 3 === 0) {
       seed.groups.push('fin');
@@ -98,13 +101,14 @@ export function buildIndexSeeds(): IndexSeed[] {
   ];
 }
 
-/** 分组：全部（虚拟组）+ 系统组（融/创）+ 用户组（FR-02.5）。 */
+/** 分组：全部（虚拟组）+ 系统组（融/创/科）+ 用户组（FR-02.5）。 */
 export function buildWatchGroups(): WatchGroup[] {
   return [
     new WatchGroup('all', 'all', 0, ''),
     new WatchGroup('fin', 'system', 1, ''),
     new WatchGroup('star', 'system', 2, ''),
-    new WatchGroup('user', 'user', 3, '')
+    new WatchGroup('kcb', 'system', 3, ''),
+    new WatchGroup('user', 'user', 4, '')
   ];
 }
 
