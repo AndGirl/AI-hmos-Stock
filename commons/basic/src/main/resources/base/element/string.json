@@ -22,6 +22,24 @@
     { "name": "route_not_found_title", "value": "页面不存在" },
     { "name": "route_not_found_desc", "value": "未找到该页面，请返回自选" },
     { "name": "route_back_watchlist", "value": "返回自选" },
-    { "name": "detail_load_failed", "value": "详情加载失败，请重试" }
+    { "name": "detail_load_failed", "value": "详情加载失败，请重试" },
+    { "name": "watch_col_name", "value": "名称" },
+    { "name": "watch_col_last", "value": "最新价" },
+    { "name": "watch_col_chg", "value": "涨跌" },
+    { "name": "watch_col_pct", "value": "涨跌幅" },
+    { "name": "watch_col_volume", "value": "总量" },
+    { "name": "watch_col_last_volume", "value": "现量" },
+    { "name": "watch_col_amount", "value": "成交额" },
+    { "name": "watch_col_amplitude", "value": "振幅" },
+    { "name": "watch_col_turnover", "value": "换手" },
+    { "name": "watch_col_pe", "value": "市盈率" },
+    { "name": "watch_col_pb", "value": "市净率" },
+    { "name": "watch_group_all", "value": "全部" },
+    { "name": "watch_group_fin", "value": "融资融券" },
+    { "name": "watch_group_star", "value": "创业板" },
+    { "name": "watch_group_user", "value": "我的关注" },
+    { "name": "watch_tag_suspended", "value": "停" },
+    { "name": "watch_tag_new", "value": "新" },
+    { "name": "watch_list_failed", "value": "自选加载失败，请重试" }
   ]
 }

@@ -1,6 +1,7 @@
 import { BreakpointHost, BreakpointService, SafeAreaHost, SafeAreaService } from 'commons_basic';
 import { AppColor } from 'commons_ui';
 import { WatchlistPage } from 'watchlist';
+import { AppServices } from '../di/AppServices';
 import { FloatingTabBar } from './FloatingTabBar';
 import { HomePage } from '../pages/HomePage';
 import { NewsPage } from '../pages/NewsPage';
@@ -31,7 +32,11 @@ export struct TabShell {
         }
 
         TabContent() {
-          WatchlistPage()
+          WatchlistPage({
+            onOpenDetail: (code: string): void => {
+              AppServices.get().pushDetail(code, 'list');
+            }
+          })
         }
 
         TabContent() {

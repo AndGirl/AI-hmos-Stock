@@ -1,0 +1,224 @@
+import { AppColor, AppDim } from 'commons_ui';
+import { emptyMetrics, NUMERIC_SORT_KEYS, SortDir, SortKey, TableMetrics } from '../viewmodel/WatchlistVM';
+import { WatchRowVM } from '../viewmodel/WatchRowVM';
+import { NameCell } from './NameCell';
+import { QuoteRow } from './QuoteRow';
+
+const CELL_INDEXES: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+const COLUMN_TITLES: Resource[] = [
+  $r('app.string.watch_col_last'),
+  $r('app.string.watch_col_chg'),
+  $r('app.string.watch_col_pct'),
+  $r('app.string.watch_col_volume'),
+  $r('app.string.watch_col_last_volume'),
+  $r('app.string.watch_col_amount'),
+  $r('app.string.watch_col_amplitude'),
+  $r('app.string.watch_col_turnover'),
+  $r('app.string.watch_col_pe'),
+  $r('app.string.watch_col_pb')
+];
+
+/**
+ * 11 列冻结表（设计 §5.2.3 方案 C）：
+ * 横向 Scroll 内含「表头 + 竖向 List」，名称列在外侧按竖向偏移 translate；
+ * 表头与数据列同源横滑（零同步），名称列竖向冻结。
+ */
+@ComponentV2
+export struct FrozenTable {
+  @Param rows: WatchRowVM[] = [];
+  @Param metrics: TableMetrics = emptyMetrics();
+  @Param sortKey: SortKey | null = null;
+  @Param sortDir: SortDir = 'none';
+  @Param initialVOffset: number = 0;
+  @Param initialHOffset: number = 0;
+  @Event onSort: (key: SortKey) => void = () => {
+  };
+  @Event onRowTap: (code: string) => void = () => {
+  };
+  @Event onScrollY: (offset: number) => void = () => {
+  };
+  @Event onScrollX: (offset: number) => void = () => {
+  };
+  @Local vOffset: number = 0;
+  @Local hOffset: number = 0;
+  private hScroller: Scroller = new Scroller();
+  private vScroller: Scroller = new Scroller();
+  private panX: number = 0;
+  private panY: number = 0;
+
+  private fadeOpacity(): number {
+    if (this.metrics.overflow <= 0) {
+      return 0;
+    }
+    return this.hOffset < this.metrics.overflow - 8 ? 1 : 0;
+  }
+
+  private sortedBy(index: number): boolean {
+    const key: SortKey | null = NUMERIC_SORT_KEYS[index];
+    return key !== null && this.sortKey === key && this.sortDir !== 'none';
+  }
+
+  @Builder
+  nameHeader() {
+    Text($r('app.string.watch_col_name'))
+      .width(this.metrics.nameWidth)
+      .height(this.metrics.headerHeight)
+      .fontSize(12)
+      .fontColor(AppColor.textSecondary)
+      .textAlign(TextAlign.Start)
+      .padding({ left: AppDim.gap12 })
+      .border({ width: { bottom: 0.5 }, color: AppColor.divider })
+  }
+
+  @Builder
+  numericHeader() {
+    Row() {
+      ForEach(CELL_INDEXES, (index: number) => {
+        Row() {
+          Text(COLUMN_TITLES[index])
+            .fontSize(12)
+            .fontColor(this.sortedBy(index) ? AppColor.accent : AppColor.textSecondary)
+            .maxLines(1)
+          if (this.sortedBy(index)) {
+            Text(this.sortDir === 'asc' ? '↑' : '↓')
+              .fontSize(10)
+              .fontColor(AppColor.accent)
+              .margin({ left: 2 })
+          }
+        }
+        .width(this.metrics.widths[index + 1])
+        .height(this.metrics.headerHeight)
+        .justifyContent(FlexAlign.End)
+        .padding({ right: 2 })
+        .onClick(() => {
+          const key: SortKey | null = NUMERIC_SORT_KEYS[index];
+          if (key !== null) {
+            this.onSort(key);
+          }
+        })
+      }, (index: number) => `h${index}`)
+    }
+    .width(this.metrics.numericWidth)
+    .height(this.metrics.headerHeight)
+    .border({ width: { bottom: 0.5 }, color: AppColor.divider })
+  }
+
+  build() {
+    Row() {
+      Column() {
+        this.nameHeader()
+
+        // 名称列不参与竖向滚动：内容整体 translate，用外层 Stack 做裁剪，
+        // 避免 translate 后的内容视觉上盖住固定表头。
+        Stack({ alignContent: Alignment.TopStart }) {
+          Column() {
+            ForEach(this.rows, (row: WatchRowVM) => {
+              NameCell({
+                row: row,
+                metrics: this.metrics,
+                onTap: (code: string): void => {
+                  this.onRowTap(code);
+                }
+              })
+            }, (row: WatchRowVM) => row.code)
+          }
+          .width(this.metrics.nameWidth)
+          .translate({ y: -this.vOffset })
+          .alignItems(HorizontalAlign.Start)
+        }
+        .width(this.metrics.nameWidth)
+        .layoutWeight(1)
+        .clip(true)
+      }
+      .width(this.metrics.nameWidth)
+      .height('100%')
+      .clip(true)
+      .backgroundColor(AppColor.bgSurface)
+      .gesture(
+        PanGesture({ direction: PanDirection.All })
+          .onActionStart(() => {
+            this.panX = 0;
+            this.panY = 0;
+          })
+          .onActionUpdate((event: GestureEvent) => {
+            const dx: number = event.offsetX - this.panX;
+            const dy: number = event.offsetY - this.panY;
+            this.panX = event.offsetX;
+            this.panY = event.offsetY;
+            // 名称列自身不滚动：把位移转发给数据区两个 scroller（惯性不转发，松手即停）。
+            this.hScroller.scrollBy(-dx, 0);
+            this.vScroller.scrollBy(0, -dy);
+          })
+      )
+
+      Stack({ alignContent: Alignment.TopEnd }) {
+        Scroll(this.hScroller) {
+          Column() {
+            this.numericHeader()
+
+            List({ scroller: this.vScroller }) {
+              ForEach(this.rows, (row: WatchRowVM) => {
+                ListItem() {
+                  QuoteRow({
+                    row: row,
+                    metrics: this.metrics,
+                    onTap: (code: string): void => {
+                      this.onRowTap(code);
+                    }
+                  })
+                }
+              }, (row: WatchRowVM) => row.code)
+            }
+            .width(this.metrics.numericWidth)
+            .layoutWeight(1)
+            .cachedCount(6)
+            .edgeEffect(EdgeEffect.None)
+            .scrollBar(BarState.Off)
+            .onDidScroll(() => {
+              this.vOffset = this.vScroller.currentOffset().yOffset;
+              this.onScrollY(this.vOffset);
+            })
+          }
+          .width(this.metrics.numericWidth)
+          .height('100%')
+          // 底部留 8vp 给横滑条，避免遮挡最后一行（设计 §5.2.5）
+          .padding({ bottom: AppDim.gap8 })
+          .backgroundColor(AppColor.bgSurface)
+        }
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.On)
+        .edgeEffect(EdgeEffect.None)
+        .width('100%')
+        .height('100%')
+        .onDidScroll(() => {
+          this.hOffset = this.hScroller.currentOffset().xOffset;
+          this.onScrollX(this.hOffset);
+        })
+
+        Row()
+          .width(AppDim.fadeWidth)
+          .height('100%')
+          .linearGradient({
+            angle: 90,
+            colors: [[AppColor.transparent, 0.0], [AppColor.bgSurface, 1.0]]
+          })
+          .opacity(this.fadeOpacity())
+          .hitTestBehavior(HitTestMode.None)
+      }
+      .layoutWeight(1)
+      .height('100%')
+    }
+    .width('100%')
+    .layoutWeight(1)
+    .alignItems(VerticalAlign.Top)
+    .onAppear(() => {
+      if (this.initialVOffset > 0) {
+        this.vScroller.scrollTo({ xOffset: 0, yOffset: this.initialVOffset, animation: false });
+      }
+      if (this.initialHOffset > 0) {
+        this.hScroller.scrollTo({ xOffset: this.initialHOffset, yOffset: 0, animation: false });
+      }
+    })
+  }
+}

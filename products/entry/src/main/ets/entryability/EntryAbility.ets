@@ -13,11 +13,11 @@
  * limitations under the License.
  */
 
-import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
+import { AbilityConstant, Configuration, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { BreakpointHost, SafeAreaHost } from 'commons_basic';
+import { BreakpointHost, ConfigHost, SafeAreaHost } from 'commons_basic';
 import { DeepLinkHandler } from '../router/DeepLinkHandler';
 
 const DOMAIN = 0x0000;
@@ -31,8 +31,19 @@ export default class EntryAbility extends UIAbility {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
+    // 字号缩放要在首帧前就绪：表格列宽按 fontScale 等比放大（CC-6.5）。
+    try {
+      ConfigHost.update(this.context.config.fontSizeScale);
+    } catch (err) {
+      hilog.warn(DOMAIN, 'testTag', 'read fontSizeScale failed: %{public}s', JSON.stringify(err));
+    }
     // 冷启动深链：先暂存，UI 就绪后由 AppRoot 消费（§3.2）。
     DeepLinkHandler.handle(want.uri);
+  }
+
+  onConfigurationUpdate(newConfig: Configuration): void {
+    ConfigHost.update(newConfig.fontSizeScale);
+    hilog.info(DOMAIN, 'testTag', 'Ability onConfigurationUpdate');
   }
 
   onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
