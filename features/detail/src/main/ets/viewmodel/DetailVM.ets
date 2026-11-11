@@ -36,6 +36,9 @@ import { DetailRepository } from '../repository/DetailRepository';
 /** 详情页动作（FR-06.10）：page 在动作栏，compact 收进「⋯」。 */
 export type DetailAction = 'watchlist' | 'pk' | 'more' | 'trade';
 
+/** 承载形态（FR-06.1 / §5.3.2）：page 全量、pane 右栏紧凑、window 多窗实例紧凑。 */
+export type DetailMode = 'page' | 'pane' | 'window';
+
 export type DetailUiState = 'loading' | 'ready' | 'firstLoadError' | 'notFound';
 
 export type ChartState = 'idle' | 'loading' | 'ready' | 'error';

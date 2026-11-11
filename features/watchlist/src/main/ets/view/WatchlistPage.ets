@@ -287,7 +287,7 @@ export struct WatchlistPage {
             if (this.effectivePaneCode().length > 0) {
               DetailContent({
                 code: this.effectivePaneCode(),
-                compact: true,
+                mode: 'pane',
                 contentWidth: this.paneWidth(),
                 bottomInset: 0,
                 onAction: (action: DetailAction): void => {

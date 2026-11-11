@@ -1,6 +1,6 @@
 import { AppColor, AppDim, StateMode, StateView } from 'commons_ui';
 import { BreakpointHost, BreakpointService, ConfigHost, ConfigService } from 'commons_basic';
-import { DetailAction, DetailVM } from '../viewmodel/DetailVM';
+import { DetailAction, DetailMode, DetailVM } from '../viewmodel/DetailVM';
 import { QuoteHeader } from './QuoteHeader';
 import { MetricPanel } from './MetricPanel';
 import { ChartArea } from './ChartArea';
@@ -12,12 +12,13 @@ import { ActionBar } from './ActionBar';
 /**
  * 详情内容组件（FR-06.1）：壳/内容分离的唯一内容实现。
  * INV-D1：不调用路由栈、不建全局 banner、不起重连定时器。
- * 形态：page（全量）/ compact（pane、window：无资讯条、内容 Tab、动作栏）。
+ * 三形态（§5.3.2）：page 全量；pane（xl 右栏）与 window（多窗实例）走紧凑版——
+ * 无资讯条、内容 Tab、动作栏，四项动作收进「⋯」。
  */
 @ComponentV2
 export struct DetailContent {
   @Param code: string = '';
-  @Param compact: boolean = false;
+  @Param mode: DetailMode = 'page';
   @Param contentWidth: number = 360;
   @Param bottomInset: number = 0;
   @Event onAction: (action: DetailAction) => void = (action: DetailAction): void => {
@@ -49,13 +50,18 @@ export struct DetailContent {
     this.onLoaded(this.code);
   }
 
+  /** pane / window 为紧凑版；page 为全量（INV-D3：window 每实例独立 VM）。 */
+  private isCompact(): boolean {
+    return this.mode !== 'page';
+  }
+
   private narrowBook(): boolean {
-    return this.compact && this.contentWidth < 360;
+    return this.isCompact() && this.contentWidth < 360;
   }
 
   private bookWidth(): number {
-    const ratio: number = this.compact ? 0.32 : 0.3;
-    const max: number = this.compact ? 132 : 170;
+    const ratio: number = this.isCompact() ? 0.32 : 0.3;
+    const max: number = this.isCompact() ? 132 : 170;
     return Math.min(max, Math.max(102, this.contentWidth * ratio));
   }
 
@@ -101,7 +107,7 @@ export struct DetailContent {
       series: this.vm.chartSeries,
       period: this.vm.period,
       chartState: this.vm.chartState,
-      compact: this.compact,
+      compact: this.isCompact(),
       viewportWidth: this.contentWidth,
       vm: this.vm,
       onSelectPeriod: (period): void => {
@@ -118,7 +124,7 @@ export struct DetailContent {
     Column() {
       QuoteHeader({
         vm: this.vm,
-        compact: this.compact,
+        compact: this.isCompact(),
         onMore: (): void => {
           this.onAction('more');
         }
@@ -129,13 +135,13 @@ export struct DetailContent {
         expanded: this.vm.metricsExpanded,
         viewportWidth: this.contentWidth,
         fontScale: this.config.fontScale,
-        compact: this.compact,
+        compact: this.isCompact(),
         onToggle: (): void => {
           this.vm.toggleMetrics();
         }
       })
 
-      if (!this.compact) {
+      if (!this.isCompact()) {
         NewsBar({
           title: this.vm.newsTitle,
           visible: this.vm.newsVisible,
@@ -169,7 +175,7 @@ export struct DetailContent {
         .alignItems(VerticalAlign.Top)
       }
 
-      if (!this.compact) {
+      if (!this.isCompact()) {
         ContentTabs({ wide: this.contentWidth >= 840 })
       }
     }
@@ -202,7 +208,7 @@ export struct DetailContent {
           .width('100%')
           .layoutWeight(1)
       } else {
-        if (this.compact) {
+        if (this.isCompact()) {
           Scroll() {
             this.mainContent()
           }
@@ -219,7 +225,7 @@ export struct DetailContent {
             .width('100%')
             .layoutWeight(1)
             .scrollBar(BarState.Off)
-          .clip(true)
+            .clip(true)
             .align(Alignment.Top)
 
             ActionBar({

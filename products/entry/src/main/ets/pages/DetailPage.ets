@@ -52,7 +52,7 @@ export struct DetailPage {
       } else {
         DetailContent({
           code: this.detailCode,
-          compact: false,
+          mode: 'page',
           contentWidth: this.contentWidth(),
           bottomInset: this.safeArea.bottomInset,
           onAction: (action: DetailAction): void => {

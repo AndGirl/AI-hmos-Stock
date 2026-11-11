@@ -3,4 +3,4 @@
  */
 export { DetailContent } from './src/main/ets/view/DetailContent';
 export { showDetailActionMenu } from './src/main/ets/view/DetailActions';
-export { DetailAction } from './src/main/ets/viewmodel/DetailVM';
+export { DetailAction, DetailMode } from './src/main/ets/viewmodel/DetailVM';
