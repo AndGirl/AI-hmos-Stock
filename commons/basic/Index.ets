@@ -7,6 +7,14 @@ export {
   ConnectionHub,
   NetState
 } from './src/main/ets/services/ConnectionHub';
+export {
+  AnalyticsEvent,
+  AnalyticsHost,
+  AnalyticsHub,
+  AnalyticsParam,
+  AnalyticsSink,
+  trackEvent
+} from './src/main/ets/services/Analytics';
 export { PerfMeter } from './src/main/ets/services/PerfMeter';
 export { ComingSoonText } from './src/main/ets/constants/ComingSoonText';
 export { LayoutConst } from './src/main/ets/constants/LayoutConst';

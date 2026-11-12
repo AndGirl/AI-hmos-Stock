@@ -1,4 +1,5 @@
 import { promptAction } from '@kit.ArkUI';
+import { accessibility } from '@kit.AccessibilityKit';
 import { AppColor, AppDim, GlobalBanner, showComingSoon } from 'commons_ui';
 import { BreakpointHost, BreakpointService, ComingSoonText } from 'commons_basic';
 import { DetailAction, showDetailActionMenu } from 'detail';
@@ -51,11 +52,43 @@ export struct PkHost {
     this.getUIContext().getPromptAction().showToast({ message: message, duration: 1800 });
   }
 
+  /** 切窗播报（FR-08.11）：读屏用户切焦点时朗读「第 N 个窗，共 M 个」+ 标的。 */
+  @Monitor('vm.focus')
+  onFocusChanged(): void {
+    const index: number = this.vm.focus;
+    const code: string = this.vm.codeAt(index);
+    if (code.length === 0) {
+      return;
+    }
+    this.announce($r('app.string.pk_a11y_window', (index + 1).toString(),
+      this.vm.windows.length.toString(), code));
+  }
+
   @Monitor('vm.exitRequested')
   onExitRequested(): void {
     if (this.vm.exitRequested) {
       this.vm.logExit();
       this.onExit();
+    }
+  }
+
+  /** 主动播报（announceForAccessibility）：失败静默，不影响交互。 */
+  private announce(text: Resource): void {
+    try {
+      const ctx = this.getUIContext().getHostContext();
+      if (ctx === undefined) {
+        return;
+      }
+      const message: string = ctx.resourceManager.getStringSync(text.id);
+      const info: accessibility.EventInfo = {
+        type: 'announceForAccessibility',
+        bundleName: ctx.applicationInfo.name,
+        triggerAction: 'focus',
+        textAnnouncedForAccessibility: message
+      };
+      accessibility.sendAccessibilityEvent(info).catch((): void => {
+      });
+    } catch (err) {
     }
   }
 

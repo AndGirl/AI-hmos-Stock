@@ -1717,6 +1717,16 @@ export interface Analytics {
 - `PerfProbe.mark(name)`：首屏、图表首帧、弹窗打开、切窗；debug 构建写日志，release 只计数。
 - 帧率：连续滚动/切窗时用系统帧回调统计，超阈值打点。
 - 内存：切 20 次周期、开关 10 次弹窗、关闭全部窗后，与基线对比（±5%）。
+> **实现备注（M5，2026-11-12）**
+> - **状态机落地**：`commons/basic/services/ConnectionHub`（`@ObservedV2` + `ConnectionHost`）持有 `state/changeSeq/retryCount`，退避与探活都在 hub 内（页面零定时器，CC-7.5）；`MockQuoteProvider` 每 1s 心跳喂状态，`MockFaults.netFault` 注入 weak/offline/delayed。
+> - **冻结在数据层**：`QuoteBus.handlePatch` 与 `DetailSubscriptionRegistry.dispatch` 在 offline 直接丢弃，视图侧不做「停更」逻辑；恢复靠下一次推送补全量（不额外强制刷新，避免 hub 反向依赖数据层）。
+> - **视觉分工**：banner 由 `commons/ui/GlobalBanner` 提供，TabShell / DetailPage / PkHost 各挂一次（同屏互斥）；55% 置灰只作用于数据区（列表行 / 详情报价头以下），表头、名称列与报价头保持可读；`delayed` 不占 banner，改挂涨跌幅列头角标。
+> - **交易联动**：`MockTradeProvider` 的 `online` = 非 Mock 故障 且 非 hub 断线；`TradeVM.applyNetState` + `TradeSheet` 监听 `hub.changeSeq` 实现弹窗内实时提示条与按钮禁用。
+> - **埋点**：`commons/basic/services/Analytics`（`AnalyticsHub` 队列 + `AnalyticsSink`），本期 sink 写 hilog，接 SDK 只换 sink；合规只传 code/枚举/序号。PK/交易/详情事件已接入。
+> - **无障碍补充**：切窗时 `accessibility.sendAccessibilityEvent({type:'announceForAccessibility', ...})` 播报「第 N 个窗，共 M 个 + 代码」，失败静默。
+> - **实测**：断线冻结 4s 像素零差异、恢复 1s 内去灰；重连退避 1→2→4→8→16→30s；3 窗 + 1.45× 60.8fps / p95 16ms / jank 1.6%；RSS 285.9→281.2MB（−1.6%），订阅 3→1。
+> - **未收尾**：真机回归、读屏端到端、`versionName` 统一（转收尾，见进度文档 §10-75）。
+
 
 ---
 

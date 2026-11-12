@@ -1,5 +1,5 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { ConnectionHost, ConnectionHub } from 'commons_basic';
+import { AnalyticsHost, AnalyticsParam, ConnectionHost, ConnectionHub } from 'commons_basic';
 import {
   AccountInfo,
   AuthSession,
@@ -346,6 +346,7 @@ export class TradeVM {
     const draft: OrderDraft = new OrderDraft(this.code, account.id, this.price, this.qty,
       this.clientOrderId);
     hilog.info(DOMAIN, 'TradeLog', 'trade_submit clientOrderId=%{public}s', this.clientOrderId);
+    this.track('submit', [new AnalyticsParam('code', this.code)]);
     this.submitTimer = setTimeout((): void => {
       if (token !== this.submitToken || !this.submitting) {
         return;
@@ -356,6 +357,7 @@ export class TradeVM {
       hilog.info(DOMAIN, 'TradePerf', 'submit_timeout clientOrderId=%{public}s', this.clientOrderId);
       hilog.info(DOMAIN, 'TradeLog', 'trade_result_unknown clientOrderId=%{public}s',
         this.clientOrderId);
+      this.track('result_unknown', [new AnalyticsParam('code', this.code)]);
     }, SUBMIT_TIMEOUT_MS);
     this.repo.submit(draft).then((result: OrderResult): void => {
       if (token !== this.submitToken) {
@@ -372,6 +374,7 @@ export class TradeVM {
       } else {
         this.failCode = failCodeOf(result.code);
         hilog.info(DOMAIN, 'TradeLog', 'trade_result_fail code=%{public}s', result.code);
+        this.track('result_fail', [new AnalyticsParam('reason', result.code)]);
       }
     }).catch((): void => {
       if (token !== this.submitToken) {
@@ -398,6 +401,7 @@ export class TradeVM {
       this.queryOrderId = result.orderId;
       this.queryTimeText = formatQueryTime(result.ts);
       hilog.info(DOMAIN, 'TradeLog', 'trade_query status=%{public}s', this.queryStatus);
+      this.track('trade_query', [new AnalyticsParam('status', this.queryStatus)]);
     }).catch((): void => {
       this.querying = false;
       this.queryStatus = 'not_found';
@@ -513,6 +517,9 @@ export class TradeVM {
     this.clientOrderIdText = this.clientOrderId;
     hilog.info(DOMAIN, 'TradeLog', 'trade_open code=%{public}s account=%{public}s canBuy=%{public}d',
       this.code, account !== null ? account.id : '', this.canBuy);
+    // 合规：只上报 code 与来源，账号/资金/数量不进埋点。
+    this.track('modal_open', [new AnalyticsParam('kind', 'trade'),
+      new AnalyticsParam('source', this.source)]);
   }
 
   private onAccepted(result: OrderResult): void {
@@ -524,6 +531,7 @@ export class TradeVM {
     hilog.info(DOMAIN, 'TradePerf', 'submit_ok clientOrderId=%{public}s orderId=%{public}s',
       result.clientOrderId, result.orderId);
     hilog.info(DOMAIN, 'TradeLog', 'trade_result_success orderId=%{public}s', result.orderId);
+    this.track('result_success', [new AnalyticsParam('code', this.code)]);
     // 成功后 700ms 自动关闭回详情（不可拦截）。
     this.clearCloseTimer();
     this.closeTimer = setTimeout((): void => {
@@ -573,6 +581,10 @@ export class TradeVM {
   }
 
   /** 提示条优先级：断线 → 交易时段 → 资金（与门禁顺序一致，FR-07.10）。 */
+  private track(event: string, params: AnalyticsParam[]): void {
+    AnalyticsHost.get().track(event, params);
+  }
+
   private refreshBlock(): void {
     if (this.netOffline || this.baseGate === TradeGate.Offline) {
       this.blockCode = 'offline';

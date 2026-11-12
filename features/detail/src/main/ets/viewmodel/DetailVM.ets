@@ -1,4 +1,5 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { AnalyticsHost, AnalyticsParam } from 'commons_basic';
 import {
   ChartPeriod,
   ChartPoint,
@@ -280,6 +281,8 @@ export class DetailVM {
     }
     this.period = period;
     this.persistPrefs();
+    AnalyticsHost.get().track('period_switch', [new AnalyticsParam('period', period),
+      new AnalyticsParam('code', this.code)]);
     this.loadChart(false);
   }
 

@@ -1,5 +1,6 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { detailSubscriptionStats } from 'detail';
+import { AnalyticsHost, AnalyticsParam } from 'commons_basic';
 import { computeLayout, layoutViolations, PkLayoutKind, PK_MAX_WINDOWS, SlotLayout } from '../repository/PkLayout';
 import { PkRepository } from '../repository/PkRepository';
 import { PkSavedGroup, PkStore } from '../repository/PkStore';
@@ -209,6 +210,8 @@ export class PkVM {
       this.emptyState = false;
       hilog.info(DOMAIN, TAG, 'window_open index=%{public}d code=%{public}s windows=%{public}d',
         this.focus, code, this.windows.length);
+      this.track('window_open', [new AnalyticsParam('index', this.focus.toString()),
+        new AnalyticsParam('windows', this.windows.length.toString())]);
       this.checkLayout();
       this.persist();
       return;
@@ -230,6 +233,8 @@ export class PkVM {
       this.windows[other].syncSeq++;
       hilog.info(DOMAIN, TAG, 'code_swap from=%{public}d to=%{public}d windows=%{public}d',
         target, other, this.windows.length);
+      this.track('code_swap', [new AnalyticsParam('from', target.toString()),
+        new AnalyticsParam('to', other.toString())]);
       this.toast('swapped');
       this.checkLayout();
       this.persist();
@@ -260,6 +265,8 @@ export class PkVM {
     }
     hilog.info(DOMAIN, TAG, 'period_sync period=%{public}s windows=%{public}d',
       period, this.windows.length);
+    this.track('period_sync', [new AnalyticsParam('period', period),
+      new AnalyticsParam('windows', this.windows.length.toString())]);
     this.toast('sync_done');
     this.persist();
   }
@@ -288,6 +295,7 @@ export class PkVM {
       hilog.info(DOMAIN, TAG, 'window_close index=%{public}d code=%{public}s windows=0',
         index, closedCode);
       hilog.info(DOMAIN, TAG, 'exit_pk windows=0 %{public}s', detailSubscriptionStats());
+      this.track('exit_pk', [new AnalyticsParam('windows', '0')]);
       this.persist();
       this.exitRequested = true;
       return;
@@ -300,6 +308,8 @@ export class PkVM {
     this.updateFocusFlags();
     hilog.info(DOMAIN, TAG, 'window_close index=%{public}d code=%{public}s windows=%{public}d focus=%{public}d',
       index, closedCode, this.windows.length, this.focus);
+    this.track('window_close', [new AnalyticsParam('index', index.toString()),
+      new AnalyticsParam('windows', this.windows.length.toString())]);
     this.checkLayout();
     this.persist();
   }
@@ -308,6 +318,7 @@ export class PkVM {
   degradeThrottle(): void {
     hilog.info(DOMAIN, TAG, 'degrade reason=throttle windows=%{public}d %{public}s',
       this.windows.length, detailSubscriptionStats());
+    this.track('degrade', [new AnalyticsParam('reason', 'throttle')]);
     this.toast('degrade_throttle');
   }
 
@@ -323,6 +334,7 @@ export class PkVM {
     this.updateFocusFlags();
     hilog.info(DOMAIN, TAG, 'degrade reason=memory windows=1 code=%{public}s %{public}s',
       keep.code, detailSubscriptionStats());
+    this.track('degrade', [new AnalyticsParam('reason', 'memory')]);
     this.toast('degrade_close');
     this.checkLayout();
     this.persist();
@@ -383,6 +395,10 @@ export class PkVM {
     }
   }
 
+  private track(event: string, params: AnalyticsParam[]): void {
+    AnalyticsHost.get().track(event, params);
+  }
+
   private toast(code: PkToastCode): void {
     this.toastCode = code;
     this.toastSeq++;
@@ -408,6 +424,10 @@ export class PkVM {
       this.source, this.windows.length);
     hilog.info(DOMAIN, TAG, 'group_created size=%{public}d focus=%{public}d',
       this.windows.length, this.focus);
+    this.track('pk_entry', [new AnalyticsParam('source', this.source),
+      new AnalyticsParam('windows', this.windows.length.toString())]);
+    this.track('group_created', [new AnalyticsParam('size', this.windows.length.toString()),
+      new AnalyticsParam('focus', this.focus.toString())]);
   }
 
   /** debug：布局不溢出断言（设计 §5.5.2）。 */
