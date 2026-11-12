@@ -106,11 +106,11 @@ export struct OrderBookPanel {
       Text($r('app.string.detail_orderbook_title'))
         .fontSize(10)
         .fontWeight(FontWeight.Medium)
-        .fontColor(AppColor.textSecondary)
+        .fontColor(AppColor.orderBookTitleText)
         .width('100%')
         .height(20)
-        .padding({ left: 4 })
-        .backgroundColor(AppColor.bgSurface)
+        .textAlign(TextAlign.Center)
+        .backgroundColor(AppColor.orderBookTitleBg)
 
       if (this.narrow) {
         Row() {
@@ -169,7 +169,7 @@ export struct OrderBookPanel {
         .fontColor(AppColor.textSecondary)
         .width('100%')
         .height(20)
-        .padding({ left: 4 })
+        .textAlign(TextAlign.Center)
         .backgroundColor(AppColor.bgSurface)
         .margin({ top: AppDim.gap4 })
 

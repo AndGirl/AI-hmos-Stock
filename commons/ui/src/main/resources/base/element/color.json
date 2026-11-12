@@ -19,6 +19,8 @@
     { "name": "color_chart_avg", "value": "#F5A623" },
     { "name": "color_bar_shadow", "value": "#14000000" },
     { "name": "color_news_band_bg", "value": "#F2F4F6" },
+    { "name": "color_orderbook_title_bg", "value": "#FFF0EF" },
+    { "name": "color_orderbook_title_text", "value": "#E8645C" },
     { "name": "color_transparent", "value": "#00000000" }
   ]
 }
