@@ -202,7 +202,7 @@ export struct DetailContent {
             OrderBookPanel({ book: this.vm.orderBook, ticks: this.vm.ticks, narrow: false })
           }
           .width(this.bookWidth())
-          .margin({ right: AppDim.gap12 })
+          .margin({ right: AppDim.gap12, top: AppDim.gap8 })
         }
         .width('100%')
         .alignItems(VerticalAlign.Top)

@@ -1,6 +1,7 @@
 import { AppColor, AppDim } from 'commons_ui';
 import { OrderLevelVM, OrderBookVM, TickVM } from '../viewmodel/DetailVM';
 import { toneColor } from './DetailLabels';
+import { DETAIL_BLOCK_HEIGHT } from './DetailLayout';
 
 /** 单档：价格按昨收着色，档位变动闪一次（FR-06.8）。 */
 @ComponentV2
@@ -201,12 +202,14 @@ export struct OrderBookPanel {
         }, (tick: TickVM) => tick.key)
       }
       .width('100%')
-      .height(this.narrow ? 64 : 76)
+      .layoutWeight(1)
 
       .scrollBar(BarState.Off)
       .cachedCount(4)
     }
     .width('100%')
+    .height(DETAIL_BLOCK_HEIGHT)
     .alignItems(HorizontalAlign.Start)
   }
 }
+

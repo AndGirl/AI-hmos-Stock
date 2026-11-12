@@ -14,6 +14,7 @@ import {
 } from '../viewmodel/DetailExports';
 import { ChartReadout, ChartState, DetailVM } from '../viewmodel/DetailVM';
 import { periodLabel } from './DetailLabels';
+import { DETAIL_BLOCK_HEIGHT } from './DetailLayout';
 
 
 /** 十字光标读数桥（把引擎回调转成组件本地状态）。 */
@@ -145,11 +146,9 @@ export struct ChartArea {
     );
   }
 
+  /** 价格图高度 = 统一列高 − 量能图高度，保证图表区与右侧盘口列等高。 */
   private priceHeight(): number {
-    if (this.compact) {
-      return 150;
-    }
-    return this.viewportWidth >= 840 ? 220 : 190;
+    return DETAIL_BLOCK_HEIGHT - this.volumeHeight();
   }
 
   private volumeHeight(): number {
@@ -175,12 +174,12 @@ export struct ChartArea {
     Column() {
       Row()
         .width('100%')
-        .height(this.priceHeight())
+        .height(DETAIL_BLOCK_HEIGHT)
         .borderRadius(8)
         .backgroundColor(AppColor.disabledBg)
     }
     .width('100%')
-    .padding({ left: AppDim.gap16, right: AppDim.gap16, top: AppDim.gap8 })
+    .padding({ left: AppDim.gap16, right: AppDim.gap16 })
   }
 
   @Builder
@@ -198,11 +197,11 @@ export struct ChartArea {
         })
     }
     .width('100%')
-    .height(this.priceHeight())
+    .height(DETAIL_BLOCK_HEIGHT)
     .justifyContent(FlexAlign.Center)
     .backgroundColor(AppColor.bgSurface)
     .borderRadius(8)
-    .margin({ left: AppDim.gap16, right: AppDim.gap16, top: AppDim.gap8 })
+    .margin({ left: AppDim.gap16, right: AppDim.gap16 })
   }
 
   @Builder
@@ -241,6 +240,8 @@ export struct ChartArea {
     .width('100%')
     .height(22)
     .padding({ left: AppDim.gap16, right: AppDim.gap16 })
+    .backgroundColor(AppColor.bgPage)
+    .hitTestBehavior(HitTestMode.None)
   }
 
   build() {
@@ -256,30 +257,36 @@ export struct ChartArea {
             .fontColor(AppColor.textSecondary)
         }
         .width('100%')
-        .height(this.priceHeight())
+        .height(DETAIL_BLOCK_HEIGHT)
         .justifyContent(FlexAlign.Center)
       } else {
-        if (this.readout !== null) {
-          this.readoutBar()
-        }
-        Column() {
-          if (this.isKline()) {
-            CandleStickChart({ model: this.engine.candlePriceModel() })
+        // 读数条叠在图表上沿（不上抬整体高度），保证图表区与盘口列始终等高。
+        Stack({ alignContent: Alignment.TopStart }) {
+          Column() {
+            if (this.isKline()) {
+              CandleStickChart({ model: this.engine.candlePriceModel() })
+                .width('100%')
+                .height(this.priceHeight())
+            } else {
+              LineChart({ model: this.engine.priceModel() })
+                .width('100%')
+                .height(this.priceHeight())
+            }
+            BarChart({ model: this.engine.volumeBarModel() })
               .width('100%')
-              .height(this.priceHeight())
-          } else {
-            LineChart({ model: this.engine.priceModel() })
-              .width('100%')
-              .height(this.priceHeight())
+              .height(this.volumeHeight())
           }
-          BarChart({ model: this.engine.volumeBarModel() })
-            .width('100%')
-            .height(this.volumeHeight())
+          .width('100%')
+          .height(DETAIL_BLOCK_HEIGHT)
+          .accessibilityText(this.chartA11y())
+          .padding({ left: AppDim.gap8, right: AppDim.gap8 })
+
+          if (this.readout !== null) {
+            this.readoutBar()
+          }
         }
         .width('100%')
-        .height(this.priceHeight() + this.volumeHeight())
-        .accessibilityText(this.chartA11y())
-        .padding({ left: AppDim.gap8, right: AppDim.gap8 })
+        .height(DETAIL_BLOCK_HEIGHT)
       }
     }
     .width('100%')
@@ -287,4 +294,6 @@ export struct ChartArea {
     .margin({ top: AppDim.gap8 })
   }
 }
+
+
 
