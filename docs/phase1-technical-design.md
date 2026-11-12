@@ -1559,7 +1559,7 @@ computeLayout(count: number, viewport: number): SlotLayout[] {
 > **实现备注（M4，2026-11-12）**
 > - 本项目无 UT 运行器，`x + width ≤ viewport` 改为 `PkLayout.layoutViolations()` 在 debug 首次布局时打印（`pk_layout_violation`，正常不出现）。
 > - 卡宽 <360vp 走 FR-06.11 紧凑版；**<240vp 再走 mini 版**（只留报价头 + 周期 Tab + 图表，收起指标/资讯/盘口），否则折叠屏 3 窗每窗约 165vp 会出现标签与数值重叠。
-> - 指示器在 `PkToolbar` 左侧渲染（3 窗才出现），点击切焦点；滑动切焦点未做。
+> - 指示器在 `PkToolbar` 左侧渲染（3 窗才出现），**仅点击切焦点**；滑动切焦点本期不做（2026-11-12 确认，Q3-b 关闭）。
 > - 窗卡位置由 `computeLayout(count, viewport)` 现算（纯函数），窗数/宽度变化即重排，无需缓存坐标系。
 > - 窗内图表实例的容器宽度会随窗数变化：`ChartArea` 在 `viewportWidth` 变化后延迟 80ms 重设 series 并 resetZoom，否则 mpchart 会沿用旧视口的缩放，K 线聚在一侧。
 
@@ -1573,10 +1573,10 @@ computeLayout(count: number, viewport: number): SlotLayout[] {
 | 关闭 | 关闭即销毁该窗 VM/图表/订阅；焦点移交相邻；最后一窗关闭 = 退出 PK |
 | 返回 | 返回键退出 PK 回来源页（不逐窗回退） |
 
-> **实现备注（M4，2026-11-12）**
+> **实现备注（M4，2026-11-12；口径已确认 DEC-08-07~09）**
 > - 换股入口做成窗卡工具栏的「换股」按钮（不点标题）：报价头已展示名称/代码，再加标题会重复；FR-08.4「标题可点」语义等价。
 > - 详情入口（动作栏「股票PK」/ 标题栏 ⧉）只带 1 只时，进入 PK 后**自动拉起选择器**补齐第 2 只；取消则保留 1 窗 +「+」。
-> - PK 内退出用系统返回或「关最后一窗」；标题栏不放 ⧉（Q5-b 未做，避免与返回重复）。
+> - PK 内退出用系统返回或「关最后一窗」；标题栏不放 ⧉（Q5-b 已关闭：不做「退出 PK」图标）。
 
 #### 5.5.4 订阅预算与降频
 
@@ -1931,7 +1931,11 @@ export class BreakpointService {
 | AC-64 | 读屏顺序/替代文本 | `accessibilityText` | 真机读屏 |
 | AC-65 | 性能/内存 | `ChartEngine.dispose` | Profiler |
 | AC-66~76 | 交易入口→结果 | §5.4 | UiTest（含 Mock 注入） |
-| AC-77~86 | 多窗 | §5.5 | UiTest + 真机折叠 |
+| AC-77~86 | 多窗 | §5.5（`PkVM` / `PkLayout` / `DetailSubscriptionRegistry` / `PkStore` / `PkHost`） | UiTest + 真机折叠 |
+
+> **实现备注（M4）**：本项目暂无 UT 运行器，「布局数学」与「订阅注册表」改为可观测断言——
+> `PkLayout.layoutViolations()` 在 debug 打印 `pk_layout_violation`（正常不出现）；
+> `DetailSubscriptionRegistry.stats()` 输出 `subs=/sinks=/codes=`，由 `DetailPerf` 的 `subs_acquire/subs_tier/subs_release` 与 PK 调试面板「订阅统计」核对（AC-83）。接 Local Test 后这两项迁回单测。
 
 ### 8.3 设备矩阵（基线 §8.1）
 
@@ -1940,7 +1944,7 @@ export class BreakpointService {
 | 11 列横滑 | ✓ | ✓ | ✓ | ✓（左栏） |
 | 详情页/右栏 | ✓ | ✓ | 待补稿（按 sm 补） | ✓ |
 | 买入/确认 | ✓ | ✓ | 待补稿（按 lg 居中） | ✓ 居中 |
-| 双窗/三窗 | — | ✓ 真机 | — | — |
+| 双窗/三窗 | — | ✓ 真机（460/940vp） | — | ✓ 模拟器（1280vp） |
 | 折叠↔展开不丢状态 | — | ✓ 真机 | ✓ 真机 | — |
 | 悬停态 | — | ✓ 真机 | — | — |
 
