@@ -134,7 +134,6 @@ class DetailPrefs {
 /** 跨实例缓存：page ↔ pane 切换不重建周期/展开态（INV-D2）。 */
 const PREFS: Map<string, DetailPrefs> = new Map<string, DetailPrefs>();
 const SERIES_CACHE: Map<string, ChartCacheEntry> = new Map<string, ChartCacheEntry>();
-const NEWS_DISMISSED: Set<string> = new Set<string>();
 
 function seriesKey(code: string, period: ChartPeriod): string {
   return code + ':' + period;
@@ -282,8 +281,8 @@ export class DetailVM {
   }
 
   dismissNews(): void {
+    // 只在当前页面实例内隐藏；每次新开详情页（新实例）会重新展示（2026-11-12 口径，覆盖 FR-06.5 会话内记忆）。
     this.newsVisible = false;
-    NEWS_DISMISSED.add(this.code);
   }
 
   dispose(): void {
@@ -342,9 +341,13 @@ export class DetailVM {
       this.applyOrderBook(snapshot.orderBook, quote);
     }
     this.applyTicks(snapshot.ticks);
-    if (snapshot.news !== null && !NEWS_DISMISSED.has(snapshot.code)) {
+    // 无资讯时整条隐藏且不占位；有资讯即展示（不做会话内记忆，新开页面重新出现）。
+    if (snapshot.news !== null) {
       this.newsTitle = snapshot.news.title;
       this.newsVisible = true;
+    } else {
+      this.newsTitle = '';
+      this.newsVisible = false;
     }
   }
 

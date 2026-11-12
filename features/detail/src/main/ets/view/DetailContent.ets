@@ -165,15 +165,14 @@ export struct DetailContent {
         }
       })
 
-      if (!this.isCompact()) {
-        NewsBar({
-          title: this.vm.newsTitle,
-          visible: this.vm.newsVisible,
-          onClose: (): void => {
-            this.vm.dismissNews();
-          }
-        })
-      }
+      // 资讯条在 page / pane / window 三种形态都展示（2026-11-12 产品口径，覆盖 FR-06 §2.6「紧凑版不显示」）。
+      NewsBar({
+        title: this.vm.newsTitle,
+        visible: this.vm.newsVisible,
+        onClose: (): void => {
+          this.vm.dismissNews();
+        }
+      })
 
       if (this.narrowBook()) {
         this.chartRow()

@@ -22,6 +22,7 @@ export class AppColor {
   static readonly chartLine: Resource = $r('app.color.color_chart_line');
   static readonly chartAvg: Resource = $r('app.color.color_chart_avg');
   static readonly barShadow: Resource = $r('app.color.color_bar_shadow');
+  static readonly newsBandBg: Resource = $r('app.color.color_news_band_bg');
   static readonly transparent: Resource = $r('app.color.color_transparent');
 }
 
