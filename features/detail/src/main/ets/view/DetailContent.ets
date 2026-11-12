@@ -211,6 +211,7 @@ export struct DetailContent {
         vm: this.vm,
         compact: this.isCompact(),
         mini: this.isMini(),
+        narrow: this.isMini() && this.contentWidth < 170,
         offline: this.offline(),
         onMore: (): void => {
           this.onAction('more');
@@ -257,7 +258,12 @@ export struct DetailContent {
         this.chartRow()
         if (!this.isMini()) {
           Row() {
-            OrderBookPanel({ book: this.vm.orderBook, ticks: this.vm.ticks, narrow: true })
+            OrderBookPanel({
+              book: this.vm.orderBook,
+              ticks: this.vm.ticks,
+              narrow: true,
+              panelWidth: Math.max(120, this.contentWidth - 32)
+            })
           }
           .width('100%')
           .padding({ left: AppDim.gap16, right: AppDim.gap16, top: AppDim.gap8 })
@@ -270,7 +276,12 @@ export struct DetailContent {
           .layoutWeight(1)
 
           Column() {
-            OrderBookPanel({ book: this.vm.orderBook, ticks: this.vm.ticks, narrow: false })
+            OrderBookPanel({
+              book: this.vm.orderBook,
+              ticks: this.vm.ticks,
+              narrow: false,
+              panelWidth: this.bookWidth()
+            })
           }
           .width(this.bookWidth())
           .margin({ right: AppDim.gap12, top: AppDim.gap8 })

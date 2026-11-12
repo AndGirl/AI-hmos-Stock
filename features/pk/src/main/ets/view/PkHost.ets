@@ -1,3 +1,4 @@
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { promptAction } from '@kit.ArkUI';
 import { accessibility } from '@kit.AccessibilityKit';
 import { AppColor, AppDim, GlobalBanner, showComingSoon } from 'commons_ui';
@@ -80,6 +81,7 @@ export struct PkHost {
         return;
       }
       const message: string = ctx.resourceManager.getStringSync(text.id);
+      hilog.info(0x0001, 'PkLog', 'pk_announce text=%{public}s', message);
       const info: accessibility.EventInfo = {
         type: 'announceForAccessibility',
         bundleName: ctx.applicationInfo.name,

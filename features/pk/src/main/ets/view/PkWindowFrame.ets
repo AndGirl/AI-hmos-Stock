@@ -37,8 +37,9 @@ export struct PkWindowFrame {
     return slots[index];
   }
 
+  /** 内容宽 = 卡宽 − 内边距（不再兜底 200vp：388vp 三窗只有约 111vp，兜底会让内容比卡片还宽而被裁）。 */
   private contentWidth(): number {
-    return Math.max(200, this.slot().width - FRAME_PADDING * 2);
+    return Math.max(96, this.slot().width - FRAME_PADDING * 2);
   }
 
   /** 窗工具栏：窗序 + 换股 + 关闭（点击窗体内任意处也能聚焦，见根节点 onClick）。 */
@@ -49,6 +50,12 @@ export struct PkWindowFrame {
         .fontSize(11)
         .fontColor(this.window.focused ? AppColor.accent : AppColor.textSecondary)
         .maxLines(1)
+        .height(28)
+        .padding({ left: AppDim.gap4, right: AppDim.gap4 })
+        .accessibilityText($r('app.string.pk_a11y_focus_window', windowLabel(this.index)))
+        .onClick(() => {
+          this.onSelect(this.index);
+        })
       Blank()
       Text($r('app.string.pk_swap'))
         .fontSize(12)

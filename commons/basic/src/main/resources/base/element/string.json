@@ -204,6 +204,7 @@
     {"name": "conn_weak", "value": "网络较弱，行情更新较慢"},
     {"name": "conn_offline", "value": "行情连接中断，数据可能延迟"},
     {"name": "conn_delayed_badge", "value": "延迟"},
-    {"name": "conn_a11y_delayed", "value": "行情延迟，当前数据可能滞后"}
+    {"name": "conn_a11y_delayed", "value": "行情延迟，当前数据可能滞后"},
+    {"name": "pk_a11y_focus_window", "value": "聚焦第 %s 个窗"}
   ]
 }

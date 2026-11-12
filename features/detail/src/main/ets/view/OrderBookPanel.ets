@@ -101,6 +101,21 @@ export struct OrderBookPanel {
   @Param book: OrderBookVM = new OrderBookVM();
   @Param ticks: TickVM[] = [];
   @Param narrow: boolean = false;
+  /** 盘口列实际可用宽（sm 388vp 时约 116vp）：成交明细按此分列，避免价格被挤成两行。 */
+  @Param panelWidth: number = 130;
+
+  /** 成交明细字号/分列：窄列（<150vp）降 1fp，时间/量按比例收窄，价格列保底。 */
+  private tickFont(): number {
+    return this.panelWidth < 150 ? 9 : 10;
+  }
+
+  private tickTimeWidth(): number {
+    return Math.max(34, Math.min(52, Math.round(this.panelWidth * 0.34)));
+  }
+
+  private tickVolumeWidth(): number {
+    return Math.max(22, Math.min(34, Math.round(this.panelWidth * 0.20)));
+  }
 
   build() {
     Column() {
@@ -179,18 +194,20 @@ export struct OrderBookPanel {
           ListItem() {
             Row() {
               Text(tick.timeText)
-                .fontSize(10)
+                .fontSize(this.tickFont())
                 .fontColor(AppColor.textSecondary)
-                .width(48)
+                .width(this.tickTimeWidth())
+                .maxLines(1)
               Text(tick.priceText)
-                .fontSize(10)
+                .fontSize(this.tickFont())
                 .fontColor(this.book.frozen ? AppColor.disabledText : toneColor(tick.tone))
                 .layoutWeight(1)
                 .textAlign(TextAlign.End)
+                .maxLines(1)
               Text(tick.volumeText)
-                .fontSize(10)
+                .fontSize(this.tickFont())
                 .fontColor(AppColor.textSecondary)
-                .width(34)
+                .width(this.tickVolumeWidth())
                 .textAlign(TextAlign.End)
                 .maxLines(1)
             }

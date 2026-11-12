@@ -13,6 +13,8 @@ export struct QuoteHeader {
   @Param compact: boolean = false;
   /** 极窄窗（多窗三窗叠放，<240vp）：只留名称/代码/价格/涨跌，其余收起避免挤压。 */
   @Param mini: boolean = false;
+  /** 超窄窗（三窗叠放在 388vp 屏上约 133vp/窗）：再降一档字号，避免价格与涨跌互相挤压。 */
+  @Param narrow: boolean = false;
   /** 断线时不显示行内行情时间（CC-7.6），避免把延迟误读为个股信息。 */
   @Param offline: boolean = false;
   @Event onMore: () => void = (): void => {
@@ -34,7 +36,7 @@ export struct QuoteHeader {
     Column() {
       Row() {
         Text(this.vm.name)
-          .fontSize(this.mini ? 16 : (this.compact ? 20 : 24))
+          .fontSize(this.narrow ? 14 : (this.mini ? 16 : (this.compact ? 20 : 24)))
           .fontWeight(FontWeight.Bold)
           .fontColor(AppColor.textPrimary)
           .maxLines(1)
@@ -102,29 +104,34 @@ export struct QuoteHeader {
       Row() {
         Stack() {
           Text(this.vm.priceText)
-            .fontSize(this.mini ? 22 : (this.compact ? 30 : 36))
+            .fontSize(this.narrow ? 18 : (this.mini ? 22 : (this.compact ? 30 : 36)))
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColor.transparent)
             .backgroundColor(toneColor(this.vm.priceTone))
             .opacity(this.flashAlpha)
           Text(this.vm.priceText)
-            .fontSize(this.mini ? 22 : (this.compact ? 30 : 36))
+            .fontSize(this.narrow ? 18 : (this.mini ? 22 : (this.compact ? 30 : 36)))
             .fontWeight(FontWeight.Bold)
             .fontColor(toneColor(this.vm.priceTone))
         }
         .padding({ left: 2, right: 2 })
 
         if (this.mini) {
-          Column() {
-            Text(this.vm.chgText)
-              .fontSize(11)
-              .fontColor(toneColor(this.vm.priceTone))
-            Text(this.vm.pctText)
-              .fontSize(11)
-              .fontColor(toneColor(this.vm.priceTone))
+          if (this.narrow) {
+            // 超窄窗：涨跌与涨跌幅换行到价格下方，避免右侧被裁。
+            Blank()
+          } else {
+            Column() {
+              Text(this.vm.chgText)
+                .fontSize(11)
+                .fontColor(toneColor(this.vm.priceTone))
+              Text(this.vm.pctText)
+                .fontSize(11)
+                .fontColor(toneColor(this.vm.priceTone))
+            }
+            .alignItems(HorizontalAlign.Start)
+            .margin({ left: AppDim.gap8 })
           }
-          .alignItems(HorizontalAlign.Start)
-          .margin({ left: AppDim.gap8 })
         } else {
           Column() {
             Text(this.vm.chgText)
@@ -142,6 +149,21 @@ export struct QuoteHeader {
       .alignItems(VerticalAlign.Bottom)
       .margin({ top: this.mini ? AppDim.gap4 : AppDim.gap8 })
       .accessibilityGroup(true)
+
+      if (this.narrow) {
+        Row() {
+          Text(this.vm.chgText)
+            .fontSize(10)
+            .fontColor(toneColor(this.vm.priceTone))
+          Text(this.vm.pctText)
+            .fontSize(10)
+            .fontColor(toneColor(this.vm.priceTone))
+            .margin({ left: AppDim.gap4 })
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+        .accessibilityGroup(true)
+      }
 
       if (!this.mini && this.vm.tags.length > 0) {
         Row() {
