@@ -4,7 +4,6 @@ import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppColor, AppDim } from 'commons_ui';
 import {
-  CHART_PERIODS,
   ChartPeriod,
   ChartSelectionListener,
   ChartSeries,
@@ -15,6 +14,7 @@ import {
 } from '../viewmodel/DetailExports';
 import { ChartReadout, ChartState, DetailVM } from '../viewmodel/DetailVM';
 import { periodLabel } from './DetailLabels';
+
 
 /** 十字光标读数桥（把引擎回调转成组件本地状态）。 */
 class ReadoutBridge implements ChartSelectionListener {
@@ -73,7 +73,6 @@ export struct ChartArea {
   };
   @Local readout: ChartReadout | null = null;
   private engine: MpChartEngine = createChartEngine(emptyStyle());
-  private tabScroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
     this.engine.setStyle(this.resolveStyle());
@@ -146,20 +145,6 @@ export struct ChartArea {
     );
   }
 
-  /** 周期 Tab 间距：sm 12 / md 14 / lg 16 / xl 20（FR-06.6）。 */
-  private tabGap(): number {
-    if (this.viewportWidth >= 1180) {
-      return 20;
-    }
-    if (this.viewportWidth >= 840) {
-      return 16;
-    }
-    if (this.viewportWidth >= 600) {
-      return 14;
-    }
-    return 12;
-  }
-
   private priceHeight(): number {
     if (this.compact) {
       return 150;
@@ -183,30 +168,6 @@ export struct ChartArea {
       return '';
     }
     return context.resourceManager.getStringSync(res);
-  }
-
-  @Builder
-  periodTabs() {
-    List({ space: this.tabGap(), scroller: this.tabScroller }) {
-      ForEach(CHART_PERIODS, (period: ChartPeriod) => {
-        ListItem() {
-          Text(periodLabel(period))
-            .fontSize(13)
-            .fontColor(period === this.period ? AppColor.accent : AppColor.textSecondary)
-            .fontWeight(period === this.period ? FontWeight.Medium : FontWeight.Normal)
-            .padding({ top: 6, bottom: 6 })
-        }
-        .onClick(() => {
-          this.onSelectPeriod(period);
-        })
-      }, (period: ChartPeriod) => period)
-    }
-    .listDirection(Axis.Horizontal)
-    .height(34)
-    .width('100%')
-
-    .scrollBar(BarState.Off)
-    .padding({ left: AppDim.gap16, right: AppDim.gap16 })
   }
 
   @Builder
@@ -284,8 +245,6 @@ export struct ChartArea {
 
   build() {
     Column() {
-      this.periodTabs()
-
       if (this.chartState === 'loading' || this.chartState === 'idle') {
         this.chartSkeleton()
       } else if (this.chartState === 'error') {
@@ -328,3 +287,4 @@ export struct ChartArea {
     .margin({ top: AppDim.gap8 })
   }
 }
+

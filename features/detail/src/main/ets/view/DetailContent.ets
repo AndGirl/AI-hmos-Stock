@@ -5,6 +5,7 @@ import { DetailAction, DetailMode, DetailVM } from '../viewmodel/DetailVM';
 import { QuoteHeader } from './QuoteHeader';
 import { MetricPanel } from './MetricPanel';
 import { ChartArea } from './ChartArea';
+import { PeriodTabs } from './PeriodTabs';
 import { OrderBookPanel } from './OrderBookPanel';
 import { NewsBar } from './NewsBar';
 import { ContentTabs } from './ContentTabs';
@@ -171,6 +172,15 @@ export struct DetailContent {
         visible: this.vm.newsVisible,
         onClose: (): void => {
           this.vm.dismissNews();
+        }
+      })
+
+      // 周期 Tab 提到图表行之上，按内容区全宽排布（page 全宽 / pane 右栏），Tab 才能有足够点击宽度。
+      PeriodTabs({
+        period: this.vm.period,
+        viewportWidth: this.contentWidth,
+        onSelect: (period): void => {
+          this.vm.selectPeriod(period);
         }
       })
 
