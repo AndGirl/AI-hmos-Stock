@@ -37,9 +37,14 @@ export struct FrozenTable {
   @Param initialHOffset: number = 0;
   /** 调试用：持续等速滚动（帧率采样时提供稳定负载）。 */
   @Param autoScroll: boolean = false;
+  /** 多选比价态（FR-08.1）：行内出现选中圈与浅强调底。 */
+  @Param selectMode: boolean = false;
+  @Param selectedCodes: string[] = [];
   @Event onSort: (key: SortKey) => void = () => {
   };
   @Event onRowTap: (code: string) => void = () => {
+  };
+  @Event onRowLongPress: (code: string) => void = () => {
   };
   @Event onScrollY: (offset: number) => void = () => {
   };
@@ -114,6 +119,10 @@ export struct FrozenTable {
       return 0;
     }
     return this.hOffset < this.metrics.overflow - 8 ? 1 : 0;
+  }
+
+  private isSelected(code: string): boolean {
+    return this.selectedCodes.indexOf(code) >= 0;
   }
 
   private sortedBy(index: number): boolean {
@@ -200,8 +209,13 @@ export struct FrozenTable {
               NameCell({
                 row: row,
                 metrics: this.metrics,
+                selectMode: this.selectMode,
+                selected: this.isSelected(row.code),
                 onTap: (code: string): void => {
                   this.onRowTap(code);
+                },
+                onLongPress: (code: string): void => {
+                  this.onRowLongPress(code);
                 }
               })
             }, (row: WatchRowVM) => row.code)
@@ -246,8 +260,13 @@ export struct FrozenTable {
                   QuoteRow({
                     row: row,
                     metrics: this.metrics,
+                    selectMode: this.selectMode,
+                    selected: this.isSelected(row.code),
                     onTap: (code: string): void => {
                       this.onRowTap(code);
+                    },
+                    onLongPress: (code: string): void => {
+                      this.onRowLongPress(code);
                     }
                   })
                 }

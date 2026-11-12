@@ -6,6 +6,7 @@ import { MockWatchlistProvider, WatchlistProvider } from './provider/WatchlistPr
 import { MockTradeProvider } from './provider/MockTradeProvider';
 import { TradeProvider } from './model/TradeModels';
 import { QuoteBus } from './bus/QuoteBus';
+import { DetailSubscriptionRegistry } from './bus/DetailSubscriptionRegistry';
 
 /**
  * 数据装配点：全工程唯一允许 `new Mock*` / `new Real*` 的地方（R-05）。
@@ -17,6 +18,7 @@ export class DataServices {
   private static detail: DetailProvider | undefined = undefined;
   private static trade: TradeProvider | undefined = undefined;
   private static bus: QuoteBus | undefined = undefined;
+  private static detailSubsRegistry: DetailSubscriptionRegistry | undefined = undefined;
 
   static quoteProvider(): QuoteProvider {
     if (DataServices.quote === undefined) {
@@ -53,5 +55,13 @@ export class DataServices {
       DataServices.bus = new QuoteBus(DataServices.quoteProvider());
     }
     return DataServices.bus;
+  }
+
+  /** 详情订阅登记表（M4）：同 code 多窗合并一路 + 非焦点降频，上层不直接订阅 provider。 */
+  static detailSubs(): DetailSubscriptionRegistry {
+    if (DataServices.detailSubsRegistry === undefined) {
+      DataServices.detailSubsRegistry = new DetailSubscriptionRegistry(DataServices.detailProvider());
+    }
+    return DataServices.detailSubsRegistry;
   }
 }

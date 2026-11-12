@@ -156,6 +156,37 @@ export struct WatchlistPage {
     this.onOpenDetail(code);
   }
 
+  /** 多选态下点行 = 切换选中（FR-08.1 第三入口）；达 3 只上限提示不加入。 */
+  private handleRowTap(code: string): void {
+    if (!this.vm.selectMode) {
+      this.openRow(code);
+      return;
+    }
+    if (!this.vm.toggleSelect(code)) {
+      this.toast($r('app.string.watch_select_max'));
+    }
+  }
+
+  private enterSelect(code: string): void {
+    if (!this.vm.enterSelect(code)) {
+      this.toast($r('app.string.watch_select_max'));
+    }
+  }
+
+  /** 比价：少于 2 只不进 PK（FR-08.1「至少选择 2 只」）。 */
+  private confirmSelect(): void {
+    const codes: string[] | null = this.vm.confirmSelect();
+    if (codes === null) {
+      this.toast($r('app.string.watch_select_min'));
+      return;
+    }
+    this.onOpenPk(codes);
+  }
+
+  private toast(message: ResourceStr): void {
+    this.getUIContext().getPromptAction().showToast({ message: message, duration: 1800 });
+  }
+
   private handlePaneAction(code: string, action: DetailAction): void {
     if (action === 'watchlist') {
       showComingSoon(this.getUIContext(), ComingSoonText.ADD_WATCHLIST);
@@ -204,13 +235,75 @@ export struct WatchlistPage {
     .padding({ left: AppDim.gap16, top: AppDim.gap8 })
   }
 
+  @Builder
+  selectBar() {
+    Row() {
+      Column() {
+        Text($r('app.string.watch_select_count', this.vm.selectedCodes.length.toString()))
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColor.textPrimary)
+        Text($r('app.string.watch_select_hint'))
+          .fontSize(11)
+          .fontColor(AppColor.textSecondary)
+          .margin({ top: 2 })
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+
+      Text($r('app.string.watch_select_cancel'))
+        .fontSize(14)
+        .fontColor(AppColor.textSecondary)
+        .height(40)
+        .padding({ left: AppDim.gap12, right: AppDim.gap12 })
+        .textAlign(TextAlign.Center)
+        .onClick(() => {
+          this.vm.cancelSelect();
+        })
+      Text($r('app.string.watch_select_pk'))
+        .fontSize(15)
+        .fontColor(AppColor.textOnAccent)
+        .height(40)
+        .width(96)
+        .textAlign(TextAlign.Center)
+        .backgroundColor(AppColor.accent)
+        .borderRadius(AppDim.pillRadius)
+        .margin({ left: AppDim.gap8 })
+        .onClick(() => {
+          this.confirmSelect();
+        })
+    }
+    .width('100%')
+    .height(60)
+    .padding({ left: AppDim.gap16, right: AppDim.gap16 })
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor(AppColor.bgSurface)
+    .border({ width: { top: 0.5 }, color: AppColor.divider })
+  }
+
   build() {
     Column() {
       Row() {
-        Text($r('app.string.watchlist_title'))
-          .fontSize(28)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColor.textPrimary)
+        if (this.vm.selectMode) {
+          Text($r('app.string.watch_select_count', this.vm.selectedCodes.length.toString()))
+            .fontSize(22)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(AppColor.textPrimary)
+          Blank()
+          Text($r('app.string.watch_select_cancel'))
+            .fontSize(13)
+            .fontColor(AppColor.textSecondary)
+            .height(32)
+            .padding({ left: AppDim.gap8, right: AppDim.gap8 })
+            .onClick(() => {
+              this.vm.cancelSelect();
+            })
+        } else {
+          Text($r('app.string.watchlist_title'))
+            .fontSize(28)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(AppColor.textPrimary)
+        }
       }
       .width('100%')
       .padding({ left: AppDim.gap16, right: AppDim.gap16, top: AppDim.gap16, bottom: AppDim.gap4 })
@@ -270,11 +363,16 @@ export struct WatchlistPage {
           initialVOffset: this.vm.vOffset,
           initialHOffset: this.vm.hOffset,
           autoScroll: this.perfRunning,
+          selectMode: this.vm.selectMode,
+          selectedCodes: this.vm.selectedCodes,
           onSort: (key: SortKey): void => {
             this.vm.cycleSort(key);
           },
           onRowTap: (code: string): void => {
-            this.openRow(code);
+            this.handleRowTap(code);
+          },
+          onRowLongPress: (code: string): void => {
+            this.enterSelect(code);
           },
           onScrollY: (offset: number): void => {
             this.vm.onVerticalOffset(offset);
@@ -284,6 +382,10 @@ export struct WatchlistPage {
           }
         })
         }
+
+          if (this.vm.selectMode) {
+            this.selectBar()
+          }
         }
         .width(this.breakpoint.isSplit ? 523 : '100%')
         .height('100%')

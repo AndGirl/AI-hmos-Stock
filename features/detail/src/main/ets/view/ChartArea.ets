@@ -74,6 +74,7 @@ export struct ChartArea {
   };
   @Local readout: ChartReadout | null = null;
   private engine: MpChartEngine = createChartEngine(emptyStyle());
+  private reflowToken: number = 0;
 
   aboutToAppear(): void {
     this.engine.setStyle(this.resolveStyle());
@@ -86,6 +87,8 @@ export struct ChartArea {
   }
 
   aboutToDisappear(): void {
+    // 让待执行的宽度重排落到空处（图表已 dispose）。
+    this.reflowToken++;
     this.engine.dispose();
   }
 
@@ -96,6 +99,32 @@ export struct ChartArea {
 
   @Monitor('period')
   onPeriodChanged(): void {
+    this.applyZoom();
+  }
+
+  /**
+   * 容器宽度变化（M4 多窗：2↔3 窗重排、折叠/展开）后图表需要重新套用可视范围。
+   * mpchart 的缩放/位移是在旧视口尺寸下算的，不重算会出现 K 线聚在右侧、左侧留白。
+   * 放在下一帧后执行，确保图表已按新宽度完成布局。
+   */
+  @Monitor('viewportWidth')
+  onViewportChanged(): void {
+    this.reflowToken++;
+    const token: number = this.reflowToken;
+    setTimeout((): void => {
+      if (token !== this.reflowToken) {
+        return;
+      }
+      this.reflow();
+    }, 80);
+  }
+
+  private reflow(): void {
+    const series: ChartSeries | null = this.series;
+    if (series === null || series.points.length === 0) {
+      return;
+    }
+    this.engine.setSeries(series);
     this.applyZoom();
   }
 

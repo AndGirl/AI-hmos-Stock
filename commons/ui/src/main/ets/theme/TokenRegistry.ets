@@ -29,6 +29,8 @@ export class AppColor {
   static readonly scrim: Resource = $r('app.color.color_scrim');
   static readonly error: Resource = $r('app.color.color_error');
   static readonly fieldBg: Resource = $r('app.color.color_field_bg');
+  /** 强调色浅底（多选态/当前项）：#FFF0EF。 */
+  static readonly accentSoft: Resource = $r('app.color.color_accent_soft');
 }
 
 export class AppDim {

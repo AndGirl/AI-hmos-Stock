@@ -20,6 +20,8 @@ export interface DetailParam {
 export interface PkParam {
   codes: string[];
   focus?: number;
+  /** 入口来源（FR-08.1 三入口）：detail 动作栏 / icon 详情 ⧉ / watchlist 自选多选。 */
+  from?: string;
 }
 
 export interface NotFoundParam {

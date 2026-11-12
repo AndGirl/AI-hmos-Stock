@@ -12,7 +12,12 @@ const CELL_INDEXES: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 export struct QuoteRow {
   @Param row: WatchRowVM = new WatchRowVM('', '', []);
   @Param metrics: TableMetrics = emptyMetrics();
+  /** 多选比价态：整行浅强调底（与名称列同色，保证跨列视觉一致）。 */
+  @Param selectMode: boolean = false;
+  @Param selected: boolean = false;
   @Event onTap: (code: string) => void = () => {
+  };
+  @Event onLongPress: (code: string) => void = () => {
   };
   @Local flashAlpha: number = 0;
 
@@ -46,8 +51,8 @@ export struct QuoteRow {
       Row()
         .width(this.metrics.numericWidth)
         .height(this.metrics.rowHeight)
-        .backgroundColor(this.flashColor())
-        .opacity(this.flashAlpha)
+        .backgroundColor(this.selected ? AppColor.accentSoft : this.flashColor())
+        .opacity(this.selected ? 1 : (this.selectMode ? 0.12 : this.flashAlpha))
 
       Row() {
         ForEach(CELL_INDEXES, (index: number) => {
@@ -71,5 +76,11 @@ export struct QuoteRow {
     .onClick(() => {
       this.onTap(this.row.code);
     })
+    .gesture(
+      LongPressGesture({ repeat: false })
+        .onAction(() => {
+          this.onLongPress(this.row.code);
+        })
+    )
   }
 }

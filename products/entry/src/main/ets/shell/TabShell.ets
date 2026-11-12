@@ -37,7 +37,7 @@ export struct TabShell {
               AppServices.get().pushDetail(code, 'list');
             },
             onOpenPk: (codes: string[]): void => {
-              AppServices.get().pushPk(codes, 0);
+              AppServices.get().pushPk(codes, 0, 'watchlist');
             }
           })
         }

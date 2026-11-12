@@ -38,7 +38,7 @@ export struct DetailPage {
       return;
     }
     if (action === 'pk') {
-      AppServices.get().pushPk([this.detailCode], 0);
+      AppServices.get().pushPk([this.detailCode], 0, 'detail');
       return;
     }
     if (action === 'more') {
@@ -54,6 +54,27 @@ export struct DetailPage {
     hilog.info(DOMAIN, TAG, 'trade_entry code=%{public}s source=detail', this.detailCode);
     this.tradeVM.attach(this.detailCode, 'detail');
     this.tradeOpen = true;
+  }
+
+  /** 标题栏右上 ⧉：进入多窗比价（FR-08.1 第二入口 / 设计稿 Q5）。 */
+  @Builder
+  pkMenu() {
+    Row() {
+      Image($r('app.media.ic_detail_pk'))
+        .width(22)
+        .height(22)
+        .fillColor(this.detailCode.length > 0 ? AppColor.textPrimary : AppColor.disabledText)
+    }
+    .width(44)
+    .height(44)
+    .justifyContent(FlexAlign.Center)
+    .accessibilityText($r('app.string.detail_action_pk'))
+    .onClick(() => {
+      if (this.detailCode.length === 0) {
+        return;
+      }
+      AppServices.get().pushPk([this.detailCode], 0, 'icon');
+    })
   }
 
   build() {
@@ -93,6 +114,7 @@ export struct DetailPage {
       .height('100%')
     }
     .title($r('app.string.route_detail_title'))
+    .menus(this.pkMenu())
     .backgroundColor(AppColor.bgPage)
     .onBackPressed((): boolean => {
       if (this.tradeOpen) {

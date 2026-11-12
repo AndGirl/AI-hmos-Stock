@@ -62,6 +62,12 @@ export {
 } from './src/main/ets/model/TradeModels';
 export { TradeAuth } from './src/main/ets/mock/TradeSeeds';
 export { QuoteSink, QuoteBus, SinkSubscription } from './src/main/ets/bus/QuoteBus';
+export {
+  BACKGROUND_INTERVAL_MS,
+  DetailSubscriptionRegistry,
+  SinkTier,
+  SubscriptionHandle
+} from './src/main/ets/bus/DetailSubscriptionRegistry';
 export { WatchlistProvider, WatchlistRaw } from './src/main/ets/provider/WatchlistProvider';
 export { MockFaults } from './src/main/ets/mock/MockFaults';
 export { DataServices } from './src/main/ets/DataServices';

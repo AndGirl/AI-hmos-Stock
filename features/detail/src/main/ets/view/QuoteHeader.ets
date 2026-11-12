@@ -11,6 +11,8 @@ import { marketLabel, statusLabel, tagLabel, toneColor } from './DetailLabels';
 export struct QuoteHeader {
   @Param vm: DetailVM = new DetailVM('');
   @Param compact: boolean = false;
+  /** 极窄窗（多窗三窗叠放，<240vp）：只留名称/代码/价格/涨跌，其余收起避免挤压。 */
+  @Param mini: boolean = false;
   @Event onMore: () => void = (): void => {
   };
   /** debug 构建：长按名称开始/停止帧率采样（release 由调用方以 BuildProfile.DEBUG 关闭）。 */
@@ -30,46 +32,57 @@ export struct QuoteHeader {
     Column() {
       Row() {
         Text(this.vm.name)
-          .fontSize(this.compact ? 20 : 24)
+          .fontSize(this.mini ? 16 : (this.compact ? 20 : 24))
           .fontWeight(FontWeight.Bold)
           .fontColor(AppColor.textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .layoutWeight(this.mini ? 1 : 0)
           .gesture(
             LongPressGesture({ repeat: false })
               .onAction(() => {
                 this.onLongPressName();
               })
           )
-        Text(this.vm.code)
-          .fontSize(13)
-          .fontColor(AppColor.textSecondary)
-          .margin({ left: AppDim.gap8 })
-        Text(marketLabel(this.vm.market))
-          .fontSize(10)
-          .fontColor(AppColor.textSecondary)
-          .backgroundColor(AppColor.bgSurface)
-          .borderRadius(3)
-          .padding({ left: 4, right: 4, top: 1, bottom: 1 })
-          .margin({ left: AppDim.gap4 })
-        Blank()
-        Row() {
-          Text(statusLabel(this.vm.status))
-            .fontSize(11)
-            .fontColor(this.vm.status === 'suspended' || this.vm.status === 'delisted' ?
-              AppColor.disabledText : AppColor.textSecondary)
-          Text(this.vm.timeText)
+        if (this.mini) {
+          Text(this.vm.code)
             .fontSize(11)
             .fontColor(AppColor.textSecondary)
             .margin({ left: AppDim.gap4 })
+            .maxLines(1)
+        } else {
+          Text(this.vm.code)
+            .fontSize(13)
+            .fontColor(AppColor.textSecondary)
+            .margin({ left: AppDim.gap8 })
+          Text(marketLabel(this.vm.market))
+            .fontSize(10)
+            .fontColor(AppColor.textSecondary)
+            .backgroundColor(AppColor.bgSurface)
+            .borderRadius(3)
+            .padding({ left: 4, right: 4, top: 1, bottom: 1 })
+            .margin({ left: AppDim.gap4 })
         }
-        if (this.compact) {
-          // 紧凑版右上「⋯」：四项动作（含去交易）收进菜单（FR-06.11 / INV-D4）。
+        Blank()
+        if (!this.mini) {
+          Row() {
+            Text(statusLabel(this.vm.status))
+              .fontSize(11)
+              .fontColor(this.vm.status === 'suspended' || this.vm.status === 'delisted' ?
+                AppColor.disabledText : AppColor.textSecondary)
+            Text(this.vm.timeText)
+              .fontSize(11)
+              .fontColor(AppColor.textSecondary)
+              .margin({ left: AppDim.gap4 })
+          }
+        }
+        if (this.compact && !this.mini) {
+          // 紧凑版右上「⋯」：动作收进菜单（FR-06.11 / INV-D4）。
           Text('⋯')
             .fontSize(18)
             .fontColor(AppColor.textPrimary)
-            .width(32)
-            .height(32)
+            .width(this.mini ? 28 : 32)
+            .height(28)
             .textAlign(TextAlign.Center)
             .margin({ left: AppDim.gap4 })
             .accessibilityText($r('app.string.detail_action_more'))
@@ -85,35 +98,48 @@ export struct QuoteHeader {
       Row() {
         Stack() {
           Text(this.vm.priceText)
-            .fontSize(this.compact ? 30 : 36)
+            .fontSize(this.mini ? 22 : (this.compact ? 30 : 36))
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColor.transparent)
             .backgroundColor(toneColor(this.vm.priceTone))
             .opacity(this.flashAlpha)
           Text(this.vm.priceText)
-            .fontSize(this.compact ? 30 : 36)
+            .fontSize(this.mini ? 22 : (this.compact ? 30 : 36))
             .fontWeight(FontWeight.Bold)
             .fontColor(toneColor(this.vm.priceTone))
         }
         .padding({ left: 2, right: 2 })
 
-        Column() {
-          Text(this.vm.chgText)
-            .fontSize(14)
-            .fontColor(toneColor(this.vm.priceTone))
-          Text(this.vm.pctText)
-            .fontSize(14)
-            .fontColor(toneColor(this.vm.priceTone))
+        if (this.mini) {
+          Column() {
+            Text(this.vm.chgText)
+              .fontSize(11)
+              .fontColor(toneColor(this.vm.priceTone))
+            Text(this.vm.pctText)
+              .fontSize(11)
+              .fontColor(toneColor(this.vm.priceTone))
+          }
+          .alignItems(HorizontalAlign.Start)
+          .margin({ left: AppDim.gap8 })
+        } else {
+          Column() {
+            Text(this.vm.chgText)
+              .fontSize(14)
+              .fontColor(toneColor(this.vm.priceTone))
+            Text(this.vm.pctText)
+              .fontSize(14)
+              .fontColor(toneColor(this.vm.priceTone))
+          }
+          .alignItems(HorizontalAlign.Start)
+          .margin({ left: AppDim.gap12 })
         }
-        .alignItems(HorizontalAlign.Start)
-        .margin({ left: AppDim.gap12 })
       }
       .width('100%')
       .alignItems(VerticalAlign.Bottom)
-      .margin({ top: AppDim.gap8 })
+      .margin({ top: this.mini ? AppDim.gap4 : AppDim.gap8 })
       .accessibilityGroup(true)
 
-      if (this.vm.tags.length > 0) {
+      if (!this.mini && this.vm.tags.length > 0) {
         Row() {
           ForEach(this.vm.tags, (tag: StockTag) => {
             Text(tagLabel(tag))

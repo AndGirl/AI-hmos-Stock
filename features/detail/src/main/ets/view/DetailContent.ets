@@ -1,7 +1,8 @@
 import { AppColor, AppDim, StateMode, StateView } from 'commons_ui';
 import { BreakpointHost, BreakpointService, ConfigHost, ConfigService, PerfMeter } from 'commons_basic';
 import { DEBUG } from '../../../../BuildProfile';
-import { DetailAction, DetailMode, DetailVM } from '../viewmodel/DetailVM';
+import { DetailAction, DetailMode, DetailTier, DetailVM } from '../viewmodel/DetailVM';
+import { CHART_PERIODS, ChartPeriod } from '../viewmodel/DetailExports';
 import { QuoteHeader } from './QuoteHeader';
 import { MetricPanel } from './MetricPanel';
 import { ChartArea } from './ChartArea';
@@ -11,11 +12,22 @@ import { NewsBar } from './NewsBar';
 import { ContentTabs } from './ContentTabs';
 import { ActionBar } from './ActionBar';
 
+/** 字符串 → 周期（宿主传入的是 string，避免 view 侧出现类型断言）。 */
+function toPeriod(text: string): ChartPeriod {
+  for (let i = 0; i < CHART_PERIODS.length; i++) {
+    if (CHART_PERIODS[i] === text) {
+      return CHART_PERIODS[i];
+    }
+  }
+  return 'timeline';
+}
+
 /**
  * 详情内容组件（FR-06.1）：壳/内容分离的唯一内容实现。
  * INV-D1：不调用路由栈、不建全局 banner、不起重连定时器。
  * 三形态（§5.3.2）：page 全量；pane（xl 右栏）与 window（多窗实例）走紧凑版——
- * 无资讯条、内容 Tab、动作栏，四项动作收进「⋯」。
+ * 无内容 Tab 与动作栏，四项动作收进「⋯」；资讯条三形态都展示（§10-42）。
+ * M4：`tier` 由多窗宿主驱动降频；`syncPeriod + syncSeq` 承载一次性「同步周期」。
  */
 @ComponentV2
 export struct DetailContent {
@@ -23,16 +35,26 @@ export struct DetailContent {
   @Param mode: DetailMode = 'page';
   @Param contentWidth: number = 360;
   @Param bottomInset: number = 0;
+  /** 推送档位（FR-08.7）：page/pane 为 normal；PK 焦点窗 focus、非焦点窗 background。 */
+  @Param tier: DetailTier = 'normal';
+  /** 一次性同步周期（FR-08.6）：宿主写入目标周期并 +1 syncSeq，内容侧只应用，不改缩放/滚动。 */
+  @Param syncPeriod: string = '';
+  @Param syncSeq: number = 0;
   @Event onAction: (action: DetailAction) => void = (action: DetailAction): void => {
   };
   @Event onLoaded: (code: string) => void = (code: string): void => {
   };
+  /** 周期变化上报（宿主据此做「同步周期」与持久化）。 */
+  @Event onPeriodChanged: (code: string, period: ChartPeriod) => void =
+    (code: string, period: ChartPeriod): void => {
+    };
   @Local vm: DetailVM = new DetailVM('');
   @Local breakpoint: BreakpointService = BreakpointHost.getService();
   @Local config: ConfigService = ConfigHost.getService();
   @Local perfRunning: boolean = false;
 
   aboutToAppear(): void {
+    this.vm.setTier(this.tier);
     this.vm.attach(this.code);
     this.vm.load();
     this.onLoaded(this.code);
@@ -72,6 +94,25 @@ export struct DetailContent {
     this.onLoaded(this.code);
   }
 
+  @Monitor('tier')
+  onTierChanged(): void {
+    this.vm.setTier(this.tier);
+  }
+
+  @Monitor('syncSeq')
+  onSyncPeriodRequested(): void {
+    const period: ChartPeriod = toPeriod(this.syncPeriod);
+    if (this.syncPeriod.length === 0) {
+      return;
+    }
+    this.vm.applySyncedPeriod(period);
+  }
+
+  private selectPeriod(period: ChartPeriod): void {
+    this.vm.selectPeriod(period);
+    this.onPeriodChanged(this.code, period);
+  }
+
   /** pane / window 为紧凑版；page 为全量（INV-D3：window 每实例独立 VM）。 */
   private isCompact(): boolean {
     return this.mode !== 'page';
@@ -79,6 +120,14 @@ export struct DetailContent {
 
   private narrowBook(): boolean {
     return this.isCompact() && this.contentWidth < 360;
+  }
+
+  /**
+   * 极窄窗（多窗三窗叠放，卡宽 <240vp）：只保留报价头 + 周期 Tab + 图表。
+   * 指标/资讯/盘口在此宽度下会互相挤压（标签与数值重叠），按 FR-08.10「尺寸变化重排」收起。
+   */
+  private isMini(): boolean {
+    return this.isCompact() && this.contentWidth < 240;
   }
 
   private bookWidth(): number {
@@ -133,7 +182,7 @@ export struct DetailContent {
       viewportWidth: this.contentWidth,
       vm: this.vm,
       onSelectPeriod: (period): void => {
-        this.vm.selectPeriod(period);
+        this.selectPeriod(period);
       },
       onRetry: (): void => {
         this.vm.retryChart();
@@ -147,6 +196,7 @@ export struct DetailContent {
       QuoteHeader({
         vm: this.vm,
         compact: this.isCompact(),
+        mini: this.isMini(),
         onMore: (): void => {
           this.onAction('more');
         },
@@ -155,42 +205,46 @@ export struct DetailContent {
         }
       })
 
-      MetricPanel({
-        metrics: this.vm.metrics,
-        expanded: this.vm.metricsExpanded,
-        viewportWidth: this.contentWidth,
-        fontScale: this.config.fontScale,
-        compact: this.isCompact(),
-        onToggle: (): void => {
-          this.vm.toggleMetrics();
-        }
-      })
+      if (!this.isMini()) {
+        MetricPanel({
+          metrics: this.vm.metrics,
+          expanded: this.vm.metricsExpanded,
+          viewportWidth: this.contentWidth,
+          fontScale: this.config.fontScale,
+          compact: this.isCompact(),
+          onToggle: (): void => {
+            this.vm.toggleMetrics();
+          }
+        })
 
-      // 资讯条在 page / pane / window 三种形态都展示（2026-11-12 产品口径，覆盖 FR-06 §2.6「紧凑版不显示」）。
-      NewsBar({
-        title: this.vm.newsTitle,
-        visible: this.vm.newsVisible,
-        onClose: (): void => {
-          this.vm.dismissNews();
-        }
-      })
+        // 资讯条在 page / pane / window 三种形态都展示（2026-11-12 产品口径，覆盖 FR-06 §2.6「紧凑版不显示」）。
+        NewsBar({
+          title: this.vm.newsTitle,
+          visible: this.vm.newsVisible,
+          onClose: (): void => {
+            this.vm.dismissNews();
+          }
+        })
+      }
 
       // 周期 Tab 提到图表行之上，按内容区全宽排布（page 全宽 / pane 右栏），Tab 才能有足够点击宽度。
       PeriodTabs({
         period: this.vm.period,
         viewportWidth: this.contentWidth,
         onSelect: (period): void => {
-          this.vm.selectPeriod(period);
+          this.selectPeriod(period);
         }
       })
 
       if (this.narrowBook()) {
         this.chartRow()
-        Row() {
-          OrderBookPanel({ book: this.vm.orderBook, ticks: this.vm.ticks, narrow: true })
+        if (!this.isMini()) {
+          Row() {
+            OrderBookPanel({ book: this.vm.orderBook, ticks: this.vm.ticks, narrow: true })
+          }
+          .width('100%')
+          .padding({ left: AppDim.gap16, right: AppDim.gap16, top: AppDim.gap8 })
         }
-        .width('100%')
-        .padding({ left: AppDim.gap16, right: AppDim.gap16, top: AppDim.gap8 })
       } else {
         Row() {
           Column() {

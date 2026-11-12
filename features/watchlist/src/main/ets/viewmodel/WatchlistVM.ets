@@ -1,4 +1,5 @@
 import { ConnectionState, MockFaults, QuotePatch, QuoteSink, QuoteSnapshot, SinkSubscription, WatchItem } from 'commons_data';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { compareRows, nextSortDir, SortDir, SortKey } from '../repository/SortRules';
 import { computeTableMetrics, TableMetrics } from '../repository/TableMetrics';
 import { WatchlistData, WatchlistRepository } from '../repository/WatchlistRepository';
@@ -56,6 +57,9 @@ export class WatchlistVM {
   @Trace rowCount: number = 0;
   /** 指数条数据版本：集合/顺序/布局变化时 +1，视图侧据此把横向 List 复位到首项。 */
   @Trace stripVersion: number = 0;
+  /** 多选比价（FR-08.1 第三入口）：长按进入，2–3 只，顺序即 PK 窗序。 */
+  @Trace selectMode: boolean = false;
+  @Trace selectedCodes: string[] = [];
 
   private repo: WatchlistRepository = new WatchlistRepository();
   private allRows: WatchRowVM[] = [];
@@ -170,6 +174,60 @@ export class WatchlistVM {
 
   onHorizontalOffset(offset: number): void {
     this.hOffset = offset;
+  }
+
+  /** 多选上限（FR-08.3：PK 最多 3 窗）。 */
+  static readonly MAX_SELECT: number = 3;
+
+  isSelected(code: string): boolean {
+    return this.selectedCodes.indexOf(code) >= 0;
+  }
+
+  /** 长按行进入多选并选中该行；已选满则不入多选（返回 false 由视图提示）。 */
+  enterSelect(code: string): boolean {
+    if (this.selectMode) {
+      return this.toggleSelect(code);
+    }
+    this.selectMode = true;
+    this.selectedCodes = [code];
+    hilog.info(0x0001, 'PkLog', 'watch_select_enter code=%{public}s', code);
+    return true;
+  }
+
+  /** 点行切换选中：int 为 false 表示已达 3 只上限（视图提示「最多选 3 只」）。 */
+  toggleSelect(code: string): boolean {
+    const index: number = this.selectedCodes.indexOf(code);
+    if (index >= 0) {
+      this.selectedCodes.splice(index, 1);
+      hilog.info(0x0001, 'PkLog', 'watch_select_toggle code=%{public}s on=false n=%{public}d',
+        code, this.selectedCodes.length);
+      return true;
+    }
+    if (this.selectedCodes.length >= WatchlistVM.MAX_SELECT) {
+      return false;
+    }
+    this.selectedCodes.push(code);
+    hilog.info(0x0001, 'PkLog', 'watch_select_toggle code=%{public}s on=true n=%{public}d',
+      code, this.selectedCodes.length);
+    return true;
+  }
+
+  cancelSelect(): void {
+    this.selectMode = false;
+    this.selectedCodes = [];
+    hilog.info(0x0001, 'PkLog', 'watch_select_cancel');
+  }
+
+  /** 确认比价：少于 2 只不进 PK（返回 null，由视图提示「至少选择 2 只」）。 */
+  confirmSelect(): string[] | null {
+    if (this.selectedCodes.length < 2) {
+      return null;
+    }
+    const codes: string[] = this.selectedCodes.slice(0, WatchlistVM.MAX_SELECT);
+    hilog.info(0x0001, 'PkLog', 'watch_select_confirm n=%{public}d', codes.length);
+    this.selectMode = false;
+    this.selectedCodes = [];
+    return codes;
   }
 
   private applyData(data: WatchlistData): void {

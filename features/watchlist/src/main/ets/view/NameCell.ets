@@ -7,7 +7,12 @@ import { DIR_DOWN, DIR_UP, WatchRowVM } from '../viewmodel/WatchRowVM';
 export struct NameCell {
   @Param row: WatchRowVM = new WatchRowVM('', '', []);
   @Param metrics: TableMetrics = emptyMetrics();
-  @Event onTap: (code: string) => void = () => {
+  /** 多选比价态（FR-08.1）：左侧出现选中圈，整行浅强调底。 */
+  @Param selectMode: boolean = false;
+  @Param selected: boolean = false;
+  @Event onTap: (code: string) => void = (code: string): void => {
+  };
+  @Event onLongPress: (code: string) => void = (code: string): void => {
   };
   @Local flashAlpha: number = 0;
 
@@ -29,56 +34,85 @@ export struct NameCell {
     return AppColor.accent;
   }
 
+  @Builder
+  selectMark() {
+    Text(this.selected ? '✓' : '')
+      .fontSize(13)
+      .fontColor(AppColor.textOnAccent)
+      .width(20)
+      .height(20)
+      .textAlign(TextAlign.Center)
+      .borderRadius(10)
+      .border({
+        width: this.selected ? 0 : 1,
+        color: this.selected ? AppColor.accent : AppColor.disabledText
+      })
+      .backgroundColor(this.selected ? AppColor.accent : AppColor.transparent)
+      .margin({ right: AppDim.gap8 })
+      .accessibilityText(this.selected ? $r('app.string.watch_select_a11y') :
+        $r('app.string.watch_select_a11y_off'))
+  }
+
   build() {
     Stack({ alignContent: Alignment.Start }) {
       Row()
         .width(this.metrics.nameWidth)
         .height(this.metrics.rowHeight)
-        .backgroundColor(this.flashColor())
-        .opacity(this.flashAlpha)
+        .backgroundColor(this.selected ? AppColor.accentSoft : this.flashColor())
+        .opacity(this.selected ? 1 : (this.selectMode ? 0.12 : this.flashAlpha))
 
-      Column() {
-        Text(this.row.name)
-          .fontSize(14)
-          .fontColor(this.row.suspended ? AppColor.textSecondary : AppColor.textPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-
-        Row() {
-          Text(this.row.code)
-            .fontSize(11)
-            .fontColor(AppColor.textSecondary)
-            .maxLines(1)
-
-          if (this.row.suspended) {
-            Text($r('app.string.watch_tag_suspended'))
-              .fontSize(10)
-              .fontColor(AppColor.textSecondary)
-              .borderWidth(0.5)
-              .borderColor(AppColor.divider)
-              .borderRadius(2)
-              .padding({ left: 2, right: 2 })
-              .margin({ left: AppDim.gap4 })
-          }
-          if (this.row.isNew) {
-            Text($r('app.string.watch_tag_new'))
-              .fontSize(10)
-              .fontColor(AppColor.priceUp)
-              .borderWidth(0.5)
-              .borderColor(AppColor.priceUp)
-              .borderRadius(2)
-              .padding({ left: 2, right: 2 })
-              .margin({ left: AppDim.gap4 })
-          }
+      Row() {
+        if (this.selectMode) {
+          this.selectMark()
         }
-        .margin({ top: 2 })
+
+        Column() {
+          Text(this.row.name)
+            .fontSize(14)
+            .fontColor(this.row.suspended ? AppColor.textSecondary : AppColor.textPrimary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .width('100%')
+
+          Row() {
+            Text(this.row.code)
+              .fontSize(11)
+              .fontColor(AppColor.textSecondary)
+              .maxLines(1)
+
+            if (this.row.suspended) {
+              Text($r('app.string.watch_tag_suspended'))
+                .fontSize(10)
+                .fontColor(AppColor.textSecondary)
+                .borderWidth(0.5)
+                .borderColor(AppColor.divider)
+                .borderRadius(2)
+                .padding({ left: 2, right: 2 })
+                .margin({ left: AppDim.gap4 })
+            }
+            if (this.row.isNew) {
+              Text($r('app.string.watch_tag_new'))
+                .fontSize(10)
+                .fontColor(AppColor.priceUp)
+                .borderWidth(0.5)
+                .borderColor(AppColor.priceUp)
+                .borderRadius(2)
+                .padding({ left: 2, right: 2 })
+                .margin({ left: AppDim.gap4 })
+            }
+          }
+          .margin({ top: 2 })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
       }
       .width(this.metrics.nameWidth)
       .height(this.metrics.rowHeight)
-      .padding({ left: AppDim.gap12, right: AppDim.gap4 })
-      .justifyContent(FlexAlign.Center)
-      .alignItems(HorizontalAlign.Start)
+      .padding({
+        left: this.selectMode ? AppDim.gap8 : AppDim.gap12,
+        right: AppDim.gap4
+      })
+      .alignItems(VerticalAlign.Center)
     }
     .width(this.metrics.nameWidth)
     .height(this.metrics.rowHeight)
@@ -88,5 +122,11 @@ export struct NameCell {
     .onClick(() => {
       this.onTap(this.row.code);
     })
+    .gesture(
+      LongPressGesture({ repeat: false })
+        .onAction(() => {
+          this.onLongPress(this.row.code);
+        })
+    )
   }
 }

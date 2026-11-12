@@ -36,10 +36,13 @@ export class AppServices {
     this.stack.pushPathByName(RouteName.DETAIL, param);
   }
 
-  pushPk(codes: string[], focus?: number): void {
+  pushPk(codes: string[], focus?: number, from?: string): void {
     const param: PkParam = { codes: codes };
     if (focus !== undefined) {
       param.focus = focus;
+    }
+    if (from !== undefined) {
+      param.from = from;
     }
     this.stack.pushPathByName(RouteName.PK, param);
   }

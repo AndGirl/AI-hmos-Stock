@@ -7,12 +7,13 @@ import {
   DetailListener,
   DetailPatch,
   DetailSnapshot,
-  DetailSubscription,
   Market,
   OrderBook,
   OrderLevel,
   QuoteSnapshot,
+  SinkTier,
   StockTag,
+  SubscriptionHandle,
   Tick,
   TradeStatus,
   isKlinePeriod
@@ -32,13 +33,19 @@ import {
   toneOfDirection,
   ValueTone
 } from '../repository/DetailFormat';
-import { DetailRepository } from '../repository/DetailRepository';
+import { DetailRepository, detailSubscriptionStats } from '../repository/DetailRepository';
 
 /** 详情页动作（FR-06.10）：page 在动作栏，compact 收进「⋯」。 */
 export type DetailAction = 'watchlist' | 'pk' | 'more' | 'trade';
 
 /** 承载形态（FR-06.1 / §5.3.2）：page 全量、pane 右栏紧凑、window 多窗实例紧凑。 */
 export type DetailMode = 'page' | 'pane' | 'window';
+
+/**
+ * 推送档位（FR-08.7）：多窗宿主里只有焦点窗保持 1s，非焦点窗降到 5s。
+ * 单页/单 pane 恒为 normal；档位由宿主在切窗时改，VM 只做转发。
+ */
+export type DetailTier = 'focus' | 'normal' | 'background';
 
 export type DetailUiState = 'loading' | 'ready' | 'firstLoadError' | 'notFound';
 
@@ -165,6 +172,10 @@ class DetailSink implements DetailListener {
   }
 }
 
+function toSinkTier(tier: DetailTier): SinkTier {
+  return tier;
+}
+
 /**
  * 详情 VM（L3）：首屏状态机、指标/盘口/明细格式化、8 周期图表缓存与 seq 取消。
  * 推送只改 @Trace 字段，整块数组仅在周期切换 / 明细刷新时替换。
@@ -196,7 +207,8 @@ export class DetailVM {
   private repo: DetailRepository = new DetailRepository();
   private loadToken: number = 0;
   private chartToken: number = 0;
-  private sub: DetailSubscription | undefined = undefined;
+  private sub: SubscriptionHandle | undefined = undefined;
+  private tier: DetailTier = 'normal';
   private lastQuote: QuoteSnapshot | null = null;
   private frozen: boolean = false;
   /** 性能采样起点（AC-65：快照/图表数据耗时，日志 grep DetailPerf）。 */
@@ -289,9 +301,32 @@ export class DetailVM {
     this.loadToken++;
     this.chartToken++;
     if (this.sub !== undefined) {
-      this.sub.unsubscribe();
+      this.sub.release();
       this.sub = undefined;
+      hilog.info(0x0001, 'DetailPerf', 'subs_release %{public}s',
+        detailSubscriptionStats());
     }
+  }
+
+  /**
+   * 修改推送档位（FR-08.7）：多窗宿主切焦点时调用；非焦点窗 5s、焦点窗立即补一帧。
+   * 未订阅（首屏加载中）时只记下档位，subscribe 时带上。
+   */
+  setTier(tier: DetailTier): void {
+    if (this.tier === tier) {
+      return;
+    }
+    this.tier = tier;
+    if (this.sub !== undefined) {
+      this.repo.setTier(this.sub, toSinkTier(tier));
+    }
+    hilog.info(0x0001, 'DetailPerf', 'subs_tier code=%{public}s tier=%{public}s %{public}s',
+      this.code, tier, detailSubscriptionStats());
+  }
+
+  /** 一次性「同步周期」（FR-08.6）：只改周期，不动缩放/滚动/内容 Tab。 */
+  applySyncedPeriod(period: ChartPeriod): void {
+    this.selectPeriod(period);
   }
 
   /** 长按十字光标读数（时间 / 价 / 均价 / 量 / 涨跌幅）。 */
@@ -354,7 +389,9 @@ export class DetailVM {
   private subscribe(): void {
     this.sub = this.repo.subscribe(this.code, new DetailSink((patch: DetailPatch): void => {
       this.applyPatch(patch);
-    }));
+    }), toSinkTier(this.tier));
+    hilog.info(0x0001, 'DetailPerf', 'subs_acquire code=%{public}s tier=%{public}s %{public}s',
+      this.code, this.tier, detailSubscriptionStats());
   }
 
   private applyPatch(patch: DetailPatch): void {

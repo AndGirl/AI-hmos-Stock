@@ -22,10 +22,17 @@ export struct MetricPanel {
   @Event onToggle: () => void = (): void => {
   };
 
-  /** 列数：sm 2 / md·lg 3 / xl 4（紧凑版 2）；字号每升一档减 1，下限 1。 */
+  /** 列数：sm 2 / md·lg 3 / xl 4（紧凑版 2，极窄窗 1）；字号每升一档减 1，下限 1。 */
   private columns(): number {
-    const base: number = this.compact ? 2 :
-      (this.viewportWidth >= 1180 ? 4 : (this.viewportWidth >= 600 ? 3 : 2));
+    const narrow: boolean = this.viewportWidth < 320;
+    let base: number = 2;
+    if (this.compact) {
+      base = narrow ? 1 : 2;
+    } else if (this.viewportWidth >= 1180) {
+      base = 4;
+    } else if (this.viewportWidth >= 600) {
+      base = 3;
+    }
     const reduce: number = this.fontScale >= 1.45 ? 2 : (this.fontScale >= 1.3 ? 1 : 0);
     return Math.max(1, base - reduce);
   }
