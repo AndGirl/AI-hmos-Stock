@@ -25,7 +25,8 @@
 | 占位文案 | `node scripts/check-coming-soon.mjs` | 5 条常量、无硬编码 | ✅ |
 | 分层红线 | `node scripts/check-architecture.mjs` | R-01~R-09 全通过 | ✅ |
 | 代码检查 | `devecocli check lint` | 0 error / 5 warning（均为页面级组件性能提示，历史遗留） | ✅ |
-| 版本一致性 | `node scripts/check-version.mjs` | V-01 versionName/versionCode 格式、V-02 code 与 name 映射、V-03 八模块版本一致 | ✅ |
+| 版本一致性 | `node scripts/check-version.mjs` | V-01 versionName/versionCode 格式、V-02 code 与 name 映射、V-03 八模块版本一致 | ✅（已做负向探针） |
+| 版本号修改 | `node scripts/bump-version.mjs <x.y.z> [--dry]` | 一次改完 app.json5 + 8 个模块（versionCode 自动 = major×1e6+minor×1e3+patch） | ✅ 已 dry-run 验证 |
 | 一键门禁 | `powershell -File scripts/gate.ps1` | 版本 → 文案 → 红线 → lint 四步 GATE PASS | ✅ |
 | CI | `.github/workflows/gate.yml` | push/PR 跑版本 + 文案 + 红线（无 SDK，不跑 lint/构建） | ✅ |
 
