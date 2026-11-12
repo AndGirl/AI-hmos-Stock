@@ -15,6 +15,8 @@ export struct QuoteHeader {
   @Param mini: boolean = false;
   /** 超窄窗（三窗叠放在 388vp 屏上约 133vp/窗）：再降一档字号，避免价格与涨跌互相挤压。 */
   @Param narrow: boolean = false;
+  /** 窄窗（紧凑版且内容宽 <360vp）：隐藏状态/时间，避免 1.45× 下挤压截断。 */
+  @Param hideStatus: boolean = false;
   /** 断线时不显示行内行情时间（CC-7.6），避免把延迟误读为个股信息。 */
   @Param offline: boolean = false;
   @Event onMore: () => void = (): void => {
@@ -68,7 +70,7 @@ export struct QuoteHeader {
             .margin({ left: AppDim.gap4 })
         }
         Blank()
-        if (!this.mini) {
+        if (!this.mini && !this.hideStatus) {
           Row() {
             Text(statusLabel(this.vm.status))
               .fontSize(11)

@@ -260,6 +260,7 @@ export struct DetailContent {
         compact: this.isCompact(),
         mini: this.isMini(),
         narrow: this.isMini() && this.contentWidth < 170,
+        hideStatus: this.isCompact() && (this.contentWidth < 240 || this.config.fontScale >= 1.3),
         offline: this.offline(),
         onMore: (): void => {
           this.onAction('more');
