@@ -1,5 +1,13 @@
 import { AppColor, AppDim, StateMode, StateView } from 'commons_ui';
-import { BreakpointHost, BreakpointService, ConfigHost, ConfigService, PerfMeter } from 'commons_basic';
+import {
+  BreakpointHost,
+  BreakpointService,
+  ConfigHost,
+  ConfigService,
+  ConnectionHost,
+  ConnectionHub,
+  PerfMeter
+} from 'commons_basic';
 import { DEBUG } from '../../../../BuildProfile';
 import { DetailAction, DetailMode, DetailTier, DetailVM } from '../viewmodel/DetailVM';
 import { CHART_PERIODS, ChartPeriod } from '../viewmodel/DetailExports';
@@ -52,6 +60,7 @@ export struct DetailContent {
   @Local breakpoint: BreakpointService = BreakpointHost.getService();
   @Local config: ConfigService = ConfigHost.getService();
   @Local perfRunning: boolean = false;
+  @Local hub: ConnectionHub = ConnectionHost.getService();
 
   aboutToAppear(): void {
     this.vm.setTier(this.tier);
@@ -126,6 +135,11 @@ export struct DetailContent {
    * 极窄窗（多窗三窗叠放，卡宽 <240vp）：只保留报价头 + 周期 Tab + 图表。
    * 指标/资讯/盘口在此宽度下会互相挤压（标签与数值重叠），按 FR-08.10「尺寸变化重排」收起。
    */
+  /** 断线（CC-7.6）：内容置灰 55%，推送已在数据层冻结。 */
+  private offline(): boolean {
+    return this.hub.state === 'offline';
+  }
+
   private isMini(): boolean {
     return this.isCompact() && this.contentWidth < 240;
   }
@@ -197,6 +211,7 @@ export struct DetailContent {
         vm: this.vm,
         compact: this.isCompact(),
         mini: this.isMini(),
+        offline: this.offline(),
         onMore: (): void => {
           this.onAction('more');
         },
@@ -205,6 +220,8 @@ export struct DetailContent {
         }
       })
 
+      // 断线置灰（CC-7.6）：报价头保持可读，其余内容整体 55% 透明度。
+      Column() {
       if (!this.isMini()) {
         MetricPanel({
           metrics: this.vm.metrics,
@@ -265,6 +282,10 @@ export struct DetailContent {
       if (!this.isCompact()) {
         ContentTabs({ wide: this.contentWidth >= 840 })
       }
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .opacity(this.offline() ? 0.55 : 1)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)

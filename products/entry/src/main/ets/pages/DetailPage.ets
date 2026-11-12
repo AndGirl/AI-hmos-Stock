@@ -1,7 +1,7 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppColor } from 'commons_ui';
 import { BreakpointHost, BreakpointService, ComingSoonText, SafeAreaHost, SafeAreaService } from 'commons_basic';
-import { showComingSoon, StateMode, StateView } from 'commons_ui';
+import { GlobalBanner, showComingSoon, StateMode, StateView } from 'commons_ui';
 import { DetailAction, DetailContent, showDetailActionMenu } from 'detail';
 import { TradeSheet, TradeVM } from 'trade';
 import { DetailParam } from '../router/AppRoutes';
@@ -79,36 +79,42 @@ export struct DetailPage {
 
   build() {
     NavDestination() {
-      Stack() {
-        if (this.detailCode.length === 0) {
-          StateView({ mode: StateMode.LOADING })
-            .width('100%')
-            .height('100%')
-        } else {
-          DetailContent({
-            code: this.detailCode,
-            mode: 'page',
-            contentWidth: this.contentWidth(),
-            bottomInset: this.safeArea.bottomInset,
-            onAction: (action: DetailAction): void => {
-              this.handleAction(action);
-            },
-            onLoaded: (code: string): void => {
-              hilog.info(DOMAIN, TAG, 'detail_loaded code=%{public}s', code);
-            }
-          })
-        }
+      Column() {
+        GlobalBanner()
 
-        if (this.tradeOpen) {
-          TradeSheet({
-            vm: this.tradeVM,
-            bottomInset: this.safeArea.bottomInset,
-            onClosed: (): void => {
-              this.tradeOpen = false;
-              this.tradeVM.dispose();
-            }
-          })
+        Stack() {
+          if (this.detailCode.length === 0) {
+            StateView({ mode: StateMode.LOADING })
+              .width('100%')
+              .height('100%')
+          } else {
+            DetailContent({
+              code: this.detailCode,
+              mode: 'page',
+              contentWidth: this.contentWidth(),
+              bottomInset: this.safeArea.bottomInset,
+              onAction: (action: DetailAction): void => {
+                this.handleAction(action);
+              },
+              onLoaded: (code: string): void => {
+                hilog.info(DOMAIN, TAG, 'detail_loaded code=%{public}s', code);
+              }
+            })
+          }
+
+          if (this.tradeOpen) {
+            TradeSheet({
+              vm: this.tradeVM,
+              bottomInset: this.safeArea.bottomInset,
+              onClosed: (): void => {
+                this.tradeOpen = false;
+                this.tradeVM.dispose();
+              }
+            })
+          }
         }
+        .width('100%')
+        .layoutWeight(1)
       }
       .width('100%')
       .height('100%')

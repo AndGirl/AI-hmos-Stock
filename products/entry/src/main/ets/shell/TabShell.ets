@@ -1,5 +1,5 @@
 import { BreakpointHost, BreakpointService, SafeAreaHost, SafeAreaService } from 'commons_basic';
-import { AppColor } from 'commons_ui';
+import { AppColor, GlobalBanner } from 'commons_ui';
 import { WatchlistPage } from 'watchlist';
 import { AppServices } from '../di/AppServices';
 import { FloatingTabBar } from './FloatingTabBar';
@@ -20,51 +20,57 @@ export struct TabShell {
   private tabsController: TabsController = new TabsController();
 
   build() {
-    // 顶部 GlobalBanner 挂点（M5）：连接状态唯一 banner 由 ConnectionHub 驱动，页面不得自绘。
-    Stack({ alignContent: Alignment.Bottom }) {
-      Tabs({ barPosition: BarPosition.End, index: this.currentIndex, controller: this.tabsController }) {
-        TabContent() {
-          HomePage()
-        }
+    // 顶部 GlobalBanner（M5）：连接状态唯一 banner 由 ConnectionHub 驱动，页面不得自绘。
+    Column() {
+      GlobalBanner()
 
-        TabContent() {
-          NewsPage()
-        }
+      Stack({ alignContent: Alignment.Bottom }) {
+        Tabs({ barPosition: BarPosition.End, index: this.currentIndex, controller: this.tabsController }) {
+          TabContent() {
+            HomePage()
+          }
 
-        TabContent() {
-          WatchlistPage({
-            onOpenDetail: (code: string): void => {
-              AppServices.get().pushDetail(code, 'list');
-            },
-            onOpenPk: (codes: string[]): void => {
-              AppServices.get().pushPk(codes, 0, 'watchlist');
-            }
-          })
-        }
+          TabContent() {
+            NewsPage()
+          }
 
-        TabContent() {
-          MarketPage()
-        }
-      }
-      .barHeight(0)
-      .scrollable(false)
-      .animationDuration(0)
-      .width('100%')
-      .height('100%')
-      .padding({ bottom: this.safeArea.bottomInset })
-      .onChange((index: number) => {
-        this.currentIndex = index;
-      })
+          TabContent() {
+            WatchlistPage({
+              onOpenDetail: (code: string): void => {
+                AppServices.get().pushDetail(code, 'list');
+              },
+              onOpenPk: (codes: string[]): void => {
+                AppServices.get().pushPk(codes, 0, 'watchlist');
+              }
+            })
+          }
 
-      FloatingTabBar({
-        currentIndex: this.currentIndex,
-        maxWidth: this.breakpoint.widthBp === 'sm' ? 600 : 480,
-        bottomInset: this.safeArea.bottomInset,
-        onSelect: (index: number) => {
-          this.tabsController.changeIndex(index);
+          TabContent() {
+            MarketPage()
+          }
+        }
+        .barHeight(0)
+        .scrollable(false)
+        .animationDuration(0)
+        .width('100%')
+        .height('100%')
+        .padding({ bottom: this.safeArea.bottomInset })
+        .onChange((index: number) => {
           this.currentIndex = index;
-        }
-      })
+        })
+
+        FloatingTabBar({
+          currentIndex: this.currentIndex,
+          maxWidth: this.breakpoint.widthBp === 'sm' ? 600 : 480,
+          bottomInset: this.safeArea.bottomInset,
+          onSelect: (index: number) => {
+            this.tabsController.changeIndex(index);
+            this.currentIndex = index;
+          }
+        })
+      }
+      .width('100%')
+      .layoutWeight(1)
     }
     .width('100%')
     .height('100%')

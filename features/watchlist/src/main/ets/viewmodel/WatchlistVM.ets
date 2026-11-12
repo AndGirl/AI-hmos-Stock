@@ -1,4 +1,14 @@
-import { ConnectionState, MockFaults, QuotePatch, QuoteSink, QuoteSnapshot, SinkSubscription, WatchItem } from 'commons_data';
+import {
+  ConnectionState,
+  MockFaults,
+  NetFault,
+  QuotePatch,
+  QuoteSink,
+  QuoteSnapshot,
+  SinkSubscription,
+  WatchItem
+} from 'commons_data';
+import { ConnectionHost, ConnectionHub } from 'commons_basic';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { compareRows, nextSortDir, SortDir, SortKey } from '../repository/SortRules';
 import { computeTableMetrics, TableMetrics } from '../repository/TableMetrics';
@@ -130,6 +140,23 @@ export class WatchlistVM {
     MockFaults.emptyWatchlist = empty;
     MockFaults.failWatchlist = fail;
     this.reload();
+  }
+
+  /**
+   * 调试面板用：注入网络故障（M5-1）。写 MockFaults 后立刻把 ConnectionHub 打到目标态，
+   * 不必等下一个心跳；恢复用 reset()，避免退避计时器残留。
+   */
+  applyNetFault(fault: NetFault): void {
+    MockFaults.netFault = fault;
+    const hub: ConnectionHub = ConnectionHost.getService();
+    if (fault === 'none') {
+      hub.reset();
+    } else if (fault === 'offline') {
+      hub.force('offline');
+    } else {
+      hub.force(fault);
+    }
+    hilog.info(0x0001, 'ConnLog', 'net_fault=%{public}s state=%{public}s', fault, hub.state);
   }
 
   resume(): void {

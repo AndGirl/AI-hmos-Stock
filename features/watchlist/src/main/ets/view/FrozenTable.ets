@@ -40,6 +40,10 @@ export struct FrozenTable {
   /** 多选比价态（FR-08.1）：行内出现选中圈与浅强调底。 */
   @Param selectMode: boolean = false;
   @Param selectedCodes: string[] = [];
+  /** 断线置灰（CC-7.6）：只灰数据行，表头与名称列保持可读。 */
+  @Param offline: boolean = false;
+  /** 延迟角标（CC-7.4）：挂在涨跌幅列头。 */
+  @Param delayed: boolean = false;
   @Event onSort: (key: SortKey) => void = () => {
   };
   @Event onRowTap: (code: string) => void = () => {
@@ -177,6 +181,17 @@ export struct FrozenTable {
               .fontColor(AppColor.accent)
               .margin({ left: 2 })
           }
+          // 延迟角标（CC-7.4）：只挂在涨跌幅列头，不占 banner。
+          if (this.delayed && index === 2) {
+            Text($r('app.string.conn_delayed_badge'))
+              .fontSize(9)
+              .fontColor(AppColor.textOnAccent)
+              .backgroundColor(AppColor.textSecondary)
+              .borderRadius(2)
+              .padding({ left: 3, right: 3 })
+              .margin({ left: 3 })
+              .accessibilityText($r('app.string.conn_a11y_delayed'))
+          }
         }
         .width(this.metrics.widths[index + 1])
         .height(this.metrics.headerHeight)
@@ -227,6 +242,7 @@ export struct FrozenTable {
         .width(this.metrics.nameWidth)
         .layoutWeight(1)
         .clip(true)
+        .opacity(this.offline ? 0.55 : 1)
       }
       .width(this.metrics.nameWidth)
       .height('100%')
@@ -277,6 +293,7 @@ export struct FrozenTable {
             .cachedCount(6)
             .edgeEffect(EdgeEffect.None)
             .scrollBar(BarState.Off)
+            .opacity(this.offline ? 0.55 : 1)
             .onDidScroll(() => {
               this.vOffset = this.vScroller.currentOffset().yOffset;
               this.onScrollY(this.vOffset);

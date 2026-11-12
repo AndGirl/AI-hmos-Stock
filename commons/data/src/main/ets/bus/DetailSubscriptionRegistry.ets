@@ -1,3 +1,4 @@
+import { ConnectionHost } from 'commons_basic';
 import { DetailListener, DetailPatch, DetailProvider, DetailSubscription } from '../model/DetailModels';
 
 /**
@@ -40,6 +41,10 @@ class CodeEntry {
   }
 
   dispatch(patch: DetailPatch): void {
+    // CC-7.6：断线冻结——保留最后一帧，不投递新数据也不清空。
+    if (ConnectionHost.getService().isOffline()) {
+      return;
+    }
     this.lastPatch = patch;
     const now: number = Date.now();
     for (let i = 0; i < this.sinks.length; i++) {

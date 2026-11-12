@@ -1,3 +1,4 @@
+import { ConnectionHost } from 'commons_basic';
 import { ConnectionState, QuoteListener, QuotePatch, QuoteProvider, QuoteSubscription } from '../model/QuoteModels';
 
 /** 行级消费方：只接收自己订阅代码的 patch（单行刷新，CC-1.2）。 */
@@ -85,6 +86,10 @@ export class QuoteBus {
   }
 
   handlePatch(patch: QuotePatch): void {
+    // CC-7.6：断线期间冻结在最后一帧，不重置列表、不切骨架。
+    if (ConnectionHost.getService().isOffline()) {
+      return;
+    }
     const existing: QuotePatch | undefined = this.pending.get(patch.code);
     this.pending.set(patch.code, existing === undefined ? patch : mergePatch(existing, patch));
     if (this.flushTimer === -1) {

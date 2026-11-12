@@ -1,5 +1,5 @@
 import { KeyboardAvoidMode, window } from '@kit.ArkUI';
-import { BreakpointHost, BreakpointService } from 'commons_basic';
+import { BreakpointHost, BreakpointService, ConnectionHost, ConnectionHub } from 'commons_basic';
 import { AppColor } from 'commons_ui';
 import { TradeVM } from '../viewmodel/TradeVM';
 import { TradeEditView } from './TradeEditView';
@@ -22,6 +22,7 @@ export struct TradeSheet {
   @Event onClosed: () => void = (): void => {
   };
   @Local breakpoint: BreakpointService = BreakpointHost.getService();
+  @Local hub: ConnectionHub = ConnectionHost.getService();
   @Local keyboardVp: number = 0;
   @Local windowHeightVp: number = 0;
   private prevAvoidMode: KeyboardAvoidMode = KeyboardAvoidMode.OFFSET;
@@ -62,6 +63,12 @@ export struct TradeSheet {
       this.hostWindow.off('keyboardHeightChange');
       this.hostWindow = undefined;
     }
+  }
+
+  @Monitor('hub.changeSeq')
+  onNetChanged(): void {
+    // 弹窗打开期间断线/恢复：提示条与主按钮状态实时跟随（CC-7.6）。
+    this.vm.applyNetState(this.hub.isOffline());
   }
 
   @Monitor('vm.phase')

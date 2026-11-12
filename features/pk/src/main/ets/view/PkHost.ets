@@ -1,5 +1,5 @@
 import { promptAction } from '@kit.ArkUI';
-import { AppColor, AppDim, showComingSoon } from 'commons_ui';
+import { AppColor, AppDim, GlobalBanner, showComingSoon } from 'commons_ui';
 import { BreakpointHost, BreakpointService, ComingSoonText } from 'commons_basic';
 import { DetailAction, showDetailActionMenu } from 'detail';
 import { DEBUG } from '../../../../BuildProfile';
@@ -214,6 +214,8 @@ export struct PkHost {
   build() {
     Stack() {
       Column() {
+        GlobalBanner()
+
         PkToolbar({
           count: this.vm.windows.length,
           focus: this.vm.focus,

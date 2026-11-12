@@ -1,3 +1,4 @@
+import { ConnectionHost, ConnectionHub } from 'commons_basic';
 import {
   Market,
   QuoteListener,
@@ -8,6 +9,7 @@ import {
   TradeStatus
 } from '../model/QuoteModels';
 import { buildIndexSeeds, buildStockSeeds, IndexSeed, StockSeed } from '../mock/MarketSeeds';
+import { MockFaults, NetFault } from '../mock/MockFaults';
 
 const PUSH_INTERVAL_MS: number = 1000;
 const LIMIT_RATIO: number = 0.10;
@@ -143,14 +145,18 @@ class ProviderSubscription implements QuoteSubscription {
 
 /**
  * Mock 行情源：1s 心跳，每次只推 1~3 只（保证单行刷新可被观察）；
- * 停牌/新股不推送涨跌；断线/延迟/429 由 M5 的 ConnectionHub 模拟（本期不接）。
+ * 停牌/新股不推送涨跌；断线/弱网/延迟由 `MockFaults.netFault` 驱动 ConnectionHub（M5-1）：
+ * - online：正常推送；weak：每 2 个心跳推一次；offline：不推送（数据冻结）；delayed：正常推送但状态挂延迟。
  */
 export class MockQuoteProvider implements QuoteProvider {
   private states: Map<string, QuoteState> = new Map<string, QuoteState>();
   private subscribers: Subscriber[] = [];
   private timerId: number = -1;
+  private tickSeq: number = 0;
 
   constructor() {
+    // 探活：Mock 下等价于「故障开关已清除」，供 ConnectionHub 的退避重连判定。
+    ConnectionHost.getService().setProbe((): boolean => MockFaults.netFault === 'none');
     const stocks: StockSeed[] = buildStockSeeds();
     for (let i = 0; i < stocks.length; i++) {
       const seed: StockSeed = stocks[i];
@@ -229,8 +235,30 @@ export class MockQuoteProvider implements QuoteProvider {
     }
   }
 
-  private ensureTimer(): void {
-    if (this.timerId !== -1) {
+  /**
+   * 网络门控（CC-7）：把故障开关映射到 ConnectionHub，并决定本次心跳是否推送。
+   * 返回 false 表示本 tick 不推送（断线冻结 / 弱网降低频率）。
+   */
+  private gateNetwork(): boolean {
+    const hub: ConnectionHub = ConnectionHost.getService();
+    const fault: NetFault = MockFaults.netFault;
+    if (fault === 'offline') {
+      hub.force('offline');
+      return false;
+    }
+    if (fault === 'weak') {
+      hub.force('weak');
+      return this.tickSeq % 2 === 0;
+    }
+    if (fault === 'delayed') {
+      hub.force('delayed');
+      return true;
+    }
+    hub.onHeartbeatOk();
+    return true;
+  }
+
+  private ensureTimer(): void {    if (this.timerId !== -1) {
       return;
     }
     this.timerId = setInterval((): void => {
@@ -247,6 +275,10 @@ export class MockQuoteProvider implements QuoteProvider {
 
   private tick(): void {
     if (this.subscribers.length === 0) {
+      return;
+    }
+    this.tickSeq++;
+    if (!this.gateNetwork()) {
       return;
     }
     const codes: Set<string> = new Set<string>();

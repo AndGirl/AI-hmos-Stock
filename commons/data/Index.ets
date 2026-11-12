@@ -69,5 +69,5 @@ export {
   SubscriptionHandle
 } from './src/main/ets/bus/DetailSubscriptionRegistry';
 export { WatchlistProvider, WatchlistRaw } from './src/main/ets/provider/WatchlistProvider';
-export { MockFaults } from './src/main/ets/mock/MockFaults';
+export { MockFaults, NetFault } from './src/main/ets/mock/MockFaults';
 export { DataServices } from './src/main/ets/DataServices';

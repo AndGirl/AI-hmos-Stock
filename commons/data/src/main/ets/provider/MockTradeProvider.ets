@@ -1,3 +1,4 @@
+import { ConnectionHost } from 'commons_basic';
 import { QuoteProvider, QuoteSnapshot, TradeStatus } from '../model/QuoteModels';
 import {
   AccountInfo,
@@ -63,7 +64,8 @@ export class MockTradeProvider implements TradeProvider {
     const tradable: Tradable = new Tradable(quote.code, quote.name, quote.market, status,
       quote.last, prevClose, limitUp, limitDown, quote.snapshotTime);
     const accounts: AccountInfo[] = this.accountsWithFaults();
-    return new TradeContext(tradable, accounts, TradeAuth.loggedIn, !MockFaults.tradeOffline, source);
+    return new TradeContext(tradable, accounts, TradeAuth.loggedIn,
+      !MockFaults.tradeOffline && !ConnectionHost.getService().isOffline(), source);
   }
 
   async login(): Promise<void> {

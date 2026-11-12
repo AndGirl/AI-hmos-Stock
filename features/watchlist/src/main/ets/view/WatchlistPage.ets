@@ -6,6 +6,8 @@ import {
   ComingSoonText,
   ConfigHost,
   ConfigService,
+  ConnectionHost,
+  ConnectionHub,
   LayoutConst,
   PerfMeter
 } from 'commons_basic';
@@ -42,6 +44,7 @@ export struct WatchlistPage {
   @Local vm: WatchlistVM = new WatchlistVM();
   @Local breakpoint: BreakpointService = BreakpointHost.getService();
   @Local config: ConfigService = ConfigHost.getService();
+  @Local hub: ConnectionHub = ConnectionHost.getService();
   @Local perfRunning: boolean = false;
   /** xl 分栏右栏当前标的（M2：详情 pane 形态，点行只换 code 不路由）。 */
   @Local paneCode: string = '';
@@ -71,11 +74,11 @@ export struct WatchlistPage {
       text: this.perfRunning ? '停止帧率采样' : '开始帧率采样（自动滚动）',
       color: DEBUG_BTN_COLOR
     };
-    const b1: promptAction.Button = { text: '字号 1.3×', color: DEBUG_BTN_COLOR };
-    const b2: promptAction.Button = { text: '字号 1.45×', color: DEBUG_BTN_COLOR };
+    const b1: promptAction.Button = { text: '字号…', color: DEBUG_BTN_COLOR };
+    const b2: promptAction.Button = { text: '网络…', color: DEBUG_BTN_COLOR };
     const b3: promptAction.Button = { text: '清空自选（空态）', color: DEBUG_BTN_COLOR };
     const b4: promptAction.Button = { text: '模拟加载失败', color: DEBUG_BTN_COLOR };
-    const b5: promptAction.Button = { text: '重置（字号 1.0× + 恢复数据）', color: DEBUG_BTN_COLOR };
+    const b5: promptAction.Button = { text: '重置（字号 + 网络 + 数据）', color: DEBUG_BTN_COLOR };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
       promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4, b5];
     this.getUIContext().getPromptAction().showActionMenu({
@@ -91,17 +94,60 @@ export struct WatchlistPage {
     if (index === 0) {
       this.togglePerf();
     } else if (index === 1) {
-      ConfigHost.getService().apply(1.3);
+      this.openFontMenu();
     } else if (index === 2) {
-      ConfigHost.getService().apply(1.45);
+      this.openNetMenu();
     } else if (index === 3) {
       this.vm.applyMockFault(true, false);
     } else if (index === 4) {
       this.vm.applyMockFault(false, true);
     } else if (index === 5) {
       ConfigHost.getService().apply(1.0);
+      this.vm.applyNetFault('none');
       this.vm.applyMockFault(false, false);
     }
+  }
+
+  /** 二级：字号档位（M5-3 端到端用）。 */
+  private openFontMenu(): void {
+    const b0: promptAction.Button = { text: '1.0×', color: DEBUG_BTN_COLOR };
+    const b1: promptAction.Button = { text: '1.3×', color: DEBUG_BTN_COLOR };
+    const b2: promptAction.Button = { text: '1.45×', color: DEBUG_BTN_COLOR };
+    const buttons: [promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2];
+    this.getUIContext().getPromptAction().showActionMenu({ title: '字号', buttons: buttons })
+      .then((res: promptAction.ActionMenuSuccessResponse): void => {
+        if (res.index === 0) {
+          ConfigHost.getService().apply(1.0);
+        } else if (res.index === 1) {
+          ConfigHost.getService().apply(1.3);
+        } else if (res.index === 2) {
+          ConfigHost.getService().apply(1.45);
+        }
+      }).catch((): void => {
+    });
+  }
+
+  /** 二级：网络故障（M5-1：weak / offline / delayed / 恢复）。 */
+  private openNetMenu(): void {
+    const b0: promptAction.Button = { text: '正常', color: DEBUG_BTN_COLOR };
+    const b1: promptAction.Button = { text: '弱网（weak）', color: DEBUG_BTN_COLOR };
+    const b2: promptAction.Button = { text: '断线（offline）', color: DEBUG_BTN_COLOR };
+    const b3: promptAction.Button = { text: '延迟（delayed）', color: DEBUG_BTN_COLOR };
+    const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
+      promptAction.Button] = [b0, b1, b2, b3];
+    this.getUIContext().getPromptAction().showActionMenu({ title: '网络状态', buttons: buttons })
+      .then((res: promptAction.ActionMenuSuccessResponse): void => {
+        if (res.index === 0) {
+          this.vm.applyNetFault('none');
+        } else if (res.index === 1) {
+          this.vm.applyNetFault('weak');
+        } else if (res.index === 2) {
+          this.vm.applyNetFault('offline');
+        } else if (res.index === 3) {
+          this.vm.applyNetFault('delayed');
+        }
+      }).catch((): void => {
+    });
   }
 
   private togglePerf(): void {
@@ -365,6 +411,8 @@ export struct WatchlistPage {
           autoScroll: this.perfRunning,
           selectMode: this.vm.selectMode,
           selectedCodes: this.vm.selectedCodes,
+          offline: this.hub.state === 'offline',
+          delayed: this.hub.state === 'delayed',
           onSort: (key: SortKey): void => {
             this.vm.cycleSort(key);
           },

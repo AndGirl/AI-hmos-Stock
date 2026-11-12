@@ -1,4 +1,5 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { ConnectionHost, ConnectionHub } from 'commons_basic';
 import {
   AccountInfo,
   AuthSession,
@@ -110,6 +111,8 @@ export class TradeVM {
   code: string = '';
   private source: TradeSource = 'detail';
   private repo: TradeRepository = new TradeRepository();
+  /** 弹窗打开期间实时断线（M5：ConnectionHub 驱动，无需重开弹窗）。 */
+  private netOffline: boolean = false;
   private tradable: Tradable | null = null;
   private accounts: AccountInfo[] = [];
   private baseGate: TradeGate = TradeGate.Ready;
@@ -415,6 +418,15 @@ export class TradeVM {
   applyMockFault(kind: TradeFaultKind): void {
     MockFaults.tradeNoAccount = kind === 'account';
     MockFaults.tradeOffline = kind === 'offline';
+    // 断线同时驱动全局 ConnectionHub，弹窗内的提示条走实时路径（M5-1）。
+    const hub: ConnectionHub = ConnectionHost.getService();
+    if (kind === 'offline') {
+      MockFaults.netFault = 'offline';
+      hub.force('offline');
+    } else if (kind === 'reset') {
+      MockFaults.netFault = 'none';
+      hub.reset();
+    }
     MockFaults.tradeClosed = kind === 'closed';
     MockFaults.tradeFundShort = kind === 'fund';
     MockFaults.tradeReject = kind === 'reject';
@@ -562,7 +574,7 @@ export class TradeVM {
 
   /** 提示条优先级：断线 → 交易时段 → 资金（与门禁顺序一致，FR-07.10）。 */
   private refreshBlock(): void {
-    if (this.baseGate === TradeGate.Offline) {
+    if (this.netOffline || this.baseGate === TradeGate.Offline) {
       this.blockCode = 'offline';
       return;
     }
@@ -590,6 +602,16 @@ export class TradeVM {
     } else {
       this.qtyError = mapped;
     }
+  }
+
+  /** 连接状态实时同步（M5-1）：断线即提示条 + 按钮禁用，恢复后自动解除。 */
+  applyNetState(offline: boolean): void {
+    if (this.netOffline === offline) {
+      return;
+    }
+    this.netOffline = offline;
+    this.refreshBlock();
+    hilog.info(DOMAIN, 'TradeLog', 'trade_net offline=%{public}s', offline ? 'true' : 'false');
   }
 
   private clearErrors(): void {

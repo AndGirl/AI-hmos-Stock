@@ -1,3 +1,8 @@
+import { NetState } from 'commons_basic';
+
+/** 网络故障注入：none 正常 / weak 弱网 / offline 断线 / delayed 延迟（CC-7）。 */
+export type NetFault = 'none' | NetState;
+
 /**
  * Mock 故障注入开关（设计 §4.5「Mock 能力开关」）。
  * 仅供 debug 调试面板使用；release 由构建 profile 裁剪（M5 接正式调试面板时统一）。
@@ -11,6 +16,8 @@ export class MockFaults {
   static failDetail: boolean = false;
   /** 图表失败（验证图表局部错误 + 重试，盘口/动作栏保留）。 */
   static failChart: boolean = false;
+  /** 网络故障（M5-1）：驱动 ConnectionHub 的 weak / offline / delayed 三态。 */
+  static netFault: NetFault = 'none';
 
   /** 未开户 / 无权限：入口禁用并 toast「请先开通交易账户」（FR-07.10）。 */
   static tradeNoAccount: boolean = false;
@@ -30,6 +37,7 @@ export class MockFaults {
     MockFaults.failWatchlist = false;
     MockFaults.failDetail = false;
     MockFaults.failChart = false;
+    MockFaults.netFault = 'none';
     MockFaults.tradeNoAccount = false;
     MockFaults.tradeOffline = false;
     MockFaults.tradeClosed = false;

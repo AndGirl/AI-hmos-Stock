@@ -200,6 +200,10 @@
     {"name": "watch_select_max", "value": "最多选 3 只"},
     {"name": "watch_select_min", "value": "至少选择 2 只"},
     {"name": "watch_select_a11y", "value": "已选择，再次点击取消"},
-    {"name": "watch_select_a11y_off", "value": "未选择，再次点击选择"}
+    {"name": "watch_select_a11y_off", "value": "未选择，再次点击选择"},
+    {"name": "conn_weak", "value": "网络较弱，行情更新较慢"},
+    {"name": "conn_offline", "value": "行情连接中断，数据可能延迟"},
+    {"name": "conn_delayed_badge", "value": "延迟"},
+    {"name": "conn_a11y_delayed", "value": "行情延迟，当前数据可能滞后"}
   ]
 }

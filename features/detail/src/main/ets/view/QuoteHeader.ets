@@ -13,6 +13,8 @@ export struct QuoteHeader {
   @Param compact: boolean = false;
   /** 极窄窗（多窗三窗叠放，<240vp）：只留名称/代码/价格/涨跌，其余收起避免挤压。 */
   @Param mini: boolean = false;
+  /** 断线时不显示行内行情时间（CC-7.6），避免把延迟误读为个股信息。 */
+  @Param offline: boolean = false;
   @Event onMore: () => void = (): void => {
   };
   /** debug 构建：长按名称开始/停止帧率采样（release 由调用方以 BuildProfile.DEBUG 关闭）。 */
@@ -70,10 +72,12 @@ export struct QuoteHeader {
               .fontSize(11)
               .fontColor(this.vm.status === 'suspended' || this.vm.status === 'delisted' ?
                 AppColor.disabledText : AppColor.textSecondary)
-            Text(this.vm.timeText)
-              .fontSize(11)
-              .fontColor(AppColor.textSecondary)
-              .margin({ left: AppDim.gap4 })
+            if (!this.offline) {
+              Text(this.vm.timeText)
+                .fontSize(11)
+                .fontColor(AppColor.textSecondary)
+                .margin({ left: AppDim.gap4 })
+            }
           }
         }
         if (this.compact && !this.mini) {
