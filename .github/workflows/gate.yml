@@ -15,6 +15,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: 版本一致性门禁（V-01~V-03）
+        run: node scripts/check-version.mjs
       - name: 占位文案门禁
         run: node scripts/check-coming-soon.mjs
       - name: 分层架构门禁（R-01~R-09）

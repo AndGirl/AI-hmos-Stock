@@ -1,6 +1,6 @@
 # 阶段一发版清单（Release Checklist）
 
-> 版本：v1.0 · 日期：2026-11-12 · 适用：小杨股票 阶段一（Mock 数据 + 应用内多窗）
+> 版本：v1.1 · 日期：2026-11-12 · 适用：小杨股票 阶段一（Mock 数据 + 应用内多窗）
 > 用法：发版前逐项打勾；未过项必须在「已知限制」里有对应登记，不允许静默放行。
 
 ## 1. 版本与工程信息
@@ -9,11 +9,13 @@
 |---|---|---|
 | bundleName | `com.example.xiaoyangstock` | ✅ |
 | versionName / versionCode | `1.0.0` / `1000000`（`AppScope/app.json5`） | ✅ 已核对 |
-| 模块版本一致性 | 8 个模块（entry + 4 feature + 3 common）`oh-package.json5` 均为 `1.0.0` | ✅ |
+| 模块版本一致性 | 8 个模块（entry + 4 feature + 3 common）`oh-package.json5` 均为 `1.0.0` | ✅ 由 `scripts/check-version.mjs` 守护（V-01~V-03，已做负向探针） |
 | SDK | compile/target/compatible = **20**（HarmonyOS 6.x） | ✅ |
 | deviceTypes | `phone` / `tablet` | ✅ |
 | 权限 | **未申请任何 `requestPermissions`**（无网络/位置/存储/通讯录等敏感权限） | ✅ |
-| 签名产物 | `products/entry/build/default/outputs/default/entry-default-signed.hap`（约 **4.3 MB**） | ✅ |
+| 签名产物（debug 构建） | `entry-default-signed.hap` 约 **4.3 MB**（含调试信息） | ✅ |
+| 签名产物（release 构建） | `devecocli build --build-mode release` 通过；signed HAP 约 **1.5 MB**（不含调试信息） | ✅ |
+| 签名证书 | 当前为 DevEco 自动生成的**调试证书**（`default_xiaoyang-stock_*.cer/.p7b/.p12`，`keyAlias: debugKey`） | ⚠️ 上架 AGC 前必须替换为**发布证书 + Profile**（见 §6） |
 
 ## 2. 构建与门禁
 
@@ -23,8 +25,9 @@
 | 占位文案 | `node scripts/check-coming-soon.mjs` | 5 条常量、无硬编码 | ✅ |
 | 分层红线 | `node scripts/check-architecture.mjs` | R-01~R-09 全通过 | ✅ |
 | 代码检查 | `devecocli check lint` | 0 error / 5 warning（均为页面级组件性能提示，历史遗留） | ✅ |
-| 一键门禁 | `powershell -File scripts/gate.ps1` | GATE PASS | ✅ |
-| CI | `.github/workflows/gate.yml` | push/PR 跑文案 + 红线（无 SDK，不跑 lint/构建） | ✅ |
+| 版本一致性 | `node scripts/check-version.mjs` | V-01 versionName/versionCode 格式、V-02 code 与 name 映射、V-03 八模块版本一致 | ✅ |
+| 一键门禁 | `powershell -File scripts/gate.ps1` | 版本 → 文案 → 红线 → lint 四步 GATE PASS | ✅ |
+| CI | `.github/workflows/gate.yml` | push/PR 跑版本 + 文案 + 红线（无 SDK，不跑 lint/构建） | ✅ |
 
 ## 3. 功能冒烟（发版前必跑）
 
@@ -67,10 +70,13 @@
 ```powershell
 cd D:\deepseek_harness_work\xiaoyang-stock
 devecocli build                                  # 1) 全量构建（含 ohpm install/sync）
-powershell -File scripts/gate.ps1                # 2) 文案 + R-01~R-09 + lint
+powershell -File scripts/gate.ps1                # 2) 版本 + 文案 + R-01~R-09 + lint
+devecocli build --build-mode release             # 2b) 发版包（signed HAP ≈1.5MB）
 devecocli run --skip-build --device "HUAWEI Mate 60 Pro"   # 3) 真机安装冒烟
 # 4) 产物：products/entry/build/default/outputs/default/entry-default-signed.hap
-# 5) 上传 AGC（二选一）：DevEco 发布向导 / hmos-connect-api-cli-skill 的 connect-api-cli
+# 5) 换发布证书：在 build-profile.json5 的 signingConfigs 填发布证书/Profile（当前 debugKey 仅内测）
+#    或使用 hmos-connect-api-cli-skill 申请发布证书/Profile 后替换
+# 6) 上传 AGC（二选一）：DevEco 发布向导 / connect-api-cli
 ```
 
 ## 7. 回滚与值守
