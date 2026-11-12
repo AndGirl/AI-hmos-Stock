@@ -26,6 +26,9 @@ export class AppColor {
   static readonly orderBookTitleBg: Resource = $r('app.color.color_orderbook_title_bg');
   static readonly orderBookTitleText: Resource = $r('app.color.color_orderbook_title_text');
   static readonly transparent: Resource = $r('app.color.color_transparent');
+  static readonly scrim: Resource = $r('app.color.color_scrim');
+  static readonly error: Resource = $r('app.color.color_error');
+  static readonly fieldBg: Resource = $r('app.color.color_field_bg');
 }
 
 export class AppDim {

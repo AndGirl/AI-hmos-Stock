@@ -3,6 +3,7 @@ import { AppColor } from 'commons_ui';
 import { BreakpointHost, BreakpointService, ComingSoonText, SafeAreaHost, SafeAreaService } from 'commons_basic';
 import { showComingSoon, StateMode, StateView } from 'commons_ui';
 import { DetailAction, DetailContent, showDetailActionMenu } from 'detail';
+import { TradeSheet, TradeVM } from 'trade';
 import { DetailParam } from '../router/AppRoutes';
 import { AppServices } from '../di/AppServices';
 
@@ -12,12 +13,19 @@ const TAG: string = 'DetailPage';
 /**
  * 个股详情壳（FR-06.1）：路由、返回栈、沉浸式与动作栏归属在壳；
  * 内容全部由 features/detail 的 DetailContent 提供（pane 形态复用同一组件）。
+ * M3：买入弹窗（TradeSheet）挂在本页 Stack 上，弹窗归属当前窗口（INV-T4）。
  */
 @ComponentV2
 export struct DetailPage {
   @Local detailCode: string = '';
   @Local safeArea: SafeAreaService = SafeAreaHost.getService();
   @Local breakpoint: BreakpointService = BreakpointHost.getService();
+  @Local tradeVM: TradeVM = new TradeVM();
+  @Local tradeOpen: boolean = false;
+
+  aboutToDisappear(): void {
+    this.tradeVM.dispose();
+  }
 
   private contentWidth(): number {
     const screen: number = this.breakpoint.viewportWidth > 0 ? this.breakpoint.viewportWidth : 360;
@@ -34,38 +42,65 @@ export struct DetailPage {
       return;
     }
     if (action === 'more') {
-      showDetailActionMenu(this.getUIContext(), (picked: DetailAction): void => {
+      showDetailActionMenu(this.getUIContext(), false, (picked: DetailAction): void => {
         this.handleAction(picked);
       });
       return;
     }
-    // FR-06 §4 / INV-D4：详情只做入口与参数透传，买入弹层归 M3（不新增占位文案，ADR-08 锁 5 条）。
-    hilog.info(DOMAIN, TAG, 'trade_entry code=%{public}s', this.detailCode);
+    // 去交易：入口只透传 code + 来源位，门禁/弹层由 features/trade 处理（FR-07.1）。
+    if (this.detailCode.length === 0) {
+      return;
+    }
+    hilog.info(DOMAIN, TAG, 'trade_entry code=%{public}s source=detail', this.detailCode);
+    this.tradeVM.attach(this.detailCode, 'detail');
+    this.tradeOpen = true;
   }
 
   build() {
     NavDestination() {
-      if (this.detailCode.length === 0) {
-        StateView({ mode: StateMode.LOADING })
-          .width('100%')
-          .height('100%')
-      } else {
-        DetailContent({
-          code: this.detailCode,
-          mode: 'page',
-          contentWidth: this.contentWidth(),
-          bottomInset: this.safeArea.bottomInset,
-          onAction: (action: DetailAction): void => {
-            this.handleAction(action);
-          },
-          onLoaded: (code: string): void => {
-            hilog.info(DOMAIN, TAG, 'detail_loaded code=%{public}s', code);
-          }
-        })
+      Stack() {
+        if (this.detailCode.length === 0) {
+          StateView({ mode: StateMode.LOADING })
+            .width('100%')
+            .height('100%')
+        } else {
+          DetailContent({
+            code: this.detailCode,
+            mode: 'page',
+            contentWidth: this.contentWidth(),
+            bottomInset: this.safeArea.bottomInset,
+            onAction: (action: DetailAction): void => {
+              this.handleAction(action);
+            },
+            onLoaded: (code: string): void => {
+              hilog.info(DOMAIN, TAG, 'detail_loaded code=%{public}s', code);
+            }
+          })
+        }
+
+        if (this.tradeOpen) {
+          TradeSheet({
+            vm: this.tradeVM,
+            bottomInset: this.safeArea.bottomInset,
+            onClosed: (): void => {
+              this.tradeOpen = false;
+              this.tradeVM.dispose();
+            }
+          })
+        }
       }
+      .width('100%')
+      .height('100%')
     }
     .title($r('app.string.route_detail_title'))
     .backgroundColor(AppColor.bgPage)
+    .onBackPressed((): boolean => {
+      if (this.tradeOpen) {
+        this.tradeVM.back();
+        return true;
+      }
+      return false;
+    })
     .onReady((context: NavDestinationContext) => {
       if (context.pathInfo.param !== undefined) {
         const param: DetailParam = context.pathInfo.param as DetailParam;

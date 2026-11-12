@@ -3,6 +3,8 @@ import { DetailProvider } from './model/DetailModels';
 import { MockQuoteProvider } from './provider/MockQuoteProvider';
 import { MockDetailProvider } from './provider/MockDetailProvider';
 import { MockWatchlistProvider, WatchlistProvider } from './provider/WatchlistProvider';
+import { MockTradeProvider } from './provider/MockTradeProvider';
+import { TradeProvider } from './model/TradeModels';
 import { QuoteBus } from './bus/QuoteBus';
 
 /**
@@ -13,6 +15,7 @@ export class DataServices {
   private static quote: QuoteProvider | undefined = undefined;
   private static watch: WatchlistProvider | undefined = undefined;
   private static detail: DetailProvider | undefined = undefined;
+  private static trade: TradeProvider | undefined = undefined;
   private static bus: QuoteBus | undefined = undefined;
 
   static quoteProvider(): QuoteProvider {
@@ -35,6 +38,14 @@ export class DataServices {
       DataServices.detail = new MockDetailProvider(DataServices.quoteProvider());
     }
     return DataServices.detail;
+  }
+
+  /** 交易网关与账户上下文：与行情同源（打开弹窗时按 code 读一次快照）。 */
+  static tradeProvider(): TradeProvider {
+    if (DataServices.trade === undefined) {
+      DataServices.trade = new MockTradeProvider(DataServices.quoteProvider());
+    }
+    return DataServices.trade;
   }
 
   static quoteBus(): QuoteBus {

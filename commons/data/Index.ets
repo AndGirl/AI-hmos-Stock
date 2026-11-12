@@ -45,6 +45,22 @@ export {
   createChartEngine
 } from './src/main/ets/chart/ChartEngine';
 export { GroupType, WatchGroup, WatchItem } from './src/main/ets/entities/WatchEntities';
+export {
+  AccountInfo,
+  AuthSession,
+  OrderDraft,
+  OrderErrorCode,
+  OrderResult,
+  OrderSide,
+  OrderStatus,
+  TradeContext,
+  TradeError,
+  TradeErrorReason,
+  TradeProvider,
+  TradeSource,
+  Tradable
+} from './src/main/ets/model/TradeModels';
+export { TradeAuth } from './src/main/ets/mock/TradeSeeds';
 export { QuoteSink, QuoteBus, SinkSubscription } from './src/main/ets/bus/QuoteBus';
 export { WatchlistProvider, WatchlistRaw } from './src/main/ets/provider/WatchlistProvider';
 export { MockFaults } from './src/main/ets/mock/MockFaults';

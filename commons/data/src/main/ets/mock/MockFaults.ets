@@ -12,10 +12,29 @@ export class MockFaults {
   /** 图表失败（验证图表局部错误 + 重试，盘口/动作栏保留）。 */
   static failChart: boolean = false;
 
+  /** 未开户 / 无权限：入口禁用并 toast「请先开通交易账户」（FR-07.10）。 */
+  static tradeNoAccount: boolean = false;
+  /** 断线：弹窗内提示条 + 主按钮禁用（CC-7.6）。 */
+  static tradeOffline: boolean = false;
+  /** 非交易时段：弹窗可编辑、不可提交（DEC-07-04）。 */
+  static tradeClosed: boolean = false;
+  /** 资金不足：可买 < 100，弹窗内提示条 + 主按钮禁用。 */
+  static tradeFundShort: boolean = false;
+  /** 网关拒单：失败留在确认层可改可重试（FR-07.8）。 */
+  static tradeReject: boolean = false;
+  /** 网关超时：2s 进入「结果未知」，禁止自动重发（FR-07.8）。 */
+  static tradeTimeout: boolean = false;
+
   static reset(): void {
     MockFaults.emptyWatchlist = false;
     MockFaults.failWatchlist = false;
     MockFaults.failDetail = false;
     MockFaults.failChart = false;
+    MockFaults.tradeNoAccount = false;
+    MockFaults.tradeOffline = false;
+    MockFaults.tradeClosed = false;
+    MockFaults.tradeFundShort = false;
+    MockFaults.tradeReject = false;
+    MockFaults.tradeTimeout = false;
   }
 }

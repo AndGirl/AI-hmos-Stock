@@ -1,5 +1,4 @@
 import { promptAction } from '@kit.ArkUI';
-import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppColor, AppDim, showComingSoon, StateMode, StateView } from 'commons_ui';
 import {
   BreakpointHost,
@@ -167,13 +166,12 @@ export struct WatchlistPage {
       return;
     }
     if (action === 'more') {
-      showDetailActionMenu(this.getUIContext(), (picked: DetailAction): void => {
+      showDetailActionMenu(this.getUIContext(), true, (picked: DetailAction): void => {
         this.handlePaneAction(code, picked);
       });
       return;
     }
-    // M3 接入买入弹层前只做入口埋点（不新增占位文案，ADR-08 锁 5 条）。
-    hilog.info(0x0001, 'WatchlistPane', 'trade_entry code=%{public}s', code);
+    // pane（xl 右栏）不提供交易入口（FR-07.11 / AC-75）：不再有 trade 分支。
   }
 
   @Builder
