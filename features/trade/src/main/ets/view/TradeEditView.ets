@@ -163,7 +163,8 @@ export struct TradeEditView {
         .fontSize(18)
         .fontColor(AppColor.textPrimary)
         .textAlign(TextAlign.Center)
-        .width(96)
+        .layoutWeight(1)
+        .constraintSize({ maxWidth: 180 })
         .height(40)
         .padding(0)
         .backgroundColor(AppColor.bgPage)
@@ -183,8 +184,10 @@ export struct TradeEditView {
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColor.textPrimary)
         .textAlign(TextAlign.Center)
-        .width(96)
+        .layoutWeight(1)
+        .constraintSize({ maxWidth: 180 })
         .height(40)
+        .maxLines(1)
         .accessibilityText($r('app.string.trade_a11y_price'))
         .onClick(() => {
           this.vm.beginEdit('price');
@@ -203,7 +206,8 @@ export struct TradeEditView {
         .fontSize(18)
         .fontColor(AppColor.textPrimary)
         .textAlign(TextAlign.Center)
-        .width(96)
+        .layoutWeight(1)
+        .constraintSize({ maxWidth: 180 })
         .height(40)
         .padding(0)
         .backgroundColor(AppColor.bgPage)
@@ -223,8 +227,10 @@ export struct TradeEditView {
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColor.textPrimary)
         .textAlign(TextAlign.Center)
-        .width(96)
+        .layoutWeight(1)
+        .constraintSize({ maxWidth: 180 })
         .height(40)
+        .maxLines(1)
         .accessibilityText($r('app.string.trade_a11y_qty'))
         .onClick(() => {
           this.vm.beginEdit('qty');
@@ -312,6 +318,8 @@ export struct TradeEditView {
           this.priceValue()
           this.stepButton('+', 'price', 1, $r('app.string.trade_step_price_plus'))
         }
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.End)
       }
       .width('100%')
       .height(48)
@@ -365,6 +373,8 @@ export struct TradeEditView {
           this.qtyValue()
           this.stepButton('+', 'qty', 1, $r('app.string.trade_step_qty_plus'))
         }
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.End)
       }
       .width('100%')
       .height(48)
