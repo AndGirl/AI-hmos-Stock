@@ -1,3 +1,4 @@
+import { promptAction } from '@kit.ArkUI';
 import { AppColor, AppDim, StateMode, StateView } from 'commons_ui';
 import {
   BreakpointHost,
@@ -77,19 +78,53 @@ export struct DetailContent {
     this.vm.dispose();
   }
 
-  /** debug 构建：长按股票名开始/停止帧率采样（命令见进度文档 §6）。 */
+  /**
+   * debug 构建：长按股票名 → 调试菜单（采样 / 网络三态）。
+   * 网络注入放在详情页，便于在「离线有缓存」页面上直接做恢复验证（M2 遗留闭环用）。
+   */
   private togglePerf(): void {
     if (!DEBUG) {
       return;
     }
-    if (this.perfRunning) {
-      this.perfRunning = false;
-      PerfMeter.stop();
+    const color: string = '#E84026';
+    const b0: promptAction.Button = {
+      text: this.perfRunning ? '停止帧率采样' : '开始帧率采样',
+      color: color
+    };
+    const b1: promptAction.Button = { text: '弱网（weak）', color: color };
+    const b2: promptAction.Button = { text: '断线（offline）', color: color };
+    const b3: promptAction.Button = { text: '延迟（delayed）', color: color };
+    const b4: promptAction.Button = { text: '恢复正常', color: color };
+    const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
+      promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4];
+    this.getUIContext().getPromptAction().showActionMenu({ title: '调试（debug）', buttons: buttons })
+      .then((res: promptAction.ActionMenuSuccessResponse): void => {
+        this.onDebugAction(res.index);
+      }).catch((): void => {
+    });
+  }
+
+  private onDebugAction(index: number): void {
+    if (index === 0) {
+      if (this.perfRunning) {
+        this.perfRunning = false;
+        PerfMeter.stop();
+        return;
+      }
+      this.perfRunning = true;
+      PerfMeter.start(this.getUIContext(),
+        'detail-' + this.code + '-' + this.contentWidth.toFixed(0) + 'vp-' + this.mode);
       return;
     }
-    this.perfRunning = true;
-    PerfMeter.start(this.getUIContext(),
-      'detail-' + this.code + '-' + this.contentWidth.toFixed(0) + 'vp-' + this.mode);
+    if (index === 1) {
+      this.vm.applyNetFault('weak');
+    } else if (index === 2) {
+      this.vm.applyNetFault('offline');
+    } else if (index === 3) {
+      this.vm.applyNetFault('delayed');
+    } else if (index === 4) {
+      this.vm.applyNetFault('none');
+    }
   }
 
   @Monitor('code')
@@ -101,6 +136,16 @@ export struct DetailContent {
     this.vm.attach(this.code);
     this.vm.load();
     this.onLoaded(this.code);
+  }
+
+  /** 网络恢复（CC-7.6）：离线错误态自动重试一次，不必手动点。 */
+  @Monitor('hub.changeSeq')
+  onNetChanged(): void {
+    if (this.hub.state === 'online' && this.vm.uiState === 'offline') {
+      this.vm.retry();
+      return;
+    }
+    this.vm.onNetChanged();
   }
 
   @Monitor('tier')
@@ -151,6 +196,9 @@ export struct DetailContent {
   }
 
   private tradeEnabled(): boolean {
+    if (this.offline()) {
+      return false;
+    }
     return this.vm.status !== 'suspended' && this.vm.status !== 'delisted';
   }
 
@@ -310,6 +358,18 @@ export struct DetailContent {
         StateView({
           mode: StateMode.ERROR,
           stateDesc: $r('app.string.detail_load_failed'),
+          showAction: true,
+          actionLabel: $r('app.string.retry'),
+          onAction: (): void => {
+            this.vm.retry();
+          }
+        })
+          .width('100%')
+          .layoutWeight(1)
+      } else if (this.vm.uiState === 'offline') {
+        StateView({
+          mode: StateMode.ERROR,
+          stateDesc: $r('app.string.detail_offline_desc'),
           showAction: true,
           actionLabel: $r('app.string.retry'),
           onAction: (): void => {

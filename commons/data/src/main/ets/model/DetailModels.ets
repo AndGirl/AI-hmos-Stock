@@ -134,7 +134,7 @@ export interface DetailSubscription {
   unsubscribe(): void;
 }
 
-export type DetailErrorReason = 'not_found' | 'timeout' | 'internal';
+export type DetailErrorReason = 'not_found' | 'timeout' | 'internal' | 'offline';
 
 /** 首屏失败原因：not_found → 404 态，其余 → 可重试错误态（FR-06.2 / §2.5）。 */
 export class DetailError extends Error {

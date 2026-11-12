@@ -22,6 +22,7 @@ import {
   TickDirection,
   TIMELINE_POINT_COUNT
 } from '../model/DetailModels';
+import { ConnectionHost } from 'commons_basic';
 import { buildStockSeeds, StockSeed } from '../mock/MarketSeeds';
 import { buildChartSeries, buildNews, buildOrderBook, buildTags, buildTicks } from '../mock/DetailSeeds';
 import { MockFaults } from '../mock/MockFaults';
@@ -131,6 +132,10 @@ export class MockDetailProvider implements DetailProvider {
   }
 
   async loadDetail(code: string): Promise<DetailSnapshot> {
+    // 首次进入即离线（FR-06.12）：无缓存由 VM 走错误态，有缓存由 VM 回放缓存并冻结。
+    if (ConnectionHost.getService().isOffline()) {
+      throw new DetailError('offline', 'network offline');
+    }
     if (this.seeds.get(code) === undefined) {
       throw new DetailError('not_found', 'unknown code ' + code);
     }
@@ -156,6 +161,10 @@ export class MockDetailProvider implements DetailProvider {
   }
 
   async loadChart(code: string, period: ChartPeriod, count?: number): Promise<ChartSeries> {
+    // 离线时图表也取不到新序列；VM 会优先用 5min 缓存（冻结），无缓存才落到局部错误态。
+    if (ConnectionHost.getService().isOffline()) {
+      throw new DetailError('offline', 'network offline');
+    }
     if (MockFaults.failChart) {
       throw new DetailError('internal', 'mock chart failure');
     }

@@ -1,5 +1,5 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { AnalyticsHost, AnalyticsParam } from 'commons_basic';
+import { AnalyticsHost, AnalyticsParam, ConnectionHost, ConnectionHub } from 'commons_basic';
 import {
   ChartPeriod,
   ChartPoint,
@@ -11,6 +11,8 @@ import {
   Market,
   OrderBook,
   OrderLevel,
+  MockFaults,
+  NetFault,
   QuoteSnapshot,
   SinkTier,
   StockTag,
@@ -48,7 +50,7 @@ export type DetailMode = 'page' | 'pane' | 'window';
  */
 export type DetailTier = 'focus' | 'normal' | 'background';
 
-export type DetailUiState = 'loading' | 'ready' | 'firstLoadError' | 'notFound';
+export type DetailUiState = 'loading' | 'ready' | 'firstLoadError' | 'notFound' | 'offline';
 
 export type ChartState = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -212,6 +214,8 @@ export class DetailVM {
   private tier: DetailTier = 'normal';
   private lastQuote: QuoteSnapshot | null = null;
   private frozen: boolean = false;
+  /** 离线缓存回放：恢复网络时需要补订阅 + 补图表。 */
+  private offlineFreeze: boolean = false;
   /** 性能采样起点（AC-65：快照/图表数据耗时，日志 grep DetailPerf）。 */
   private loadStartMs: number = 0;
   private chartStartMs: number = 0;
@@ -266,12 +270,77 @@ export class DetailVM {
       }
       hilog.info(0x0001, 'DetailPerf', 'snapshot_fail code=%{public}s ms=%{public}d',
         this.code, Date.now() - this.loadStartMs);
-      this.uiState = isNotFound(err) ? 'notFound' : 'firstLoadError';
+      const reason: string = errorReasonOf(err);
+      if (reason === 'not_found') {
+        this.uiState = 'notFound';
+        return;
+      }
+      if (reason === 'offline') {
+        // FR-06.12：有缓存→回放缓存并冻结（不订阅）；无缓存→离线错误态（仅返回 + 重试）。
+        const cached: DetailSnapshot | undefined = this.repo.cached(this.code);
+        if (cached !== undefined) {
+          this.applySnapshot(cached);
+          this.uiState = 'ready';
+          this.offlineFreeze = true;
+          this.restoreChartFromCache();
+          hilog.info(0x0001, 'DetailPerf', 'offline_cache code=%{public}s', this.code);
+          return;
+        }
+        this.uiState = 'offline';
+        hilog.info(0x0001, 'DetailPerf', 'offline_nocache code=%{public}s', this.code);
+        return;
+      }
+      this.uiState = 'firstLoadError';
     });
   }
 
   retry(): void {
     this.load();
+  }
+
+  /** 调试面板用：网络三态注入（M2 离线态 / M5 连接状态复用）。 */
+  applyNetFault(fault: NetFault): void {
+    MockFaults.netFault = fault;
+    const hub: ConnectionHub = ConnectionHost.getService();
+    if (fault === 'none') {
+      hub.reset();
+    } else if (fault === 'offline') {
+      hub.force('offline');
+    } else {
+      hub.force(fault);
+    }
+    hilog.info(0x0001, 'DetailPerf', 'net_fault_inject=%{public}s state=%{public}s',
+      fault, hub.state);
+  }
+
+  /** 网络恢复（CC-7.6）：离线回放态补订阅与图表，普通页面只补图表错误。 */
+  onNetChanged(): void {
+    if (this.uiState !== 'ready') {
+      return;
+    }
+    if (this.offlineFreeze) {
+      this.offlineFreeze = false;
+      this.subscribe();
+      if (this.chartState !== 'ready') {
+        this.loadChart(true);
+      }
+      hilog.info(0x0001, 'DetailPerf', 'offline_resume code=%{public}s', this.code);
+      return;
+    }
+    if (this.chartState === 'error') {
+      this.loadChart(true);
+    }
+  }
+
+  /** 离线有缓存时的图表：命中 5min 缓存则冻结展示，否则保留局部错误态（可重试）。 */
+  private restoreChartFromCache(): void {
+    const cached: ChartCacheEntry | undefined = SERIES_CACHE.get(seriesKey(this.code, this.period));
+    if (cached !== undefined) {
+      this.chartSeries = cached.series;
+      this.chartState = 'ready';
+      return;
+    }
+    this.chartState = 'error';
   }
 
   /** 周期切换：点击即刷新（禁止沿用上一周期画面），5min 内切回走缓存。 */
@@ -571,11 +640,11 @@ export class DetailVM {
   }
 }
 
-function isNotFound(err: Error): boolean {
+function errorReasonOf(err: Error): string {
   if (err instanceof DetailError) {
-    return (err as DetailError).reason === 'not_found';
+    return (err as DetailError).reason;
   }
-  return false;
+  return 'internal';
 }
 
 /** 视图层用：指标数量（sm 6 / md/lg 9 / xl 12，展开后 12）。 */
