@@ -9,6 +9,7 @@ import {
   TradeStatus
 } from '../model/QuoteModels';
 import { buildIndexSeeds, buildStockSeeds, IndexSeed, StockSeed } from '../mock/MarketSeeds';
+import { buildExtraStockSeeds, ExtraStockSeed } from '../mock/SearchSeeds';
 import { MockFaults, NetFault } from '../mock/MockFaults';
 
 const PUSH_INTERVAL_MS: number = 1000;
@@ -207,6 +208,37 @@ export class MockQuoteProvider implements QuoteProvider {
       state.floatShares = 1000000000000;
       state.volume = 2200000;
       state.amount = state.volume * 100 * seed.base;
+      state.snapshotTime = Date.now();
+      this.states.set(seed.code, state);
+    }
+    // 搜索主数据里的追加股票（不在自选种子内）：同样进行情状态，保证搜索结果与详情有价格。
+    const extra: ExtraStockSeed[] = buildExtraStockSeeds();
+    for (let i = 0; i < extra.length; i++) {
+      const seed: ExtraStockSeed = extra[i];
+      if (this.states.has(seed.code)) {
+        continue;
+      }
+      const state: QuoteState = new QuoteState();
+      state.code = seed.code;
+      state.name = seed.name;
+      state.market = seed.market;
+      state.status = seed.status;
+      state.isNew = seed.isNew;
+      state.volatility = 1;
+      const base: number = 8 + ((i * 23) % 380) / 2;
+      state.last = base;
+      state.prevClose = base * (1 - (((i % 9) - 4) / 100));
+      state.open = state.prevClose * (1 + (((i % 5) - 2) / 200));
+      state.high = Math.max(state.last, state.prevClose, state.open);
+      state.low = Math.min(state.last, state.prevClose, state.open);
+      state.floatShares = 800000000 + (i % 6) * 400000000;
+      state.totalShares = state.floatShares * 1.2;
+      state.volume = 15000 + (i * 431) % 70000;
+      state.lastVolume = 20 + (i * 97) % 180;
+      state.amount = state.volume * 100 * base;
+      state.volumeRatio = 0.7 + (i % 15) / 10;
+      state.pe = 8 + (i % 40);
+      state.pb = 1 + (i % 20) / 10;
       state.snapshotTime = Date.now();
       this.states.set(seed.code, state);
     }

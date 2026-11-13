@@ -28,7 +28,7 @@ export class MockWatchlistProvider implements WatchlistProvider {
     if (MockFaults.failWatchlist) {
       return Promise.reject(new Error('mock watchlist failure'));
     }
-    const seeds: StockSeed[] = MockFaults.emptyWatchlist ? [] : buildStockSeeds();
+    const seeds: StockSeed[] = buildStockSeeds();
     return Promise.resolve(new WatchlistRaw(buildWatchGroups(), buildWatchItems(seeds)));
   }
 

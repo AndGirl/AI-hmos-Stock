@@ -7,6 +7,10 @@ import { MockTradeProvider } from './provider/MockTradeProvider';
 import { TradeProvider } from './model/TradeModels';
 import { QuoteBus } from './bus/QuoteBus';
 import { DetailSubscriptionRegistry } from './bus/DetailSubscriptionRegistry';
+import { MockSearchProvider } from './provider/MockSearchProvider';
+import { SearchProvider } from './model/SearchModels';
+import { SearchHistoryStore } from './store/SearchHistoryStore';
+import { WatchlistStore } from './store/WatchlistStore';
 
 /**
  * 数据装配点：全工程唯一允许 `new Mock*` / `new Real*` 的地方（R-05）。
@@ -19,6 +23,9 @@ export class DataServices {
   private static trade: TradeProvider | undefined = undefined;
   private static bus: QuoteBus | undefined = undefined;
   private static detailSubsRegistry: DetailSubscriptionRegistry | undefined = undefined;
+  private static search: SearchProvider | undefined = undefined;
+  private static history: SearchHistoryStore | undefined = undefined;
+  private static watchStore: WatchlistStore | undefined = undefined;
 
   static quoteProvider(): QuoteProvider {
     if (DataServices.quote === undefined) {
@@ -63,5 +70,29 @@ export class DataServices {
       DataServices.detailSubsRegistry = new DetailSubscriptionRegistry(DataServices.detailProvider());
     }
     return DataServices.detailSubsRegistry;
+  }
+
+  /** 搜索源（M6）：本地索引 + 同源行情快照，离线可搜（D52）。 */
+  static searchProvider(): SearchProvider {
+    if (DataServices.search === undefined) {
+      DataServices.search = new MockSearchProvider(DataServices.quoteProvider());
+    }
+    return DataServices.search;
+  }
+
+  /** 搜索历史（M6-5）：唯一入口是 StorageAdapter，本方法只返回同一实例。 */
+  static searchHistory(): SearchHistoryStore {
+    if (DataServices.history === undefined) {
+      DataServices.history = new SearchHistoryStore();
+    }
+    return DataServices.history;
+  }
+
+  /** 自选存储（M7-1 最小版）：M6-7 就地加自选写入这里。 */
+  static watchlistStore(): WatchlistStore {
+    if (DataServices.watchStore === undefined) {
+      DataServices.watchStore = new WatchlistStore();
+    }
+    return DataServices.watchStore;
   }
 }

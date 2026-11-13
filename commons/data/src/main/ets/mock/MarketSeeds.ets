@@ -97,7 +97,14 @@ export function buildIndexSeeds(): IndexSeed[] {
     new IndexSeed('IDX399001', '深证成指', 10142.30),
     new IndexSeed('IDX399006', '创业板指', 1938.20),
     new IndexSeed('IDX000300', '沪深300', 3762.40),
-    new IndexSeed('IDX000688', '科创50', 872.50)
+    new IndexSeed('IDX000688', '科创50', 872.50),
+    new IndexSeed('IDX399005', '中小100', 6234.50),
+    new IndexSeed('IDX000016', '上证50', 2650.30),
+    new IndexSeed('IDX399673', '创业板50', 1988.10),
+    new IndexSeed('IDX000905', '中证500', 5620.40),
+    new IndexSeed('IDX000852', '中证1000', 5980.70),
+    new IndexSeed('IDX399102', '创业板综', 2870.20),
+    new IndexSeed('IDX000009', '上证380', 5320.90)
   ];
 }
 

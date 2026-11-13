@@ -8,8 +8,6 @@ export type NetFault = 'none' | NetState;
  * 仅供 debug 调试面板使用；release 由构建 profile 裁剪（M5 接正式调试面板时统一）。
  */
 export class MockFaults {
-  /** 自选为空（验证空态）。 */
-  static emptyWatchlist: boolean = false;
   /** 自选加载失败（验证失败态与重试）。 */
   static failWatchlist: boolean = false;
   /** 详情首屏失败（验证首屏错误态与重试）。 */
@@ -18,6 +16,15 @@ export class MockFaults {
   static failChart: boolean = false;
   /** 网络故障（M5-1）：驱动 ConnectionHub 的 weak / offline / delayed 三态。 */
   static netFault: NetFault = 'none';
+
+  /** 搜索请求失败（M6：六态之「失败」，验证重试）。 */
+  static failSearch: boolean = false;
+  /** 搜索限流（M6：六态之 429，3s 冷却后可重试）。 */
+  static searchRateLimited: boolean = false;
+  /** 热搜失败（M6：整块隐藏，不占位不报错）。 */
+  static failHot: boolean = false;
+  /** 慢请求（M6：把 Mock 时延拉到 1.5s，用于截取「搜索中」态）。 */
+  static searchSlow: boolean = false;
 
   /** 未开户 / 无权限：入口禁用并 toast「请先开通交易账户」（FR-07.10）。 */
   static tradeNoAccount: boolean = false;
@@ -33,11 +40,14 @@ export class MockFaults {
   static tradeTimeout: boolean = false;
 
   static reset(): void {
-    MockFaults.emptyWatchlist = false;
     MockFaults.failWatchlist = false;
     MockFaults.failDetail = false;
     MockFaults.failChart = false;
     MockFaults.netFault = 'none';
+    MockFaults.failSearch = false;
+    MockFaults.searchRateLimited = false;
+    MockFaults.failHot = false;
+    MockFaults.searchSlow = false;
     MockFaults.tradeNoAccount = false;
     MockFaults.tradeOffline = false;
     MockFaults.tradeClosed = false;
