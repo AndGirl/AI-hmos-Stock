@@ -24,7 +24,18 @@ const DATA_MAIN = path.join(ROOT, 'commons', 'data', 'src', 'main', 'ets');
 const DATA_SERVICES = path.join(DATA_MAIN, 'DataServices.ets');
 
 /** 契约 v1.1 里必须是可选形式的成员。 */
-const OPTIONAL_MEMBERS = ['onError', 'capabilities', 'chartPage', 'seq', 'retryAfterMs', 'browse'];
+const OPTIONAL_MEMBERS = [
+  'onError',
+  'capabilities',
+  'chartPage',
+  'seq',
+  'retryAfterMs',
+  'browse',
+  'listOrders',
+  'cancelOrder',
+  'openAccount',
+  'positionOf'
+];
 
 const norm = (value) => value.replace(/\\/g, '/');
 const rel = (file) => norm(path.relative(ROOT, file));

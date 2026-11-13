@@ -3,7 +3,6 @@ import { DetailProvider } from './model/DetailModels';
 import { MockQuoteProvider } from './provider/MockQuoteProvider';
 import { MockDetailProvider } from './provider/MockDetailProvider';
 import { MockWatchlistProvider, WatchlistProvider } from './provider/WatchlistProvider';
-import { MockTradeProvider } from './provider/MockTradeProvider';
 import { TradeProvider } from './model/TradeModels';
 import { QuoteBus } from './bus/QuoteBus';
 import { DetailSubscriptionRegistry } from './bus/DetailSubscriptionRegistry';
@@ -16,6 +15,10 @@ import { ViewPrefStore } from './store/ViewPrefStore';
 import { QuoteCacheStore } from './store/QuoteCacheStore';
 import { QuoteChannel } from './real/QuoteChannel';
 import { AppConfig, QuoteSource } from './real/AppConfig';
+import { LocalTradeProvider } from './provider/LocalTradeProvider';
+import { TradeAccountStore } from './store/TradeAccountStore';
+import { TradeOrderStore } from './store/TradeOrderStore';
+import { OrderJournalStore } from './store/OrderJournalStore';
 
 /**
  * 数据装配点：全工程唯一允许 `new Mock*` / `new Real*` 的地方（R-05）。
@@ -37,6 +40,9 @@ export class DataServices {
   private static pendingSync: WatchlistSyncService | undefined = undefined;
   private static viewPreferences: ViewPrefStore | undefined = undefined;
   private static quoteCacheStore: QuoteCacheStore | undefined = undefined;
+  private static accountStore: TradeAccountStore | undefined = undefined;
+  private static orderStore: TradeOrderStore | undefined = undefined;
+  private static journalStore: OrderJournalStore | undefined = undefined;
 
   /**
    * 行情源（M9-2）：按 `AppConfig.quoteSource` 装配。
@@ -85,12 +91,47 @@ export class DataServices {
     return DataServices.detail;
   }
 
-  /** 交易网关与账户上下文：与行情同源（打开弹窗时按 code 读一次快照）。 */
+  /** 交易网关与账户上下文：本地模拟撮合（M10），与行情同源（下单时读一次快照）。 */
   static tradeProvider(): TradeProvider {
     if (DataServices.trade === undefined) {
-      DataServices.trade = new MockTradeProvider(DataServices.quoteProvider());
+      DataServices.trade = new LocalTradeProvider(
+        DataServices.quoteProvider(),
+        DataServices.tradeAccount(),
+        DataServices.tradeOrders(),
+        DataServices.orderJournal()
+      );
     }
     return DataServices.trade;
+  }
+
+  /** 交易账户/持仓（M10，`trade_account_v1`）。 */
+  static tradeAccount(): TradeAccountStore {
+    if (DataServices.accountStore === undefined) {
+      DataServices.accountStore = new TradeAccountStore();
+    }
+    return DataServices.accountStore;
+  }
+
+  /** 委托库（M10，`trade_orders_v1`）。 */
+  static tradeOrders(): TradeOrderStore {
+    if (DataServices.orderStore === undefined) {
+      DataServices.orderStore = new TradeOrderStore();
+    }
+    return DataServices.orderStore;
+  }
+
+  /** 幂等流水（M10，`order_journal_v1`）。 */
+  static orderJournal(): OrderJournalStore {
+    if (DataServices.journalStore === undefined) {
+      DataServices.journalStore = new OrderJournalStore();
+    }
+    return DataServices.journalStore;
+  }
+
+  /** 本地交易网关实例（调试面板/验收断言用；未装配时为 undefined）。 */
+  static localTrade(): LocalTradeProvider | undefined {
+    const provider: TradeProvider = DataServices.tradeProvider();
+    return provider instanceof LocalTradeProvider ? provider : undefined;
   }
 
   static quoteBus(): QuoteBus {

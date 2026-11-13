@@ -50,10 +50,19 @@ export { GroupType, WatchGroup, WatchItem } from './src/main/ets/entities/WatchE
 export {
   AccountInfo,
   AuthSession,
+  CancelResult,
+  isCancelable,
+  isFinalState,
+  OpenAccountResult,
+  ORDER_STATES,
   OrderDraft,
   OrderErrorCode,
+  OrderItem,
+  OrderPage,
+  OrderQuery,
   OrderResult,
   OrderSide,
+  OrderState,
   OrderStatus,
   TradeContext,
   TradeError,
@@ -62,6 +71,26 @@ export {
   TradeSource,
   Tradable
 } from './src/main/ets/model/TradeModels';
+export {
+  AccountDelta,
+  applyFill,
+  CancelDecision,
+  canCancel,
+  MATCH_LOT,
+  MatchAccount,
+  MatchDecision,
+  matchableSession,
+  MatchOrder,
+  MatchOutcome,
+  matchOnce,
+  MatchQuote,
+  precheck,
+  round2
+} from './src/main/ets/rules/MatchingRules';
+export { JournalEntry, OrderJournalStore } from './src/main/ets/store/OrderJournalStore';
+export { AccountRecord, DEFAULT_CASH, HoldRecord, TradeAccountStore } from './src/main/ets/store/TradeAccountStore';
+export { TRADE_ORDERS_MAX, TradeOrderStore } from './src/main/ets/store/TradeOrderStore';
+export { LocalTradeProvider } from './src/main/ets/provider/LocalTradeProvider';
 export { TradeAuth } from './src/main/ets/mock/TradeSeeds';
 export { QuoteSink, QuoteBus, SinkSubscription } from './src/main/ets/bus/QuoteBus';
 export {

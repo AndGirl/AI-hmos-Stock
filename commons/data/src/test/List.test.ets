@@ -2,15 +2,19 @@ import authClientTest from './AuthClient.test';
 import contractTest from './ContractTest.test';
 import frameValidatorTest from './FrameValidator.test';
 import limitRulesTest from './LimitRules.test';
+import localTradeProviderTest from './LocalTradeProvider.test';
+import matchingRulesTest from './MatchingRules.test';
+import orderJournalStoreTest from './OrderJournalStore.test';
 import quoteCacheRulesTest from './QuoteCacheRules.test';
 import quoteChannelTest from './QuoteChannel.test';
 import quoteMergeRulesTest from './QuoteMergeRules.test';
 import rateLimitRulesTest from './RateLimitRules.test';
 import seededRandomTest from './SeededRandom.test';
+import tradeStoresTest from './TradeStores.test';
 import tradingSessionTest from './TradingSession.test';
 
 /**
- * M9 真实行情 → 模拟行情通道 单测入口（Hypium Local Test）。
+ * M9 行情通道 + M10 模拟交易 单测入口（Hypium Local Test）。
  * 运行：`hvigor test -p module=commons_data -p coverage=false`
  */
 export default function testsuite(): void {
@@ -24,4 +28,8 @@ export default function testsuite(): void {
   quoteChannelTest();
   tradingSessionTest();
   seededRandomTest();
+  matchingRulesTest();
+  orderJournalStoreTest();
+  tradeStoresTest();
+  localTradeProviderTest();
 }
