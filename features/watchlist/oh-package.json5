@@ -1,7 +1,7 @@
 {
   "name": "watchlist",
   "version": "1.0.0",
-  "description": "基础特性层 · 自选列表",
+  "description": "基础特性层 · 自选列表（含 M8 卡片视图）",
   "main": "Index.ets",
   "author": "",
   "license": "",
@@ -10,5 +10,8 @@
     "commons_data": "file:../../commons/data",
     "commons_ui": "file:../../commons/ui",
     "commons_basic": "file:../../commons/basic"
+  },
+  "devDependencies": {
+    "@ohos/hypium": "1.0.25"
   }
 }
