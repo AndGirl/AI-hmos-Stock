@@ -39,6 +39,41 @@ export function roundPrice(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+/** 价格小数位上限（FR-07.4：恒两位小数）。 */
+export const PRICE_DECIMALS: number = 2;
+
+/**
+ * 手输价格输入过滤（FR-07.4 / AC-69）：只留数字与一个小数点，小数最多两位。
+ * 逐字符过滤而不是提交时四舍五入，避免「输入 3 位再被悄悄改掉」。
+ */
+export function sanitizePriceInput(raw: string): string {
+  let out: string = '';
+  let dotSeen: boolean = false;
+  let decimals: number = 0;
+  for (let i = 0; i < raw.length; i++) {
+    const ch: string = raw.charAt(i);
+    if (ch >= '0' && ch <= '9') {
+      if (dotSeen) {
+        if (decimals >= PRICE_DECIMALS) {
+          continue;
+        }
+        decimals++;
+      }
+      out += ch;
+    } else if (ch === '.' && !dotSeen) {
+      dotSeen = true;
+      out += ch;
+    }
+  }
+  if (out.length === 0) {
+    return '';
+  }
+  if (out.charAt(0) === '.') {
+    return '0' + out;
+  }
+  return out;
+}
+
 export function clampPrice(value: number, limitDown: number, limitUp: number): number {
   if (value < limitDown) {
     return limitDown;

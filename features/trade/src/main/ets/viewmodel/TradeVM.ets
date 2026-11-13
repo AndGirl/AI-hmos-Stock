@@ -24,6 +24,7 @@ import {
   QtyCommit,
   resolveGate,
   roundPrice,
+  sanitizePriceInput,
   stepPrice,
   stepQty,
   TradeGate,
@@ -230,6 +231,14 @@ export class TradeVM {
     }
   }
 
+  /** 手输入框：逐字符过滤到两位小数（FR-07.4），非法字符直接丢弃；一旦输入即清掉旧错误。 */
+  setPriceInput(raw: string): void {
+    this.priceInput = sanitizePriceInput(raw);
+    if (this.priceError !== '') {
+      this.priceError = '';
+    }
+  }
+
   /** 手输提交：空/非数字就地拒绝并保留原值；超区间修正到边界并说明。 */
   commitPrice(raw: string): void {
     this.editing = '';
@@ -343,8 +352,9 @@ export class TradeVM {
     this.queryTimeText = '';
     this.submitToken++;
     const token: number = this.submitToken;
-    const draft: OrderDraft = new OrderDraft(this.code, account.id, this.price, this.qty,
-      this.clientOrderId);
+    // 提交前再收口一次精度：价格两位小数、数量整股（FR-07.4 / FR-07.5）。
+    const draft: OrderDraft = new OrderDraft(this.code, account.id, roundPrice(this.price),
+      Math.round(this.qty), this.clientOrderId);
     hilog.info(DOMAIN, 'TradeLog', 'trade_submit clientOrderId=%{public}s', this.clientOrderId);
     this.track('submit', [new AnalyticsParam('code', this.code)]);
     this.submitTimer = setTimeout((): void => {

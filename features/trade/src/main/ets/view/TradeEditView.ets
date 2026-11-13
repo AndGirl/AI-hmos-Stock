@@ -159,6 +159,8 @@ export struct TradeEditView {
       TextInput({ text: this.vm.priceInput, controller: this.priceController })
         .id(this.priceInputId)
         .type(InputType.NUMBER_DECIMAL)
+        // 价格恒两位小数（FR-07.4）：第三位小数起直接拒绝输入，空串/小数点允许。
+        .inputFilter('^\\d*(\\.\\d{0,2})?$')
         .enterKeyType(EnterKeyType.Done)
         .fontSize(18)
         .fontColor(AppColor.textPrimary)
@@ -170,7 +172,7 @@ export struct TradeEditView {
         .backgroundColor(AppColor.bgPage)
         .borderRadius(8)
         .onChange((value: string): void => {
-          this.vm.priceInput = value;
+          this.vm.setPriceInput(value);
         })
         .onSubmit((): void => {
           this.vm.commitPrice(this.vm.priceInput);
