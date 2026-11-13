@@ -68,7 +68,8 @@ export struct NameCell {
 
         Column() {
           Text(this.row.name)
-            .fontSize(14)
+            .fontSize(18)
+            .fontWeight(FontWeight.Medium)
             .fontColor(this.row.suspended ? AppColor.textSecondary : AppColor.textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -76,10 +77,9 @@ export struct NameCell {
 
           Row() {
             Text(this.row.code)
-              .fontSize(11)
+              .fontSize(13)
+              .fontWeight(FontWeight.Medium)
               .fontColor(AppColor.textSecondary)
-              .maxLines(1)
-
             if (this.row.suspended) {
               Text($r('app.string.watch_tag_suspended'))
                 .fontSize(10)

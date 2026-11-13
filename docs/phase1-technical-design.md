@@ -524,7 +524,7 @@ products/
             │   ├── DetailPage.ets           # 详情壳（sm/md/lg 全屏）
             │   ├── PkPage.ets               # 多窗比价壳（PaneHost）
             │   └── NotFoundPage.ets         # 404 态
-            ├── shell/                       # TabShell、FloatingTabBar、GlobalBanner、PlaceholderPage
+            ├── shell/                       # TabShell、BottomTabBar、GlobalBanner、PlaceholderPage
             ├── router/                      # AppRouter、DeepLinkParser、LaunchParam
             └── di/AppServices.ets           # 页面装配点（路由注册、页面工厂）
 
@@ -943,7 +943,7 @@ Index（AppRoot）
      │      │    ├─ NewsPage        (占位：最新资讯)
      │      │    ├─ WatchlistPage   (M1：自选)
      │      │    └─ MarketPage      (占位：行情)
-     │      └─ FloatingTabBar       // 四 Tab，悬浮胶囊
+     │      └─ BottomTabBar         // 四 Tab，悬浮胶囊
      └─ NavDestination: detail / pk
 ```
 

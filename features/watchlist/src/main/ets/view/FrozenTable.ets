@@ -158,7 +158,8 @@ export struct FrozenTable {
     Text($r('app.string.watch_col_name'))
       .width(this.metrics.nameWidth)
       .height(this.metrics.headerHeight)
-      .fontSize(12)
+      .fontSize(15)
+      .fontWeight(FontWeight.Medium)
       .fontColor(AppColor.textSecondary)
       .textAlign(TextAlign.Start)
       .padding({ left: AppDim.gap12 })
@@ -172,7 +173,8 @@ export struct FrozenTable {
       ForEach(CELL_INDEXES, (index: number) => {
         Row() {
           Text(COLUMN_TITLES[index])
-            .fontSize(12)
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
             .fontColor(this.sortedBy(index) ? AppColor.accent : AppColor.textSecondary)
             .maxLines(1)
           if (this.sortedBy(index)) {
@@ -196,7 +198,7 @@ export struct FrozenTable {
         .width(this.metrics.widths[index + 1])
         .height(this.metrics.headerHeight)
         .justifyContent(FlexAlign.End)
-        .padding({ right: 2 })
+        .padding({ right: 4 })
         .accessibilityText(this.headerLabel(index))
         .onClick(() => {
           const key: SortKey | null = NUMERIC_SORT_KEYS[index];
@@ -247,7 +249,7 @@ export struct FrozenTable {
       .width(this.metrics.nameWidth)
       .height('100%')
       .clip(true)
-      .backgroundColor(AppColor.bgSurface)
+      .backgroundColor(AppColor.bgPage)
       .gesture(
         PanGesture({ direction: PanDirection.All })
           .onActionStart(() => {
@@ -303,7 +305,7 @@ export struct FrozenTable {
           .height('100%')
           // 滑动条已隐藏（产品要求），底部仅保留 8vp 呼吸位
           .padding({ bottom: AppDim.gap8 })
-          .backgroundColor(AppColor.bgSurface)
+          .backgroundColor(AppColor.bgPage)
         }
         .scrollable(ScrollDirection.Horizontal)
         .scrollBar(BarState.Off)
@@ -315,7 +317,7 @@ export struct FrozenTable {
           this.onScrollX(this.hOffset);
         })
 
-        Row()
+        /*Row()
           .width(AppDim.fadeWidth)
           .height('100%')
           .linearGradient({
@@ -323,13 +325,14 @@ export struct FrozenTable {
             colors: [[AppColor.transparent, 0.0], [AppColor.bgSurface, 1.0]]
           })
           .opacity(this.fadeOpacity())
-          .hitTestBehavior(HitTestMode.None)
+          .hitTestBehavior(HitTestMode.None)*/
       }
       .layoutWeight(1)
       .height('100%')
     }
     .width('100%')
     .layoutWeight(1)
+    .padding({left:AppDim.gap8,right:AppDim.gap8})
     .alignItems(VerticalAlign.Top)
     .onAppear(() => {
       if (this.initialVOffset > 0) {

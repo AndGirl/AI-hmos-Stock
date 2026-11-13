@@ -64,14 +64,14 @@ export struct GroupTabs {
             Column() {
               Row() {
                 Text(this.labelOf(group.id))
-                  .fontSize(14)
-                  .fontWeight(group.selected ? FontWeight.Medium : FontWeight.Regular)
-                  .fontColor(group.selected ? AppColor.textPrimary : AppColor.textSecondary)
+                  .fontSize(16)
+                  .fontWeight(group.selected ? FontWeight.Bold : FontWeight.Medium)
+                  .fontColor(group.selected ? AppColor.accent : AppColor.textSecondary)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
                 Text(`${group.count}`)
-                  .fontSize(11)
-                  .fontColor(AppColor.textSecondary)
+                  .fontSize(12)
+                  .fontColor(group.selected ? AppColor.accent : AppColor.textSecondary)
                   .margin({ left: 2 })
                   .maxLines(1)
               }

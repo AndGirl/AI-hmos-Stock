@@ -45,20 +45,21 @@ export struct IndexStrip {
   recommendCard() {
     Row() {
       Text($r('app.string.watch_recommend'))
-        .fontSize(12)
+        .fontSize(14)
+        .fontWeight(FontWeight.Bold)
         .fontColor(AppColor.accent)
         .maxLines(1)
       Text('›')
-        .fontSize(12)
+        .fontSize(14)
+        .fontWeight(FontWeight.Bold)
         .fontColor(AppColor.accent)
         .margin({ left: 2 })
     }
     .width(CARD_WIDTH)
     .height(CARD_HEIGHT)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor(AppColor.bgSurface)
-    .borderRadius(AppDim.gap8)
-    .border({ width: 0.5, color: AppColor.divider })
+    .backgroundColor(AppColor.accentSoft)
+    .borderRadius(AppDim.gap12)
     .margin({ left: AppDim.gap8 })
     .accessibilityText($r('app.string.watch_recommend'))
   }
@@ -70,14 +71,15 @@ export struct IndexStrip {
           ListItem() {
             Column() {
               Text(row.name)
-                .fontSize(11)
+                .fontSize(13)
+                .fontWeight(FontWeight.Medium)
                 .fontColor(AppColor.textSecondary)
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
                 .width('100%')
               Text(row.cells[2])
-                .fontSize(13)
-                .fontWeight(FontWeight.Medium)
+                .fontSize(20)
+                .fontWeight(FontWeight.Bold)
                 .fontColor(this.colorOf(row.dir))
                 .maxLines(1)
                 .width('100%')
@@ -85,7 +87,7 @@ export struct IndexStrip {
             }
             .width(ITEM_WIDTH)
             .height(STRIP_HEIGHT)
-            .padding({ left: AppDim.gap8, right: AppDim.gap8 })
+            .padding(AppDim.gap8)
             .justifyContent(FlexAlign.Center)
             .alignItems(HorizontalAlign.Start)
           }

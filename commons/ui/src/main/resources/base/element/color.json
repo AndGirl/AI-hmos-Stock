@@ -25,6 +25,8 @@
     {"name": "color_scrim", "value": "#66000000"},
     {"name": "color_error", "value": "#E8342A"},
     {"name": "color_field_bg", "value": "#F5F6F8"},
-    {"name": "color_accent_soft", "value": "#FFF0EF"}
+    {"name": "color_accent_soft", "value": "#FFF0EF"},
+    {"name": "color_recommend_card_bg", "value": "#FFFAFA"},
+    {"name": "color_divider_strong", "value": "#DCDCDC"}
   ]
 }

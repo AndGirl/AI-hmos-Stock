@@ -59,9 +59,11 @@ export struct QuoteRow {
           Text(this.row.cells[index])
             .width(this.metrics.widths[index + 1])
             .height(this.metrics.rowHeight)
-            .fontSize(13)
+            .fontSize(16)
+            .fontWeight(FontWeight.Medium)
             .textAlign(TextAlign.End)
             .maxLines(1)
+            .padding({ right: 4 })
             .fontColor(this.cellColor(index))
         }, (index: number) => `${index}`)
       }

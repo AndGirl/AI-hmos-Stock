@@ -14,11 +14,13 @@ export class AppColor {
   static readonly priceFlat: Resource = $r('app.color.color_price_flat');
   static readonly accent: Resource = $r('app.color.color_accent');
   static readonly divider: Resource = $r('app.color.color_divider');
+  static readonly dividerStrong: Resource = $r('app.color.color_divider_strong');
   static readonly tagFin: Resource = $r('app.color.color_tag_fin');
   static readonly tagStar: Resource = $r('app.color.color_tag_star');
   static readonly disabledBg: Resource = $r('app.color.color_disabled_bg');
   static readonly disabledText: Resource = $r('app.color.color_disabled_text');
   static readonly bannerBg: Resource = $r('app.color.color_banner_bg');
+  static readonly recommendCardBg: Resource = $r('app.color.color_recommend_card_bg');
   static readonly chartLine: Resource = $r('app.color.color_chart_line');
   static readonly chartAvg: Resource = $r('app.color.color_chart_avg');
   static readonly barShadow: Resource = $r('app.color.color_bar_shadow');
@@ -45,6 +47,5 @@ export class AppDim {
   static readonly gap12: Resource = $r('app.float.gap_12');
   static readonly gap16: Resource = $r('app.float.gap_16');
   static readonly gap24: Resource = $r('app.float.gap_24');
-  static readonly tabBarRadius: Resource = $r('app.float.tab_bar_radius');
   static readonly opacityOffline: Resource = $r('app.float.opacity_offline');
 }

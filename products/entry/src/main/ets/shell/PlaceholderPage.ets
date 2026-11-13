@@ -1,4 +1,3 @@
-import { LayoutConst } from 'commons_basic';
 import { AppColor, AppDim } from 'commons_ui';
 
 /** 占位 Tab 的统一空态页：标题 + 说明 + 统一灰色图标位，不含第二个按钮。 */
@@ -31,7 +30,6 @@ export struct PlaceholderPage {
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .padding({ bottom: LayoutConst.TAB_BAR_RESERVED })
     .backgroundColor(AppColor.bgPage)
   }
 }

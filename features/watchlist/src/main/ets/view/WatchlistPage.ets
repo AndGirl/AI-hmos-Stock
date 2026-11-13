@@ -8,7 +8,6 @@ import {
   ConfigService,
   ConnectionHost,
   ConnectionHub,
-  LayoutConst,
   PerfMeter
 } from 'commons_basic';
 import { DetailAction, DetailContent, showDetailActionMenu } from 'detail';
@@ -327,6 +326,14 @@ export struct WatchlistPage {
     .border({ width: { top: 0.5 }, color: AppColor.divider })
   }
 
+  @Builder
+  hDivider() {
+    Divider()
+      .strokeWidth(1)
+      .color(AppColor.dividerStrong)
+      .width('100%')
+  }
+
   build() {
     Column() {
       Row() {
@@ -346,7 +353,7 @@ export struct WatchlistPage {
             })
         } else {
           Text($r('app.string.watchlist_title'))
-            .fontSize(28)
+            .fontSize(30)
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColor.textPrimary)
         }
@@ -367,12 +374,16 @@ export struct WatchlistPage {
             version: this.vm.stripVersion
           })
 
+          this.hDivider()
+
       GroupTabs({
         groups: this.vm.groups,
         onSelect: (id: string): void => {
           this.vm.selectGroup(id);
         }
       })
+
+      this.hDivider()
 
       if (this.vm.state === 'loading') {
         this.skeleton()
@@ -471,7 +482,6 @@ export struct WatchlistPage {
     }
     .width('100%')
     .height('100%')
-    .padding({ bottom: LayoutConst.TAB_BAR_RESERVED })
     .backgroundColor(AppColor.bgPage)
   }
 }
