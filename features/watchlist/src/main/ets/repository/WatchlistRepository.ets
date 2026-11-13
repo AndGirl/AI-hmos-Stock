@@ -56,6 +56,8 @@ export class WatchlistRepository {
     for (let i = 0; i < snapshots.length; i++) {
       data.quotes.set(snapshots[i].code, snapshots[i]);
     }
+    // M9-6：把本次快照写进缓存，供下次冷启首帧直接渲染（≤800ms 出内容）。
+    DataServices.quoteCache().putAll(snapshots);
     return data;
   }
 

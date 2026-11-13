@@ -62,6 +62,13 @@ export default class EntryAbility extends UIAbility {
     }).catch((err: BusinessError): void => {
       hilog.warn(DOMAIN, 'testTag', 'preheat viewMode failed: %{public}s', JSON.stringify(err));
     });
+    // 行情缓存预热（M9-6）：首帧前把 `quote_cache_v1` 读进内存，
+    // 自选页 `loadCached()` 就能直接命中，AC-111 要求 ≤800ms 出内容。
+    DataServices.quoteCache().load().then((): void => {
+      hilog.info(DOMAIN, 'testTag', 'quoteCache ready size=%{public}d', DataServices.quoteCache().size());
+    }).catch((err: BusinessError): void => {
+      hilog.warn(DOMAIN, 'testTag', 'preheat quoteCache failed: %{public}s', JSON.stringify(err));
+    });
     // 冷启动深链：先暂存，UI 就绪后由 AppRoot 消费（§3.2）。
     DeepLinkHandler.handle(want.uri);
   }
