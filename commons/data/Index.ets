@@ -41,6 +41,7 @@ export {
   ChartEngine,
   ChartSelectionListener,
   ChartStyle,
+  ChartViewport,
   MpChartEngine,
   createChartEngine
 } from './src/main/ets/chart/ChartEngine';

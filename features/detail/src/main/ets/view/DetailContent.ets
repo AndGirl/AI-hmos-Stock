@@ -11,7 +11,7 @@ import {
   PerfMeter
 } from 'commons_basic';
 import { DEBUG } from '../../../../BuildProfile';
-import { DetailAction, DetailMode, DetailTier, DetailVM } from '../viewmodel/DetailVM';
+import { DetailAction, DetailMode, DetailTier, DetailVM, ChartReadout } from '../viewmodel/DetailVM';
 import { CHART_PERIODS, ChartPeriod } from '../viewmodel/DetailExports';
 import { QuoteHeader } from './QuoteHeader';
 import { MetricPanel } from './MetricPanel';
@@ -21,7 +21,14 @@ import { OrderBookPanel } from './OrderBookPanel';
 import { NewsBar } from './NewsBar';
 import { ContentTabs } from './ContentTabs';
 import { ActionBar } from './ActionBar';
-import { PANE_FULL_MIN_VP } from './DetailLayout';
+import { ReadoutBar } from './ReadoutBar';
+import {
+  DETAIL_BLOCK_HEIGHT,
+  PANE_FULL_MIN_VP,
+  landscapeChartHeight,
+  landscapeLeftWidth,
+  landscapeRightWidth
+} from './DetailLayout';
 
 /** 字符串 → 周期（宿主传入的是 string，避免 view 侧出现类型断言）。 */
 function toPeriod(text: string): ChartPeriod {
@@ -45,6 +52,8 @@ export struct DetailContent {
   @Param code: string = '';
   @Param mode: DetailMode = 'page';
   @Param contentWidth: number = 360;
+  /** M12-1：窗口高度（vp），用于横屏图表高度推导；0 时回落到当前断点。 */
+  @Param viewportHeight: number = 0;
   @Param bottomInset: number = 0;
   /** 推送档位（FR-08.7）：page/pane 为 normal；PK 焦点窗 focus、非焦点窗 background。 */
   @Param tier: DetailTier = 'normal';
@@ -64,6 +73,8 @@ export struct DetailContent {
   @Local config: ConfigService = ConfigHost.getService();
   @Local perfRunning: boolean = false;
   @Local hub: ConnectionHub = ConnectionHost.getService();
+  /** 横屏底部通栏读数（来自 ChartArea 上抛，避免读数条遮挡 K 线）。 */
+  @Local landscapeReadout: ChartReadout | null = null;
 
   aboutToAppear(): void {
     this.vm.setTier(this.tier);
@@ -217,6 +228,20 @@ export struct DetailContent {
     return this.hub.state === 'offline';
   }
 
+  /** M12-1：只有详情整页（page）允许横屏重排；pane/窗口实例保持原布局，避免 M6~M8 分栏回归。 */
+  private landscape(): boolean {
+    return this.mode === 'page' && this.breakpoint.isLandscape;
+  }
+
+  private landscapeChartH(): number {
+    const height: number = this.breakpoint.viewportHeight > 0 ? this.breakpoint.viewportHeight : this.viewportHeight;
+    return landscapeChartHeight(height > 0 ? height : 400);
+  }
+
+  private landscapeRightW(): number {
+    return landscapeRightWidth(this.contentWidth);
+  }
+
   private isMini(): boolean {
     return this.isCompact() && this.contentWidth < 240;
   }
@@ -274,12 +299,17 @@ export struct DetailContent {
       chartState: this.vm.chartState,
       compact: this.isCompact(),
       viewportWidth: this.contentWidth,
+      blockHeight: this.landscape() ? this.landscapeChartH() : DETAIL_BLOCK_HEIGHT,
+      showReadout: !this.landscape(),
       vm: this.vm,
       onSelectPeriod: (period): void => {
         this.selectPeriod(period);
       },
       onRetry: (): void => {
         this.vm.retryChart();
+      },
+      onReadoutChanged: (readout: ChartReadout | null): void => {
+        this.landscapeReadout = readout;
       }
     })
   }
@@ -311,6 +341,7 @@ export struct DetailContent {
           viewportWidth: this.contentWidth,
           fontScale: this.config.fontScale,
           compact: this.isCompact(),
+          landscape: false,
           onToggle: (): void => {
             this.vm.toggleMetrics();
           }
@@ -383,6 +414,108 @@ export struct DetailContent {
     .alignItems(HorizontalAlign.Start)
   }
 
+  /** 横屏左列（62%）：报价头 + 周期 + 图表 + 指标两行；短屏可纵向滚动，动作栏仍固定底部。 */
+  @Builder
+  landscapeLeft() {
+    Scroll() {
+      Column() {
+        QuoteHeader({
+          vm: this.vm,
+          compact: false,
+          mini: false,
+          narrow: false,
+          hideStatus: false,
+          offline: this.offline(),
+          onMore: (): void => {
+            this.onAction('more');
+          },
+          onLongPressName: (): void => {
+            this.togglePerf();
+          }
+        })
+
+        PeriodTabs({
+          period: this.vm.period,
+          viewportWidth: landscapeLeftWidth(this.contentWidth) - 32,
+          onSelect: (period): void => {
+            this.selectPeriod(period);
+          }
+        })
+
+        this.chartRow()
+
+        MetricPanel({
+          metrics: this.vm.metrics,
+          expanded: this.vm.metricsExpanded,
+          viewportWidth: landscapeLeftWidth(this.contentWidth) - 32,
+          fontScale: this.config.fontScale,
+          compact: false,
+          landscape: true,
+          onToggle: (): void => {
+            this.vm.toggleMetrics();
+          }
+        })
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .opacity(this.offline() ? 0.55 : 1)
+    }
+    .width(landscapeLeftWidth(this.contentWidth))
+    .height('100%')
+    .scrollBar(BarState.Off)
+    .align(Alignment.Top)
+    .clip(true)
+  }
+
+  /** 横屏右列（38%）：盘口 + 成交明细，纵向铺满。 */
+  @Builder
+  landscapeRight() {
+    Column() {
+      OrderBookPanel({
+        book: this.vm.orderBook,
+        ticks: this.vm.ticks,
+        narrow: false,
+        panelWidth: this.landscapeRightW() - 24,
+        fillHeight: true
+      })
+    }
+    .width(this.landscapeRightW())
+    .height('100%')
+    .padding({ left: AppDim.gap8, right: AppDim.gap16, top: AppDim.gap8 })
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  /** 横屏整页：左右分栏 + 固定底部动作栏；不显示资讯条与内容 Tab（把高度让给图表）。 */
+  @Builder
+  landscapeContent() {
+    Column() {
+      Row() {
+        this.landscapeLeft()
+        Column()
+          .width(0.5)
+          .height('100%')
+          .backgroundColor(AppColor.divider)
+        this.landscapeRight()
+      }
+      .width('100%')
+      .layoutWeight(1)
+      .alignItems(VerticalAlign.Top)
+
+      // G2-5：横屏读数条放在动作栏上方，22vp 通栏，不遮挡 K 线。
+      ReadoutBar({ readout: this.landscapeReadout })
+
+      ActionBar({
+        tradeEnabled: this.tradeEnabled(),
+        onAction: (action: DetailAction): void => {
+          this.onAction(action);
+        }
+      })
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ bottom: this.bottomInset })
+  }
+
   build() {
     Column() {
       if (this.vm.uiState === 'loading') {
@@ -420,7 +553,9 @@ export struct DetailContent {
           .width('100%')
           .layoutWeight(1)
       } else {
-        if (this.compactShell()) {
+        if (this.landscape()) {
+          this.landscapeContent()
+        } else if (this.compactShell()) {
           Scroll() {
             this.mainContent()
           }
@@ -456,5 +591,7 @@ export struct DetailContent {
     .width('100%')
     .height('100%')
     .backgroundColor(AppColor.bgPage)
+    // M12-1：横屏根节点 id 仅用于 UiTest 断言布局分支（竖屏保持原 id）。
+    .id(this.landscape() ? 'detail_landscape' : 'detail_layout')
   }
 }

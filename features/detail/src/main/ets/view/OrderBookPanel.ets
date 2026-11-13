@@ -108,6 +108,8 @@ export struct OrderBookPanel {
   @Param narrow: boolean = false;
   /** 盘口列实际可用宽（sm 388vp 时约 116vp）：成交明细按此分列，避免价格被挤成两行。 */
   @Param panelWidth: number = 130;
+  /** M12-1：横屏右列按容器高度铺满，与左列图表区底部对齐。 */
+  @Param fillHeight: boolean = false;
 
   /** 成交明细字号/分列：窄列（<150vp）降 1fp，时间/量按比例收窄，价格列保底。 */
   private tickFont(): number {
@@ -233,7 +235,7 @@ export struct OrderBookPanel {
       .cachedCount(4)
     }
     .width('100%')
-    .height(DETAIL_BLOCK_HEIGHT)
+    .height(this.fillHeight ? '100%' : DETAIL_BLOCK_HEIGHT)
     .alignItems(HorizontalAlign.Start)
   }
 }

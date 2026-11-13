@@ -46,7 +46,11 @@ struct Index {
     })
     .mode(NavigationMode.Stack)
     .hideTitleBar(true)
-    .padding({ top: this.safeArea.topInset })
+    .padding({
+      top: this.safeArea.topInset,
+      left: this.safeArea.leftInset,
+      right: this.safeArea.rightInset
+    })
     .backgroundColor(AppColor.bgPage)
     .width('100%')
     .height('100%')

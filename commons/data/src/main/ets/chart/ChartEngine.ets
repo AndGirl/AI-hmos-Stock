@@ -55,6 +55,17 @@ export class ChartStyle {
   }
 }
 
+/** 当前可视 X 范围（M12-1：旋转/尺寸变化后恢复缩放位置）。 */
+export class ChartViewport {
+  lowest: number;
+  highest: number;
+
+  constructor(lowest: number, highest: number) {
+    this.lowest = lowest;
+    this.highest = highest;
+  }
+}
+
 /** 长按十字光标的读数回调（时间/价/均价/量由 View 侧按 index 取点）。 */
 export interface ChartSelectionListener {
   onSelect(index: number): void;
@@ -73,6 +84,12 @@ export interface ChartEngine {
   setZoomEnabled(enabled: boolean): void;
 
   resetZoomFor(period: ChartPeriod): void;
+
+  captureViewport(): ChartViewport | null;
+
+  restoreViewport(viewport: ChartViewport): void;
+
+  clearSelection(): void;
 
   dispose(): void;
 }
@@ -285,6 +302,45 @@ export class MpChartEngine implements ChartEngine {
     this.lineModel.setVisibleXRangeMaximum(visible);
     this.lineModel.moveViewToX(0);
     this.lineModel.invalidate();
+  }
+
+  /**
+   * 记录当前可视范围（M12-1）：旋转/尺寸变化前抓取，重排后恢复，避免「转一下就回到默认缩放」。
+   * 空数据或范围非法时返回 null，调用方回落到 `resetZoomFor`。
+   */
+  captureViewport(): ChartViewport | null {
+    let lowest: number = 0;
+    let highest: number = 0;
+    if (this.candleMode) {
+      lowest = this.candleModel.getLowestVisibleX();
+      highest = this.candleModel.getHighestVisibleX();
+    } else {
+      lowest = this.lineModel.getLowestVisibleX();
+      highest = this.lineModel.getHighestVisibleX();
+    }
+    if (!Number.isFinite(lowest) || !Number.isFinite(highest) || highest <= lowest) {
+      return null;
+    }
+    return new ChartViewport(lowest, highest);
+  }
+
+  restoreViewport(viewport: ChartViewport): void {
+    const range: number = Math.max(1, viewport.highest - viewport.lowest);
+    if (this.candleMode) {
+      this.candleModel.setVisibleXRangeMaximum(range);
+      this.candleModel.moveViewToX(viewport.lowest);
+      this.candleModel.invalidate();
+      return;
+    }
+    this.lineModel.setVisibleXRangeMaximum(range);
+    this.lineModel.moveViewToX(viewport.lowest);
+    this.lineModel.invalidate();
+  }
+
+  /** 取消十字光标（M12-1：旋转后不残留旧读数）。 */
+  clearSelection(): void {
+    this.lineModel.highlightValueForObject(null, false);
+    this.candleModel.highlightValueForObject(null, false);
   }
 
   dispose(): void {

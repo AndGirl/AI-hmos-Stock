@@ -8,6 +8,7 @@ export {
   ChartSelectionListener,
   ChartSeries,
   ChartStyle,
+  ChartViewport,
   Market,
   MpChartEngine,
   StockTag,

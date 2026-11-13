@@ -1,6 +1,6 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppColor } from 'commons_ui';
-import { BreakpointHost, BreakpointService, SafeAreaHost, SafeAreaService } from 'commons_basic';
+import { BreakpointHost, BreakpointService, OrientationHost, SafeAreaHost, SafeAreaService } from 'commons_basic';
 import { GlobalBanner, StateMode, StateView } from 'commons_ui';
 import { DetailAction, DetailContent, showDetailActionMenu } from 'detail';
 import { TradeSheet, TradeVM } from 'trade';
@@ -24,6 +24,8 @@ export struct DetailPage {
   @Local tradeOpen: boolean = false;
 
   aboutToDisappear(): void {
+    // 离开详情页恢复系统方向策略（M12-1：仅详情页允许横屏）。
+    OrientationHost.restore();
     this.tradeVM.dispose();
   }
 
@@ -93,6 +95,7 @@ export struct DetailPage {
               code: this.detailCode,
               mode: 'page',
               contentWidth: this.contentWidth(),
+              viewportHeight: this.breakpoint.viewportHeight,
               bottomInset: this.safeArea.bottomInset,
               onAction: (action: DetailAction): void => {
                 this.handleAction(action);
@@ -123,6 +126,13 @@ export struct DetailPage {
     .title($r('app.string.route_detail_title'))
     .menus(this.pkMenu())
     .backgroundColor(AppColor.bgPage)
+    // M12-1：详情页可见时允许系统旋转；被 Pk/交易等覆盖时恢复，避免其它页横屏。
+    .onShown((): void => {
+      OrientationHost.allowAutoRotation();
+    })
+    .onHidden((): void => {
+      OrientationHost.restore();
+    })
     .onBackPressed((): boolean => {
       if (this.tradeOpen) {
         this.tradeVM.back();

@@ -23,18 +23,26 @@ export class Breakpoint {
 export class BreakpointService {
   @Trace widthBp: WidthBp = 'sm';
   @Trace viewportWidth: number = 0;
+  /** M12-1：窗口高度（vp）。旋转/折叠/分屏都会更新。 */
+  @Trace viewportHeight: number = 0;
+  /** M12-1：只由窗口宽高判定，不参与断点；详情页据此切横屏布局。 */
+  @Trace isLandscape: boolean = false;
   @Trace isSplit: boolean = false;
   @Trace listColumns: number = Breakpoint.LIST_COLUMNS;
 
   constructor() {
     this.widthBp = 'sm';
     this.viewportWidth = 0;
+    this.viewportHeight = 0;
+    this.isLandscape = false;
     this.isSplit = false;
     this.listColumns = Breakpoint.LIST_COLUMNS;
   }
 
-  apply(widthVp: number): void {
+  apply(widthVp: number, heightVp: number = 0): void {
     this.viewportWidth = widthVp;
+    this.viewportHeight = heightVp;
+    this.isLandscape = heightVp > 0 && widthVp > heightVp;
     if (widthVp < Breakpoint.SM_MAX) {
       this.widthBp = 'sm';
       this.isSplit = false;
@@ -79,19 +87,22 @@ export class BreakpointHost {
       BreakpointHost.detach();
     }
     let widthPx: number = 0;
+    let heightPx: number = 0;
     try {
-      widthPx = mainWindow.getWindowProperties().windowRect.width;
+      const rect = mainWindow.getWindowProperties().windowRect;
+      widthPx = rect.width;
+      heightPx = rect.height;
     } catch (error) {
       hilog.warn(DOMAIN, 'Breakpoint', 'read window rect failed: %{public}s', JSON.stringify(error));
     }
-    service.apply(uiContext.px2vp(widthPx));
+    service.apply(uiContext.px2vp(widthPx), uiContext.px2vp(heightPx));
 
     const listener = (size: window.Size): void => {
       if (BreakpointHost.debounceTimer !== -1) {
         clearTimeout(BreakpointHost.debounceTimer);
       }
       BreakpointHost.debounceTimer = setTimeout(() => {
-        service.apply(uiContext.px2vp(size.width));
+        service.apply(uiContext.px2vp(size.width), uiContext.px2vp(size.height));
         BreakpointHost.debounceTimer = -1;
       }, Breakpoint.DEBOUNCE_MS);
     };

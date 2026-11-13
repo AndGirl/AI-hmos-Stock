@@ -17,7 +17,7 @@ import { AbilityConstant, Configuration, ConfigurationConstant, UIAbility, Want 
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { BackDispatcher, BreakpointHost, ConfigHost, SafeAreaHost } from 'commons_basic';
+import { BackDispatcher, BreakpointHost, ConfigHost, OrientationHost, SafeAreaHost } from 'commons_basic';
 import { DataServices, StorageAdapter } from 'commons_data';
 import { DeepLinkHandler } from '../router/DeepLinkHandler';
 
@@ -109,6 +109,8 @@ export default class EntryAbility extends UIAbility {
       // 首帧内容就绪后再挂断点/安全区监听，保证窗口尺寸与 UIContext 均可用（§3.2）。
       const mainWindow: window.Window = windowStage.getMainWindowSync();
       BreakpointHost.init(mainWindow, mainWindow.getUIContext());
+      // 屏幕方向（M12-1）：应用不全局锁方向，详情页可见时再允许旋转。
+      OrientationHost.init(mainWindow);
       // 全屏布局：页面背景延伸到状态栏/导航条，再由 SafeAreaService 做内容避让（§5.1.2）。
       mainWindow.setWindowLayoutFullScreen(true).then(() => {
         hilog.info(DOMAIN, 'testTag', 'Succeeded in setting full-screen layout.');
@@ -124,6 +126,7 @@ export default class EntryAbility extends UIAbility {
   onWindowStageDestroy(): void {
     SafeAreaHost.detach();
     BreakpointHost.detach();
+    OrientationHost.detach();
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageDestroy');
   }
 

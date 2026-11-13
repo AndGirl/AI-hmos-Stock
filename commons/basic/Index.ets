@@ -1,4 +1,5 @@
 export { Breakpoint, BreakpointHost, BreakpointService } from './src/main/ets/services/BreakpointService';
+export { OrientationHost } from './src/main/ets/services/OrientationService';
 export { SafeAreaHost, SafeAreaService } from './src/main/ets/services/SafeAreaService';
 export { ConfigHost, ConfigService } from './src/main/ets/services/ConfigService';
 export {

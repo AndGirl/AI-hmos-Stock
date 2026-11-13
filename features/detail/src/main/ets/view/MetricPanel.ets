@@ -1,8 +1,11 @@
 import { AppColor, AppDim } from 'commons_ui';
 import { MetricVM, visibleMetricCount } from '../viewmodel/DetailVM';
 import { metricLabel, toneColor } from './DetailLabels';
+import { landscapeMetricColumns } from './DetailLayout';
 
 const ROW_HEIGHT: number = 22;
+/** 横屏指标格（标签上 / 数值下），两行横排。 */
+const LANDSCAPE_ROW_HEIGHT: number = 36;
 /** 展开按钮点击区 ≥ 44vp（touch_min），chevron 本身 18vp。 */
 const TOGGLE_HEIGHT: number = 44;
 const CHEVRON_SIZE: number = 22;
@@ -19,11 +22,16 @@ export struct MetricPanel {
   @Param viewportWidth: number = 360;
   @Param fontScale: number = 1;
   @Param compact: boolean = false;
+  /** M12-1：横屏详情左列，12 项两行横排（1.3× 降 4 列）。 */
+  @Param landscape: boolean = false;
   @Event onToggle: () => void = (): void => {
   };
 
-  /** 列数：sm 2 / md·lg 3 / xl 4（紧凑版 2，极窄窗 1）；字号每升一档减 1，下限 1。 */
+  /** 列数：sm 2 / md·lg 3 / xl 4（紧凑版 2，极窄窗 1）；字号每升一档减 1，下限 1；横屏 6/4。 */
   private columns(): number {
+    if (this.landscape) {
+      return landscapeMetricColumns(this.fontScale);
+    }
     const narrow: boolean = this.viewportWidth < 320;
     let base: number = 2;
     if (this.compact) {
@@ -37,8 +45,11 @@ export struct MetricPanel {
     return Math.max(1, base - reduce);
   }
 
-  /** 收起态展示项数：sm 6 / md·lg 9 / xl 12（紧凑版 6）。 */
+  /** 收起态展示项数：sm 6 / md·lg 9 / xl 12（紧凑版 6）；横屏全量 12。 */
   private collapsedCount(): number {
+    if (this.landscape) {
+      return this.metrics.length;
+    }
     if (this.compact) {
       return 6;
     }
@@ -82,9 +93,9 @@ export struct MetricPanel {
     return this.metrics.length > this.collapsedCount();
   }
 
-  /** 新开详情页时：当前断点若已展示全部 12 项（xl），不显示 chevron；有超出项才显示。 */
+  /** 新开详情页时：当前断点若已展示全部 12 项（xl/横屏），不显示 chevron；有超出项才显示。 */
   private showChevron(): boolean {
-    return this.hasOverflow();
+    return !this.landscape && this.hasOverflow();
   }
 
   private chevronAngle(): number {
@@ -100,37 +111,71 @@ export struct MetricPanel {
     return key;
   }
 
+  @Builder
+  metricCell(cell: MetricVM, cellIndex: number, rowLength: number) {
+    if (this.landscape) {
+      Column() {
+        Text(metricLabel(cell.key))
+          .fontSize(10)
+          .fontColor(AppColor.textSecondary)
+          .maxLines(1)
+        if (cell.isLoss) {
+          Text($r('app.string.detail_pe_loss'))
+            .fontSize(12)
+            .fontColor(AppColor.textPrimary)
+            .maxLines(1)
+        } else {
+          Text(cell.text)
+            .fontSize(12)
+            .fontColor(toneColor(cell.tone))
+            .maxLines(1)
+        }
+      }
+      .layoutWeight(1)
+      .height(LANDSCAPE_ROW_HEIGHT)
+      .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+      .alignItems(HorizontalAlign.Start)
+      .border({
+        width: { right: cellIndex < rowLength - 1 ? 0.5 : 0 },
+        color: AppColor.divider
+      })
+      .accessibilityGroup(true)
+    } else {
+      Row() {
+        Text(metricLabel(cell.key))
+          .fontSize(11)
+          .fontColor(AppColor.textSecondary)
+          .maxLines(1)
+        Blank()
+        if (cell.isLoss) {
+          Text($r('app.string.detail_pe_loss'))
+            .fontSize(13)
+            .fontColor(AppColor.textPrimary)
+            .maxLines(1)
+        } else {
+          Text(cell.text)
+            .fontSize(13)
+            .fontColor(toneColor(cell.tone))
+            .maxLines(1)
+        }
+      }
+      .layoutWeight(1)
+      .height(ROW_HEIGHT)
+      .padding({ left: AppDim.gap12, right: AppDim.gap12 })
+      .border({
+        width: { right: cellIndex < rowLength - 1 ? 0.5 : 0 },
+        color: AppColor.divider
+      })
+      .accessibilityGroup(true)
+    }
+  }
+
   build() {
     Column() {
       ForEach(this.metricRows(), (row: MetricVM[], rowIndex: number) => {
         Row() {
           ForEach(row, (cell: MetricVM, cellIndex: number) => {
-            Row() {
-              Text(metricLabel(cell.key))
-                .fontSize(11)
-                .fontColor(AppColor.textSecondary)
-                .maxLines(1)
-              Blank()
-              if (cell.isLoss) {
-                Text($r('app.string.detail_pe_loss'))
-                  .fontSize(13)
-                  .fontColor(AppColor.textPrimary)
-                  .maxLines(1)
-              } else {
-                Text(cell.text)
-                  .fontSize(13)
-                  .fontColor(toneColor(cell.tone))
-                  .maxLines(1)
-              }
-            }
-            .layoutWeight(1)
-            .height(ROW_HEIGHT)
-            .padding({ left: AppDim.gap12, right: AppDim.gap12 })
-            .border({
-              width: { right: cellIndex < row.length - 1 ? 0.5 : 0 },
-              color: AppColor.divider
-            })
-            .accessibilityGroup(true)
+            this.metricCell(cell, cellIndex, row.length)
           }, (cell: MetricVM) => cell.key)
         }
         .width('100%')

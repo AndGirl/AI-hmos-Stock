@@ -9,6 +9,7 @@ import {
   ChartSelectionListener,
   ChartSeries,
   ChartStyle,
+  ChartViewport,
   MpChartEngine,
   createChartEngine,
   isKlinePeriod
@@ -16,6 +17,7 @@ import {
 import { ChartReadout, ChartState, DetailVM } from '../viewmodel/DetailVM';
 import { periodLabel } from './DetailLabels';
 import { DETAIL_BLOCK_HEIGHT } from './DetailLayout';
+import { ReadoutBar } from './ReadoutBar';
 
 
 /** 十字光标读数桥（把引擎回调转成组件本地状态）。 */
@@ -68,15 +70,24 @@ export struct ChartArea {
   @Param chartState: ChartState = 'idle';
   @Param compact: boolean = false;
   @Param viewportWidth: number = 360;
+  /** M12-1：图表区总高（价格 + 量能）；竖屏 312，横屏按视口高推导。 */
+  @Param blockHeight: number = DETAIL_BLOCK_HEIGHT;
+  /** M12-1：横屏把十字光标读数交给 DetailContent 的底部通栏，图表内不再叠读数条。 */
+  @Param showReadout: boolean = true;
   @Param vm: DetailVM = new DetailVM('');
   @Event onSelectPeriod: (period: ChartPeriod) => void = (period: ChartPeriod): void => {
   };
   @Event onRetry: () => void = (): void => {
   };
+  /** 读数变化上报（横屏底部读数条用）；竖屏可忽略。 */
+  @Event onReadoutChanged: (readout: ChartReadout | null) => void =
+    (readout: ChartReadout | null): void => {
+    };
   @Local readout: ChartReadout | null = null;
   @Local config: ConfigService = ConfigHost.getService();
   private engine: MpChartEngine = createChartEngine(emptyStyle());
   private reflowToken: number = 0;
+  private pendingViewport: ChartViewport | null = null;
 
   aboutToAppear(): void {
     this.engine.setStyle(this.resolveStyle());
@@ -113,6 +124,11 @@ export struct ChartArea {
     this.engine.setStyle(this.resolveStyle());
   }
 
+  @Monitor('readout')
+  onReadoutChangedLocal(): void {
+    this.onReadoutChanged(this.readout);
+  }
+
   /**
    * 容器宽度变化（M4 多窗：2↔3 窗重排、折叠/展开）后图表需要重新套用可视范围。
    * mpchart 的缩放/位移是在旧视口尺寸下算的，不重算会出现 K 线聚在右侧、左侧留白。
@@ -120,6 +136,10 @@ export struct ChartArea {
    */
   @Monitor('viewportWidth')
   onViewportChanged(): void {
+    // M12-1：旋转/尺寸变化前抓取可视范围，重排后恢复；十字光标取消但缩放保留。
+    this.pendingViewport = this.engine.captureViewport();
+    this.readout = null;
+    this.engine.clearSelection();
     this.reflowToken++;
     const token: number = this.reflowToken;
     setTimeout((): void => {
@@ -136,6 +156,11 @@ export struct ChartArea {
       return;
     }
     this.engine.setSeries(series);
+    if (this.pendingViewport !== null) {
+      this.engine.restoreViewport(this.pendingViewport);
+      this.pendingViewport = null;
+      return;
+    }
     this.applyZoom();
   }
 
@@ -188,7 +213,7 @@ export struct ChartArea {
 
   /** 价格图高度 = 统一列高 − 量能图高度，保证图表区与右侧盘口列等高。 */
   private priceHeight(): number {
-    return DETAIL_BLOCK_HEIGHT - this.volumeHeight();
+    return this.blockHeight - this.volumeHeight();
   }
 
   private volumeHeight(): number {
@@ -214,7 +239,7 @@ export struct ChartArea {
     Column() {
       Row()
         .width('100%')
-        .height(DETAIL_BLOCK_HEIGHT)
+        .height(this.blockHeight)
         .borderRadius(8)
         .backgroundColor(AppColor.disabledBg)
     }
@@ -237,52 +262,13 @@ export struct ChartArea {
         })
     }
     .width('100%')
-    .height(DETAIL_BLOCK_HEIGHT)
+    .height(this.blockHeight)
     .justifyContent(FlexAlign.Center)
     .backgroundColor(AppColor.bgSurface)
     .borderRadius(8)
     .margin({ left: AppDim.gap16, right: AppDim.gap16 })
   }
 
-  @Builder
-  readoutBar() {
-    Row() {
-      Text(this.readout !== null ? this.readout.timeText : '')
-        .fontSize(11)
-        .fontColor(AppColor.textPrimary)
-      Text(this.readout !== null ? this.readout.priceText : '')
-        .fontSize(11)
-        .fontColor(AppColor.textPrimary)
-        .margin({ left: AppDim.gap8 })
-      if (this.readout !== null && this.readout.avgText.length > 0) {
-        Text($r('app.string.detail_readout_avg'))
-          .fontSize(10)
-          .fontColor(AppColor.textSecondary)
-          .margin({ left: AppDim.gap8 })
-        Text(this.readout.avgText)
-          .fontSize(11)
-          .fontColor(AppColor.chartAvg)
-          .margin({ left: 2 })
-      }
-      Text($r('app.string.detail_readout_volume'))
-        .fontSize(10)
-        .fontColor(AppColor.textSecondary)
-        .margin({ left: AppDim.gap8 })
-      Text(this.readout !== null ? this.readout.volumeText : '')
-        .fontSize(11)
-        .fontColor(AppColor.textPrimary)
-        .margin({ left: 2 })
-      Text(this.readout !== null ? this.readout.pctText : '')
-        .fontSize(11)
-        .fontColor(AppColor.textPrimary)
-        .margin({ left: AppDim.gap8 })
-    }
-    .width('100%')
-    .height(22)
-    .padding({ left: AppDim.gap16, right: AppDim.gap16 })
-    .backgroundColor(AppColor.bgPage)
-    .hitTestBehavior(HitTestMode.None)
-  }
 
   build() {
     Column() {
@@ -297,10 +283,10 @@ export struct ChartArea {
             .fontColor(AppColor.textSecondary)
         }
         .width('100%')
-        .height(DETAIL_BLOCK_HEIGHT)
+        .height(this.blockHeight)
         .justifyContent(FlexAlign.Center)
       } else {
-        // 读数条叠在图表上沿（不上抬整体高度），保证图表区与盘口列始终等高。
+        // 竖屏读数条叠在图表上沿；横屏由宿主在动作栏上方渲染通栏读数条（showReadout=false）。
         Stack({ alignContent: Alignment.TopStart }) {
           Column() {
             if (this.isKline()) {
@@ -317,16 +303,16 @@ export struct ChartArea {
               .height(this.volumeHeight())
           }
           .width('100%')
-          .height(DETAIL_BLOCK_HEIGHT)
+          .height(this.blockHeight)
           .accessibilityText(this.chartA11y())
           .padding({ left: AppDim.gap8, right: AppDim.gap8 })
 
-          if (this.readout !== null) {
-            this.readoutBar()
+          if (this.showReadout && this.readout !== null) {
+            ReadoutBar({ readout: this.readout })
           }
         }
         .width('100%')
-        .height(DETAIL_BLOCK_HEIGHT)
+        .height(this.blockHeight)
       }
     }
     .width('100%')
