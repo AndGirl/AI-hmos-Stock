@@ -3,16 +3,17 @@
 > 对应设计 §3.1.10（分层校验 R-01~R-09）、§6.3（占位文案校验）、§6.6（工程红线与 CI 门禁）。
 > 目标：让「分层被破坏 / 占位文案漂移 / 硬编码」在提交前失败，而不是靠评审记忆。
 
-## 1. 六道门禁
+## 1. 七道门禁
 
 | # | 门禁 | 脚本 | 运行位置 | 说明 |
 |---|---|---|---|---|
 | 1 | 版本一致性 | `scripts/check-version.mjs` | CI + 本地 | V-01~V-03，9 模块与 `app.json5` 一致 |
 | 2 | 占位文案静态单测 | `scripts/check-coming-soon.mjs` | CI + 本地 | 2 条 `coming_soon_*` 文案格式、禁用词、标点/emoji；代码禁止硬编码 |
 | 3 | 分层架构红线 | `scripts/check-architecture.mjs` | CI + 本地 | R-01~R-09，静态扫描 import 与关键字 |
-| 4 | 深色 token 完整性 | `scripts/check-dark-tokens.mjs` | CI + 本地 | D-01~D-03：base/dark 键集合一致、`TokenRegistry` 全量、`.ets` 无颜色字面量 |
-| 5 | 对比度与红绿可辨 | `scripts/check-contrast.mjs` | CI + 本地 | C-01~C-04：dark 文本 ≥4.5、非文本 ≥3、涨跌 ΔE ≥20 且亮度差 ≥15%；base 只报告 |
-| 6 | CodeLinter | `devecocli check lint` | 本地 `scripts/gate.ps1` | 依赖 HarmonyOS SDK，GitHub 托管 runner 无 SDK |
+| 4 | 契约完整性 | `scripts/check-contracts.mjs` | CI + 本地 | K-01~K-04：Provider 接口有实现、必需方法齐备、装配点覆盖、M9 可选成员不得写成必需 |
+| 5 | 深色 token 完整性 | `scripts/check-dark-tokens.mjs` | CI + 本地 | D-01~D-03：base/dark 键集合一致、`TokenRegistry` 全量、`.ets` 无颜色字面量 |
+| 6 | 对比度与红绿可辨 | `scripts/check-contrast.mjs` | CI + 本地 | C-01~C-04：dark 文本 ≥4.5、非文本 ≥3、涨跌 ΔE ≥20 且亮度差 ≥15%；base 只报告 |
+| 7 | CodeLinter | `devecocli check lint` | 本地 `scripts/gate.ps1` | 依赖 HarmonyOS SDK，GitHub 托管 runner 无 SDK |
 
 一键本地执行：
 
@@ -27,6 +28,7 @@ powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 node scripts/check-version.mjs
 node scripts/check-coming-soon.mjs
 node scripts/check-architecture.mjs
+node scripts/check-contracts.mjs
 node scripts/check-dark-tokens.mjs
 node scripts/check-contrast.mjs
 devecocli check lint
@@ -66,7 +68,23 @@ devecocli check lint
 2. 设计文档 §3.1.10 白名单；
 3. `scripts/check-architecture.mjs` 的 `ALLOWED_FEATURE_EDGES`。
 
-## 3.1 深色 token 门禁（D-01~D-03）
+## 3.1 契约完整性门禁（K-01~K-04，M9 起）
+
+| 规则 | 脚本判定 |
+|---|---|
+| K-01 | 每个 `*Provider` 接口至少有一个实现类 |
+| K-02 | 每个实现类实现该接口的全部**必需**成员（带 `?` 的可选成员可缺省） |
+| K-03 | 每个 `*Provider` 接口必须出现在装配点 `commons/data/src/main/ets/DataServices.ets` |
+| K-04 | 契约 v1.1 的可选成员（`onError` / `capabilities` / `chartPage` / `seq` / `retryAfterMs` / `browse`）必须是 `?` 形式 |
+
+背景：M9 起 Provider 走「只加不改」，最容易出的是「接口加了方法、某个实现忘了写」或「把可选成员写成必需」——这两类编译期都不一定报错，所以在提交前静态拦一次。扫描范围只到 `commons/data/src/main/ets`（**不含测试**，测试里的桩实现不受约束）。
+
+负向探针（已验证，验证后还原）：
+
+- 把 `SearchProvider.browse?` 的 `?` 去掉 → **K-04 FAIL**（`必须是可选成员`）；
+- K-02 在脚本首次落地时曾真实失败 7 项（`async` 方法漏匹配），修复后 PASS——说明「实现缺方法」确实会被拦。
+
+## 3.2 深色 token 门禁（D-01~D-03）
 
 | 规则 | 脚本判定 |
 |---|---|
@@ -76,7 +94,7 @@ devecocli check lint
 
 负向探针：dark 漏 `color_accent_soft`、或任一 `.ets` 写 `#FFFFFF`，脚本必须失败。
 
-## 3.2 对比度门禁（C-01~C-04）
+## 3.3 对比度门禁（C-01~C-04）
 
 | 规则 | 脚本判定 |
 |---|---|
@@ -89,10 +107,11 @@ devecocli check lint
 
 ## 4. CI 现状与边界
 
-- `.github/workflows/gate.yml` 在 push/PR 时只跑第 1~5 道（纯 Node，无 SDK）。
-- 第 3 道 CodeLinter、构建、Hypium 需要 DevEco Studio / Command Line Tools，当前在本地 `scripts/gate.ps1` 执行；后续可接带 SDK 的自托管 runner。
+- `.github/workflows/gate.yml` 在 push/PR 时只跑第 1~6 道（纯 Node，无 SDK）。
+- 第 7 道 CodeLinter、构建、Hypium 需要 DevEco Studio / Command Line Tools，当前在本地 `scripts/gate.ps1` 执行；后续可接带 SDK 的自托管 runner。
 - 目前没有 Hypium 单元测试工程；占位文案用静态脚本承担「防漂移」职责。M1 起如需纯函数单测（几何/排序/校验），再在 `features/*/src/test` 建 Hypium local test，并纳入 `gate.ps1`。
   - M6 已在 `features/search/src/test` 落地第一组纯函数单测（`MatchRules` / `SearchQuery`），当前通过 `devecocli local test` 手动执行，尚未并入 `gate.ps1`。
+  - **M9 在 `commons/data/src/test` 增加行情通道单测**（涨跌停/帧序号/帧校验/限流降级/缓存规则/契约），运行：`hvigor test -p module=commons_data -p coverage=false`。
 
 ## 5. 自检记录
 

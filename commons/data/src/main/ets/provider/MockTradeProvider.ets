@@ -12,14 +12,13 @@ import {
 } from '../model/TradeModels';
 import { buildAccounts, buildNoAccounts, TradeAuth } from '../mock/TradeSeeds';
 import { MockFaults } from '../mock/MockFaults';
+import { LimitPair, resolveLimits } from '../rules/LimitRules';
 
 const CONTEXT_LATENCY_MS: number = 80;
 const SUBMIT_LATENCY_MS: number = 600;
 const SUBMIT_TIMEOUT_LATENCY_MS: number = 2600;
 const QUERY_LATENCY_MS: number = 200;
 const LOGIN_LATENCY_MS: number = 300;
-/** 主板 ±10%；创业板/科创板幅度差异本期不实装（DEC-07-03）。 */
-const LIMIT_RATIO: number = 0.1;
 
 function delay(ms: number): Promise<void> {
   return new Promise<void>((resolve: (value: void) => void): void => {
@@ -27,10 +26,6 @@ function delay(ms: number): Promise<void> {
       resolve();
     }, ms);
   });
-}
-
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
 }
 
 /**
@@ -57,8 +52,11 @@ export class MockTradeProvider implements TradeProvider {
     }
     const quote: QuoteSnapshot = list[0];
     const prevClose: number | null = quote.prevClose;
-    const limitUp: number = prevClose === null ? 0 : round2(prevClose * (1 + LIMIT_RATIO));
-    const limitDown: number = prevClose === null ? 0 : round2(prevClose * (1 - LIMIT_RATIO));
+    // M9-5 / CK-10：涨跌停与行情同源——快照已按板块下发（主板 10 / ST 5 / 科创·创业 20 / 北交所 30），
+    // 下发值优先，缺失才按同一套规则推导。原实现一律 10%，会让创业板委托上限算错。
+    const pair: LimitPair = resolveLimits(prevClose, quote.code, quote.name, quote.limitUp, quote.limitDown);
+    const limitUp: number = pair.limitUp !== null ? pair.limitUp : 0;
+    const limitDown: number = pair.limitDown !== null ? pair.limitDown : 0;
     // 故障注入的「非交易时段」只覆盖时间因素（不改标的停牌/退市状态）。
     const status: TradeStatus = MockFaults.tradeClosed ? 'closed' : quote.status;
     const tradable: Tradable = new Tradable(quote.code, quote.name, quote.market, status,

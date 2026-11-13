@@ -1,11 +1,22 @@
 import { ConnectionHost } from 'commons_basic';
-import { ConnectionState, QuoteListener, QuotePatch, QuoteProvider, QuoteSubscription } from '../model/QuoteModels';
+import {
+  ConnectionState,
+  QuoteError,
+  QuoteListener,
+  QuotePatch,
+  QuoteProvider,
+  QuoteSubscription
+} from '../model/QuoteModels';
+import { decideSeq, mergePatch, SeqDecision } from '../rules/QuoteMergeRules';
 
 /** 行级消费方：只接收自己订阅代码的 patch（单行刷新，CC-1.2）。 */
 export interface QuoteSink {
   onPatch(patch: QuotePatch): void;
 
   onStatus(state: ConnectionState): void;
+
+  /** M9-4 可选：降频/鉴权失败等下行错误（未实现者不受影响）。 */
+  onError?(error: QuoteError): void;
 }
 
 export interface SinkSubscription {
@@ -39,6 +50,10 @@ class BusListener implements QuoteListener {
   onStatus(state: ConnectionState): void {
     this.bus.handleStatus(state);
   }
+
+  onError(error: QuoteError): void {
+    this.bus.handleError(error);
+  }
 }
 
 class BusSubscription implements SinkSubscription {
@@ -63,6 +78,11 @@ class BusSubscription implements SinkSubscription {
 /**
  * 行情总线：唯一 provider 订阅 + 1s 合并窗口 + 按 code 分发到 sink。
  * 定时器只允许出现在 commons/data（附录 C 第 8 条）。
+ *
+ * M9-3 增强：
+ * - 按 code 维护帧序号水位，重复帧/乱序帧直接丢弃且不进 UI（AC-108）；
+ * - 同一 code 在 1s 窗口内多帧按字段合并，`seq` 取最大；
+ * - 下行错误（429/401）通过 `onError` 多播给实现了该方法的 sink（AC-109）。
  */
 export class QuoteBus {
   private provider: QuoteProvider;
@@ -72,6 +92,10 @@ export class QuoteBus {
   private subscribedKey: string = '';
   private pending: Map<string, QuotePatch> = new Map<string, QuotePatch>();
   private flushTimer: number = -1;
+  /** 各 code 已接受的帧序号水位（重订阅后重置，避免新通道从 1 开始被全丢）。 */
+  private lastSeq: Map<string, number> = new Map<string, number>();
+  /** 丢弃计数（重复 + 乱序），随埋点上报 `quote_drop`。 */
+  private dropped: number = 0;
 
   constructor(provider: QuoteProvider) {
     this.provider = provider;
@@ -90,6 +114,13 @@ export class QuoteBus {
     if (ConnectionHost.getService().isOffline()) {
       return;
     }
+    const current: number = this.lastSeqOf(patch.code);
+    const decision: SeqDecision = decideSeq(current, patch.seq);
+    if (!decision.accepted()) {
+      this.dropped++;
+      return;
+    }
+    this.lastSeq.set(patch.code, decision.nextSeq);
     const existing: QuotePatch | undefined = this.pending.get(patch.code);
     this.pending.set(patch.code, existing === undefined ? patch : mergePatch(existing, patch));
     if (this.flushTimer === -1) {
@@ -105,6 +136,16 @@ export class QuoteBus {
     }
   }
 
+  /** 下行错误多播（429 / 401）：只在通道层判定，这里只做分发。 */
+  handleError(error: QuoteError): void {
+    for (let i = 0; i < this.entries.length; i++) {
+      const sink: QuoteSink = this.entries[i].sink;
+      if (sink.onError !== undefined) {
+        sink.onError(error);
+      }
+    }
+  }
+
   removeEntry(entry: SinkEntry): void {
     const index: number = this.entries.indexOf(entry);
     if (index >= 0) {
@@ -114,7 +155,35 @@ export class QuoteBus {
     if (this.entries.length === 0) {
       this.stopFlushTimer();
       this.pending.clear();
+      this.lastSeq.clear();
     }
+  }
+
+  /** 订阅/退订统计（AC-107：同 code 多窗合并为一路，退订即释放）。 */
+  stats(): string {
+    const codes: string[] = this.subscribedKey.length === 0 ? [] : this.subscribedKey.split(',');
+    return `subs=${this.providerSub !== undefined ? 1 : 0} sinks=${this.entries.length} ` +
+      `codes=${codes.length} drop=${this.dropped}`;
+  }
+
+  /** 逻辑订阅数（provider 侧永远 ≤1 路）。 */
+  activeCount(): number {
+    return this.providerSub !== undefined ? 1 : 0;
+  }
+
+  /** sink 总数（窗实例数）。 */
+  sinkCount(): number {
+    return this.entries.length;
+  }
+
+  /** 丢弃计数（重复/乱序帧）。 */
+  droppedCount(): number {
+    return this.dropped;
+  }
+
+  private lastSeqOf(code: string): number {
+    const current: number | undefined = this.lastSeq.get(code);
+    return current !== undefined ? current : 0;
   }
 
   private resubscribe(): void {
@@ -134,6 +203,8 @@ export class QuoteBus {
       this.providerSub.unsubscribe();
       this.providerSub = undefined;
     }
+    // 新通道的 seq 从 1 重新计数：清空水位，否则新帧会被整体判为乱序而丢弃。
+    this.lastSeq.clear();
     if (union.length === 0) {
       return;
     }
@@ -164,23 +235,4 @@ export class QuoteBus {
       this.flushTimer = -1;
     }
   }
-}
-
-function mergePatch(base: QuotePatch, next: QuotePatch): QuotePatch {
-  const merged: QuotePatch = {
-    code: base.code,
-    snapshotTime: next.snapshotTime
-  };
-  merged.last = next.last !== undefined ? next.last : base.last;
-  merged.chg = next.chg !== undefined ? next.chg : base.chg;
-  merged.pct = next.pct !== undefined ? next.pct : base.pct;
-  merged.volume = next.volume !== undefined ? next.volume : base.volume;
-  merged.lastVolume = next.lastVolume !== undefined ? next.lastVolume : base.lastVolume;
-  merged.amount = next.amount !== undefined ? next.amount : base.amount;
-  merged.amplitude = next.amplitude !== undefined ? next.amplitude : base.amplitude;
-  merged.turnover = next.turnover !== undefined ? next.turnover : base.turnover;
-  merged.pe = next.pe !== undefined ? next.pe : base.pe;
-  merged.pb = next.pb !== undefined ? next.pb : base.pb;
-  merged.status = next.status !== undefined ? next.status : base.status;
-  return merged;
 }

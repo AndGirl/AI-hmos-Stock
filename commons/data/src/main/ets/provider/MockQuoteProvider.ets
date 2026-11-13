@@ -11,14 +11,10 @@ import {
 import { buildIndexSeeds, buildStockSeeds, IndexSeed, StockSeed } from '../mock/MarketSeeds';
 import { buildExtraStockSeeds, ExtraStockSeed } from '../mock/SearchSeeds';
 import { MockFaults, NetFault } from '../mock/MockFaults';
+import { hashSeed, SESSION_SEED, SeededRandom } from '../mock/SeededRandom';
+import { LimitPair, resolveLimits, round2 } from '../rules/LimitRules';
 
 const PUSH_INTERVAL_MS: number = 1000;
-const LIMIT_RATIO: number = 0.10;
-
-/** 价格 / 涨跌停统一两位小数，与交易侧（MockTradeProvider.round2）同口径。 */
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
-}
 
 /** 可变行情状态：只有 Mock 内部使用，对外只产出快照/patch。 */
 class QuoteState {
@@ -42,6 +38,14 @@ class QuoteState {
   volumeRatio: number = 1;
   totalShares: number = 2000000000;
   snapshotTime: number = 0;
+  /** M9-3：增量帧序号（每推一帧 +1），用于乱序丢弃与 1s 合窗取最大 seq。 */
+  seq: number = 0;
+  /** M9-7：按 code 派生的独立随机流，保证同一种子下该标的走势可复现且与订阅顺序无关。 */
+  rnd: SeededRandom = new SeededRandom(1);
+
+  limits(): LimitPair {
+    return resolveLimits(this.prevClose, this.code, this.name, null, null);
+  }
 
   buildSnapshot(): QuoteSnapshot {
     const suspended: boolean = this.status === 'suspended' || this.status === 'delisted';
@@ -55,6 +59,7 @@ class QuoteState {
       null : (this.high - this.low) / this.prevClose * 100;
     // volume 单位为「手」（契约 §4.3）：先折成股再算换手率。
     const turnover: number | null = suspended ? null : this.volume * 100 / this.floatShares * 100;
+    const limit: LimitPair = this.limits();
     return {
       code: this.code,
       market: this.market,
@@ -76,8 +81,10 @@ class QuoteState {
       open: suspended ? null : this.open,
       high: suspended ? null : this.high,
       low: suspended ? null : this.low,
-      limitUp: suspended ? null : round2(this.prevClose * (1 + LIMIT_RATIO)),
-      limitDown: suspended ? null : round2(this.prevClose * (1 - LIMIT_RATIO)),
+      // M9-5 / CK-10：涨跌停按板块推导（主板 10 / ST 5 / 科创·创业 20 / 北交所 30），
+      // 不再一律 10%；通道/后端下发时由 resolveLimits 优先采用下发值。
+      limitUp: suspended ? null : limit.limitUp,
+      limitDown: suspended ? null : limit.limitDown,
       volumeRatio: suspended ? null : this.volumeRatio,
       marketCap: suspended ? null : this.last * this.totalShares,
       floatCap: suspended ? null : this.last * this.floatShares
@@ -88,7 +95,8 @@ class QuoteState {
     const snap: QuoteSnapshot = this.buildSnapshot();
     const patch: QuotePatch = {
       code: this.code,
-      snapshotTime: this.snapshotTime
+      snapshotTime: this.snapshotTime,
+      seq: this.seq
     };
     if (snap.last !== null) {
       patch.last = snap.last;
@@ -160,6 +168,8 @@ export class MockQuoteProvider implements QuoteProvider {
   private subscribers: Subscriber[] = [];
   private timerId: number = -1;
   private tickSeq: number = 0;
+  /** 帧选择用随机流（确定性）：只影响「本次推哪几只」，不影响各标的自身走势。 */
+  private rnd: SeededRandom = new SeededRandom(SESSION_SEED);
 
   constructor() {
     // 探活：Mock 下等价于「故障开关已清除」，供 ConnectionHub 的退避重连判定。
@@ -189,6 +199,7 @@ export class MockQuoteProvider implements QuoteProvider {
       state.pe = seed.pe;
       state.pb = seed.pb;
       state.snapshotTime = Date.now();
+      state.rnd = new SeededRandom(hashSeed(seed.code) ^ SESSION_SEED);
       this.states.set(seed.code, state);
     }
     const indexes: IndexSeed[] = buildIndexSeeds();
@@ -209,6 +220,7 @@ export class MockQuoteProvider implements QuoteProvider {
       state.volume = 2200000;
       state.amount = state.volume * 100 * seed.base;
       state.snapshotTime = Date.now();
+      state.rnd = new SeededRandom(hashSeed(seed.code) ^ SESSION_SEED);
       this.states.set(seed.code, state);
     }
     // 搜索主数据里的追加股票（不在自选种子内）：同样进行情状态，保证搜索结果与详情有价格。
@@ -240,6 +252,7 @@ export class MockQuoteProvider implements QuoteProvider {
       state.pe = 8 + (i % 40);
       state.pb = 1 + (i % 20) / 10;
       state.snapshotTime = Date.now();
+      state.rnd = new SeededRandom(hashSeed(seed.code) ^ SESSION_SEED);
       this.states.set(seed.code, state);
     }
   }
@@ -330,10 +343,10 @@ export class MockQuoteProvider implements QuoteProvider {
     if (all.length === 0) {
       return;
     }
-    const count: number = Math.min(all.length, 1 + Math.floor(Math.random() * 3));
+    const count: number = Math.min(all.length, 1 + this.rnd.int(3));
     const touched: Set<string> = new Set<string>();
     for (let i = 0; i < count; i++) {
-      const code: string = all[Math.floor(Math.random() * all.length)];
+      const code: string = all[this.rnd.int(all.length)];
       if (touched.has(code)) {
         continue;
       }
@@ -349,24 +362,25 @@ export class MockQuoteProvider implements QuoteProvider {
   }
 
   private advance(state: QuoteState): void {
-    const drift: number = (Math.random() * 2 - 1) * 0.008 * state.volatility;
+    // M9-7：用该标的自己的确定性随机流（同种子重放一致，且与订阅顺序无关）。
+    const drift: number = (state.rnd.next() * 2 - 1) * 0.008 * state.volatility;
     let next: number = state.last * (1 + drift);
-    const upper: number = round2(state.prevClose * (1 + LIMIT_RATIO));
-    const lower: number = round2(state.prevClose * (1 - LIMIT_RATIO));
-    if (next > upper) {
-      next = upper;
+    const limit: LimitPair = state.limits();
+    if (limit.limitUp !== null && next > limit.limitUp) {
+      next = limit.limitUp;
     }
-    if (next < lower) {
-      next = lower;
+    if (limit.limitDown !== null && next < limit.limitDown) {
+      next = limit.limitDown;
     }
-    state.last = Math.round(next * 100) / 100;
+    state.last = round2(next);
     state.high = Math.max(state.high, state.last);
     state.low = Math.min(state.low, state.last);
-    const addedVolume: number = 10 + Math.floor(Math.random() * 200);
+    const addedVolume: number = 10 + state.rnd.int(200);
     state.volume += addedVolume;
     state.lastVolume = addedVolume;
     state.amount += addedVolume * 100 * state.last;
     state.snapshotTime = Date.now();
+    state.seq++;
   }
 
   private dispatch(patch: QuotePatch): void {

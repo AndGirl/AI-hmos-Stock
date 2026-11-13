@@ -159,4 +159,10 @@ export interface DetailProvider {
 
   /** 离线有缓存场景取最后一份快照（CC-7.6）。 */
   cachedDetail(code: string): DetailSnapshot | undefined;
+
+  /**
+   * M9-1 可选分页（只加不改）：以 `beforeTs` 为游标向更早取 `count` 根 K 线，
+   * 单次上限 `KLINE_MAX_COUNT`（500 根）。缺失时调用方回退 `loadChart`。
+   */
+  chartPage?(code: string, period: ChartPeriod, beforeTs: number, count: number): Promise<ChartSeries>;
 }
