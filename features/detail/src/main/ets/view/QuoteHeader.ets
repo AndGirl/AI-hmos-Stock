@@ -1,4 +1,5 @@
 import { AppColor, AppDim } from 'commons_ui';
+import { arrowOfTone } from 'commons_basic';
 import { StockTag } from '../viewmodel/DetailExports';
 import { DetailVM } from '../viewmodel/DetailVM';
 import { marketLabel, statusLabel, tagLabel, toneColor } from './DetailLabels';
@@ -32,6 +33,18 @@ export struct QuoteHeader {
     this.getUIContext().animateTo({ duration: 320, curve: Curve.EaseOut }, () => {
       this.flashAlpha = 0;
     });
+  }
+
+  /** 涨跌/涨跌幅（M12-3）：数值前加 ▲/▼，符号用小字号，颜色仍按方向。 */
+  @Builder
+  changeText(text: string, size: number) {
+    Text() {
+      Span(arrowOfTone(this.vm.priceTone)).fontSize(Math.max(9, size - 3))
+      Span(text)
+    }
+    .fontSize(size)
+    .fontColor(toneColor(this.vm.priceTone))
+    .maxLines(1)
   }
 
   build() {
@@ -124,24 +137,16 @@ export struct QuoteHeader {
             Blank()
           } else {
             Column() {
-              Text(this.vm.chgText)
-                .fontSize(11)
-                .fontColor(toneColor(this.vm.priceTone))
-              Text(this.vm.pctText)
-                .fontSize(11)
-                .fontColor(toneColor(this.vm.priceTone))
+              this.changeText(this.vm.chgText, 11)
+              this.changeText(this.vm.pctText, 11)
             }
             .alignItems(HorizontalAlign.Start)
             .margin({ left: AppDim.gap8 })
           }
         } else {
           Column() {
-            Text(this.vm.chgText)
-              .fontSize(14)
-              .fontColor(toneColor(this.vm.priceTone))
-            Text(this.vm.pctText)
-              .fontSize(14)
-              .fontColor(toneColor(this.vm.priceTone))
+            this.changeText(this.vm.chgText, 14)
+            this.changeText(this.vm.pctText, 14)
           }
           .alignItems(HorizontalAlign.Start)
           .margin({ left: AppDim.gap12 })
@@ -154,13 +159,10 @@ export struct QuoteHeader {
 
       if (this.narrow) {
         Row() {
-          Text(this.vm.chgText)
+          this.changeText(this.vm.chgText, 10)
+          Text('  ')
             .fontSize(10)
-            .fontColor(toneColor(this.vm.priceTone))
-          Text(this.vm.pctText)
-            .fontSize(10)
-            .fontColor(toneColor(this.vm.priceTone))
-            .margin({ left: AppDim.gap4 })
+          this.changeText(this.vm.pctText, 10)
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)

@@ -1,4 +1,5 @@
 import { AppColor, AppDim } from 'commons_ui';
+import { arrowOfDir } from 'commons_basic';
 import { IndexBarDataSource } from '../viewmodel/IndexBarDataSource';
 import { DIR_DOWN, DIR_FLAT, DIR_UP, WatchRowVM } from '../viewmodel/WatchRowVM';
 
@@ -77,13 +78,16 @@ export struct IndexStrip {
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
                 .width('100%')
-              Text(row.cells[2])
-                .fontSize(20)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.colorOf(row.dir))
-                .maxLines(1)
-                .width('100%')
-                .margin({ top: 2 })
+              Text() {
+                Span(arrowOfDir(row.dir)).fontSize(11)
+                Span(row.cells[2])
+              }
+              .fontSize(20)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(this.colorOf(row.dir))
+              .maxLines(1)
+              .width('100%')
+              .margin({ top: 2 })
             }
             .width(ITEM_WIDTH)
             .height(STRIP_HEIGHT)

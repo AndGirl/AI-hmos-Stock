@@ -1,4 +1,5 @@
 import { AppColor } from 'commons_ui';
+import { arrowOfDir } from 'commons_basic';
 import { emptyMetrics, TableMetrics } from '../viewmodel/WatchlistVM';
 import { DIR_DOWN, DIR_UP, WatchRowVM } from '../viewmodel/WatchRowVM';
 
@@ -58,15 +59,21 @@ export struct QuoteRow {
 
       Row() {
         ForEach(CELL_INDEXES, (index: number) => {
-          Text(this.row.cells[index])
-            .width(this.metrics.widths[index + 1])
-            .height(this.metrics.rowHeight)
-            .fontSize(16)
-            .fontWeight(FontWeight.Medium)
-            .textAlign(TextAlign.End)
-            .maxLines(1)
-            .padding({ right: 4 })
-            .fontColor(this.cellColor(index))
+          // 涨跌额（1）/ 涨跌幅（2）加 ▲/▼（M12-3）：颜色之外的第二重区分，符号 9fp 不挤列宽。
+          Text() {
+            if (index === 1 || index === 2) {
+              Span(arrowOfDir(this.row.dir)).fontSize(9)
+            }
+            Span(this.row.cells[index])
+          }
+          .width(this.metrics.widths[index + 1])
+          .height(this.metrics.rowHeight)
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .textAlign(TextAlign.End)
+          .maxLines(1)
+          .padding({ right: 4 })
+          .fontColor(this.cellColor(index))
         }, (index: number) => `${index}`)
       }
       .width(this.metrics.numericWidth)

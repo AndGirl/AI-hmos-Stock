@@ -18,6 +18,13 @@ export {
 export { PerfMeter } from './src/main/ets/services/PerfMeter';
 export { BackDispatcher, BackHandler } from './src/main/ets/services/BackDispatcher';
 export { ComingSoonText } from './src/main/ets/constants/ComingSoonText';
+export {
+  ARROW_DOWN,
+  ARROW_UP,
+  arrowOfDir,
+  arrowOfTone,
+  arrowOfValue
+} from './src/main/ets/constants/QuoteMark';
 export { LayoutConst } from './src/main/ets/constants/LayoutConst';
 export {
   nextViewMode,

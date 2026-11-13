@@ -1,4 +1,5 @@
 import { AppColor, AppDim } from 'commons_ui';
+import { arrowOfDir } from 'commons_basic';
 import { DIR_DOWN, DIR_UP, WatchRowVM } from '../viewmodel/WatchRowVM';
 
 /** 卡片 6 项指标的标签资源（顺序必须与 `WatchRowVM.cardValues` 一致）。 */
@@ -206,16 +207,23 @@ export struct CardCell {
           .fontColor(this.priceColor())
           .maxLines(1)
         Column() {
-          Text(this.row.cells[1])
-            .fontSize(12)
-            .fontColor(this.priceColor())
-            .maxLines(1)
-          Text(this.row.cells[2])
-            .fontSize(14)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(this.priceColor())
-            .maxLines(1)
-            .margin({ top: 1 })
+          // 涨跌/涨跌幅前加 ▲/▼（M12-3），符号 9fp 不挤卡宽。
+          Text() {
+            Span(arrowOfDir(this.row.dir)).fontSize(9)
+            Span(this.row.cells[1])
+          }
+          .fontSize(12)
+          .fontColor(this.priceColor())
+          .maxLines(1)
+          Text() {
+            Span(arrowOfDir(this.row.dir)).fontSize(9)
+            Span(this.row.cells[2])
+          }
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.priceColor())
+          .maxLines(1)
+          .margin({ top: 1 })
         }
         .alignItems(HorizontalAlign.Start)
         .margin({ left: AppDim.gap4 })
@@ -274,7 +282,7 @@ export struct CardCell {
               width: this.selected ? 0 : 1,
               color: this.selected ? AppColor.accent : AppColor.disabledText
             })
-            .backgroundColor(this.selected ? AppColor.accent : AppColor.transparent)
+            .backgroundColor(this.selected ? AppColor.accentFill : AppColor.transparent)
             .accessibilityText(this.selected ? $r('app.string.watch_select_a11y') :
               $r('app.string.watch_select_a11y_off'))
         }

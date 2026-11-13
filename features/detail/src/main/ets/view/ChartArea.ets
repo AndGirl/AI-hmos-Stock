@@ -3,6 +3,7 @@ import { FrameCallback } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppColor, AppDim } from 'commons_ui';
+import { ConfigHost, ConfigService } from 'commons_basic';
 import {
   ChartPeriod,
   ChartSelectionListener,
@@ -73,6 +74,7 @@ export struct ChartArea {
   @Event onRetry: () => void = (): void => {
   };
   @Local readout: ChartReadout | null = null;
+  @Local config: ConfigService = ConfigHost.getService();
   private engine: MpChartEngine = createChartEngine(emptyStyle());
   private reflowToken: number = 0;
 
@@ -100,6 +102,15 @@ export struct ChartArea {
   @Monitor('period')
   onPeriodChanged(): void {
     this.applyZoom();
+  }
+
+  /**
+   * 深浅色切换（M12-4）：重新解析 token 并只换配色，
+   * 不重建图表容器、不重置缩放；`engine.setStyle` 内部用同一份 series 重建 DataSet。
+   */
+  @Monitor('config.colorMode')
+  onColorModeChanged(): void {
+    this.engine.setStyle(this.resolveStyle());
   }
 
   /**

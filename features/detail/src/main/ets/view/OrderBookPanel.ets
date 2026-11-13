@@ -1,4 +1,5 @@
 import { AppColor, AppDim } from 'commons_ui';
+import { arrowOfTone } from 'commons_basic';
 import { OrderLevelVM, OrderBookVM, TickVM } from '../viewmodel/DetailVM';
 import { toneColor } from './DetailLabels';
 import { DETAIL_BLOCK_HEIGHT } from './DetailLayout';
@@ -39,11 +40,15 @@ struct OrderLevelRow {
           .fontSize(10)
           .fontColor(AppColor.textSecondary)
           .width(7)
-        Text(this.level.priceText)
-          .fontSize(11)
-          .fontColor(this.frozen ? AppColor.disabledText : toneColor(this.level.tone))
-          .layoutWeight(1)
-          .textAlign(TextAlign.End)
+        // 盘口价格相对昨收着色 + ▲/▼（M12-3）；停牌整块置灰时不加符号。
+        Text() {
+          Span(arrowOfTone(this.frozen ? 'none' : this.level.tone)).fontSize(8)
+          Span(this.level.priceText)
+        }
+        .fontSize(11)
+        .fontColor(this.frozen ? AppColor.disabledText : toneColor(this.level.tone))
+        .layoutWeight(1)
+        .textAlign(TextAlign.End)
         Text(this.level.volumeText)
           .fontSize(10)
           .fontColor(AppColor.textSecondary)
@@ -198,12 +203,15 @@ export struct OrderBookPanel {
                 .fontColor(AppColor.textSecondary)
                 .width(this.tickTimeWidth())
                 .maxLines(1)
-              Text(tick.priceText)
-                .fontSize(this.tickFont())
-                .fontColor(this.book.frozen ? AppColor.disabledText : toneColor(tick.tone))
-                .layoutWeight(1)
-                .textAlign(TextAlign.End)
-                .maxLines(1)
+              Text() {
+                Span(arrowOfTone(this.book.frozen ? 'none' : tick.tone)).fontSize(8)
+                Span(tick.priceText)
+              }
+              .fontSize(this.tickFont())
+              .fontColor(this.book.frozen ? AppColor.disabledText : toneColor(tick.tone))
+              .layoutWeight(1)
+              .textAlign(TextAlign.End)
+              .maxLines(1)
               Text(tick.volumeText)
                 .fontSize(this.tickFont())
                 .fontColor(AppColor.textSecondary)

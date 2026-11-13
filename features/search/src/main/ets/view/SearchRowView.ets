@@ -1,4 +1,5 @@
 import { AppColor, AppDim } from 'commons_ui';
+import { arrowOfDir } from 'commons_basic';
 import { SearchRowVM, SEARCH_DIR_DOWN, SEARCH_DIR_UP } from '../viewmodel/SearchRowVM';
 import { HighlightText } from './HighlightText';
 
@@ -81,7 +82,7 @@ export struct SearchRowView {
         color: this.row.picked ? AppColor.accent :
           (this.row.added ? AppColor.disabledText : AppColor.textSecondary)
       })
-      .backgroundColor(this.row.picked ? AppColor.accent : AppColor.transparent)
+      .backgroundColor(this.row.picked ? AppColor.accentFill : AppColor.transparent)
       .opacity(this.row.added ? 0.5 : 1)
       .margin({ right: AppDim.gap8 })
       .accessibilityText(this.row.picked ? $r('app.string.watch_select_a11y') :
@@ -184,10 +185,13 @@ export struct SearchRowView {
             .fontWeight(FontWeight.Medium)
             .fontColor(this.priceColor())
         }
-        Text(this.row.pctText)
-          .fontSize(12)
-          .fontColor(this.row.kind === 'sector' ? this.pctColor() : this.priceColor())
-          .margin({ top: 2 })
+        Text() {
+          Span(arrowOfDir(this.row.dir)).fontSize(9)
+          Span(this.row.pctText)
+        }
+        .fontSize(12)
+        .fontColor(this.row.kind === 'sector' ? this.pctColor() : this.priceColor())
+        .margin({ top: 2 })
       }
       .alignItems(HorizontalAlign.End)
       .width(88)

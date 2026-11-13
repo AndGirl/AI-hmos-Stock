@@ -146,6 +146,8 @@ export class MpChartEngine implements ChartEngine {
   private priceSet: LineDataSet | undefined = undefined;
   private avgSet: LineDataSet | undefined = undefined;
   private candleSet: CandleDataSet | undefined = undefined;
+  /** 最近一次 series：M12-4 深色切换只换配色时据此重建 DataSet（不重建图表容器/不重置缩放）。 */
+  private lastSeries: ChartSeries | undefined = undefined;
 
   constructor(style: ChartStyle) {
     this.style = style;
@@ -191,9 +193,15 @@ export class MpChartEngine implements ChartEngine {
     this.configureLineChart();
     this.configureCandleChart();
     this.configureVolumeChart();
+    // 重着色：用同一份 series 重建 DataSet（颜色写在 DataSet 上），
+    // 图表容器/视口矩阵不变，因此缩放位置保留（M12-4「切换深色不重建图表」）。
+    if (this.lastSeries !== undefined) {
+      this.setSeries(this.lastSeries);
+    }
   }
 
   setSeries(series: ChartSeries): void {
+    this.lastSeries = series;
     this.candleMode = isKlinePeriod(series.period);
     this.pointCount = series.points.length;
     this.xFormatter.setData(series.period, series.points);

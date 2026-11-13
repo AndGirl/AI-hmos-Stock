@@ -1,4 +1,5 @@
 import { promptAction } from '@kit.ArkUI';
+import { common, ConfigurationConstant } from '@kit.AbilityKit';
 import { AppColor, AppDim, StateMode, StateView } from 'commons_ui';
 import {
   BreakpointHost,
@@ -96,8 +97,9 @@ export struct DetailContent {
     const b2: promptAction.Button = { text: '断线（offline）', color: color };
     const b3: promptAction.Button = { text: '延迟（delayed）', color: color };
     const b4: promptAction.Button = { text: '恢复正常', color: color };
+    const b5: promptAction.Button = { text: '切换深浅色（M12 验收）', color: color };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
-      promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4];
+      promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4, b5];
     this.getUIContext().getPromptAction().showActionMenu({ title: '调试（debug）', buttons: buttons })
       .then((res: promptAction.ActionMenuSuccessResponse): void => {
         this.onDebugAction(res.index);
@@ -125,6 +127,22 @@ export struct DetailContent {
       this.vm.applyNetFault('delayed');
     } else if (index === 4) {
       this.vm.applyNetFault('none');
+    } else if (index === 5) {
+      this.toggleColorMode();
+    }
+  }
+
+  /** M12-4/M12-5 验收：在图表页直接热切深浅色，验证只重着色、不重建、不重置缩放。 */
+  private toggleColorMode(): void {
+    const context: common.Context | undefined = this.getUIContext().getHostContext();
+    if (context === undefined) {
+      return;
+    }
+    const app = context.getApplicationContext();
+    if (this.config.colorMode === 'dark') {
+      app.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT);
+    } else {
+      app.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_DARK);
     }
   }
 
