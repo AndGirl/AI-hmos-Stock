@@ -250,6 +250,8 @@ watchlist ──► detail ──► trade
 
 允许这三条的理由：watchlist 在 xl 分栏直接复用 `DetailContent`；detail 的动作栏要打开买入弹窗；pk 的每个窗就是一实例 `DetailContent`。**新增横向依赖必须同时修改本节与 §3.1.10 的白名单**，否则 CI 拦下。
 
+> **平板右栏的交易入口（§10-83）**：xl 右栏的动作栏「去交易」不新增 `watchlist→trade` 依赖——`WatchlistPage` 只把动作上报为 `onOpenTrade(code)`，由 `products/entry` 的 `TabShell` 用 `bindContentCover` 全屏模态挂载 `TradeSheet`（弹窗归属当前窗口，系统返回/侧滑由系统模态关闭）。
+
 #### 3.1.3 模块产物与依赖声明
 
 - `products/entry`：`module.json5` 提供 `deviceTypes`、`pages`、`abilities`；HAP 只做装配与设备适配，不含业务。
@@ -524,7 +526,7 @@ products/
             │   ├── DetailPage.ets           # 详情壳（sm/md/lg 全屏）
             │   ├── PkPage.ets               # 多窗比价壳（PaneHost）
             │   └── NotFoundPage.ets         # 404 态
-            ├── shell/                       # TabShell、BottomTabBar、GlobalBanner、PlaceholderPage
+            ├── shell/                       # TabShell、GlobalBanner、PlaceholderPage（BottomTabBar 已下沉 commons_ui，§10-83）
             ├── router/                      # AppRouter、DeepLinkParser、LaunchParam
             └── di/AppServices.ets           # 页面装配点（路由注册、页面工厂）
 
@@ -943,7 +945,7 @@ Index（AppRoot）
      │      │    ├─ NewsPage        (占位：最新资讯)
      │      │    ├─ WatchlistPage   (M1：自选)
      │      │    └─ MarketPage      (占位：行情)
-     │      └─ BottomTabBar         // 四 Tab，悬浮胶囊
+     │      └─ BottomTabBar         // 四 Tab，悬浮胶囊；xl 分栏时由自选左列承载（§10-83）
      └─ NavDestination: detail / pk
 ```
 
@@ -1293,14 +1295,14 @@ export struct DetailContent {
 | INV-D1 | `DetailContent` 不调用 `pathStack.push/pop`、不创建 `GlobalBanner`、不起重连定时器 |
 | INV-D2 | 周期、指标展开态由 `DetailVM` 持有（按 code 缓存），page↔pane 切换不重建 VM |
 | INV-D3 | window 每实例独立 `DetailVM` + `ChartEngine`，关闭即 `dispose` |
-| INV-D4 | 「去交易」全页唯一：page 在动作栏，pane/window 收进「⋯」菜单 |
+| INV-D4 | 「去交易」全页唯一：page 在动作栏；平板 xl 右栏（≥600vp）同 page 有动作栏；窄嵌入 / window 收进「⋯」（§10-83） |
 
 #### 5.3.2 形态映射
 
 | 形态 | 触发 | 组成 |
 |---|---|---|
 | page | sm/md 全屏 push；lg 可全屏 | 全量 |
-| pane | xl 右栏 | 紧凑版（FR-06 §2.6） |
+| pane | xl 右栏（宽度 ≥600vp） | 全量（动作栏 + 内容 Tab，§10-83）；<600vp 按紧凑版 |
 | window | 多窗实例 | 紧凑版，独立订阅 |
 | compact | 窗宽 <360vp | 图表在上，五档两列 + 明细在下 |
 
@@ -1954,7 +1956,7 @@ export class BreakpointService {
 | 11 列横滑 | ✓ | ✓ | ✓ | ✓（左栏） |
 | 详情页/右栏 | ✓ | ✓ | 待补稿（按 sm 补） | ✓ |
 | 买入/确认 | ✓ | ✓ | 待补稿（按 lg 居中） | ✓ 居中 |
-| 双窗/三窗 | — | ✓ 真机（460/940vp） | — | ✓ 模拟器（1280vp） |
+| 双窗/三窗 | — | ✓ 真机（460/940vp） | — | ✓ 模拟器（1440vp） |
 | 折叠↔展开不丢状态 | — | ✓ 真机 | ✓ 真机 | — |
 | 悬停态 | — | ✓ 真机 | — | — |
 

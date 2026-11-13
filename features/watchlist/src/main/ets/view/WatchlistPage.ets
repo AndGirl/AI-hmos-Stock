@@ -1,5 +1,5 @@
 import { promptAction } from '@kit.ArkUI';
-import { AppColor, AppDim, showComingSoon, StateMode, StateView } from 'commons_ui';
+import { BottomTabBar, AppColor, AppDim, showComingSoon, StateMode, StateView } from 'commons_ui';
 import {
   BreakpointHost,
   BreakpointService,
@@ -8,7 +8,9 @@ import {
   ConfigService,
   ConnectionHost,
   ConnectionHub,
-  PerfMeter
+  PerfMeter,
+  SafeAreaHost,
+  SafeAreaService
 } from 'commons_basic';
 import { DetailAction, DetailContent, showDetailActionMenu } from 'detail';
 import { DEBUG } from '../../../../BuildProfile';
@@ -40,10 +42,18 @@ export struct WatchlistPage {
   };
   @Param onOpenPk: (codes: string[]) => void = () => {
   };
+  /** 平板 xl 右栏动作栏的「去交易」（§10-83）：弹窗归属窗口，由壳层挂载（INV-T4）。 */
+  @Param onOpenTrade: (code: string) => void = () => {
+  };
+  /** xl 分栏时底栏由本页左列承载（§10-83）：当前选中 Tab 与切换回调由壳层注入。 */
+  @Param bottomBarIndex: number = 2;
+  @Param onSelectBottomTab: (index: number) => void = () => {
+  };
   @Local vm: WatchlistVM = new WatchlistVM();
   @Local breakpoint: BreakpointService = BreakpointHost.getService();
   @Local config: ConfigService = ConfigHost.getService();
   @Local hub: ConnectionHub = ConnectionHost.getService();
+  @Local safeArea: SafeAreaService = SafeAreaHost.getService();
   @Local perfRunning: boolean = false;
   /** xl 分栏右栏当前标的（M2：详情 pane 形态，点行只换 code 不路由）。 */
   @Local paneCode: string = '';
@@ -247,7 +257,11 @@ export struct WatchlistPage {
       });
       return;
     }
-    // pane（xl 右栏）不提供交易入口（FR-07.11 / AC-75）：不再有 trade 分支。
+    // 平板 xl 右栏动作栏的「去交易」（§10-83）：交给壳层开窗，弹窗不跨窗（FR-07.11）。
+    if (action === 'trade') {
+      this.onOpenTrade(code);
+      return;
+    }
   }
 
   @Builder
@@ -445,6 +459,17 @@ export struct WatchlistPage {
           if (this.vm.selectMode) {
             this.selectBar()
           }
+
+          // xl 分栏：底栏收进左列，右栏（含动作栏）才能贴到窗口底部（§10-83 / 设计稿）。
+          if (this.breakpoint.isSplit) {
+            BottomTabBar({
+              currentIndex: this.bottomBarIndex,
+              bottomInset: this.safeArea.bottomInset,
+              onSelect: (index: number): void => {
+                this.onSelectBottomTab(index);
+              }
+            })
+          }
         }
         .width(this.breakpoint.isSplit ? 523 : '100%')
         .height('100%')
@@ -457,7 +482,7 @@ export struct WatchlistPage {
                 code: this.effectivePaneCode(),
                 mode: 'pane',
                 contentWidth: this.paneWidth(),
-                bottomInset: 0,
+                bottomInset: this.safeArea.bottomInset,
                 onAction: (action: DetailAction): void => {
                   this.handlePaneAction(this.effectivePaneCode(), action);
                 }

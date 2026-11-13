@@ -20,6 +20,7 @@ import { OrderBookPanel } from './OrderBookPanel';
 import { NewsBar } from './NewsBar';
 import { ContentTabs } from './ContentTabs';
 import { ActionBar } from './ActionBar';
+import { PANE_FULL_MIN_VP } from './DetailLayout';
 
 /** 字符串 → 周期（宿主传入的是 string，避免 view 侧出现类型断言）。 */
 function toPeriod(text: string): ChartPeriod {
@@ -34,8 +35,8 @@ function toPeriod(text: string): ChartPeriod {
 /**
  * 详情内容组件（FR-06.1）：壳/内容分离的唯一内容实现。
  * INV-D1：不调用路由栈、不建全局 banner、不起重连定时器。
- * 三形态（§5.3.2）：page 全量；pane（xl 右栏）与 window（多窗实例）走紧凑版——
- * 无内容 Tab 与动作栏，四项动作收进「⋯」；资讯条三形态都展示（§10-42）。
+ * 三形态（§5.3.2）：page 全量；pane 在 xl 平板右栏（≥600vp）也按设计稿保留动作栏与内容 Tab（§10-83），
+ * 只有窄嵌入 / window（多窗实例）走紧凑版——无内容 Tab 与动作栏，动作收进「⋯」；资讯条三形态都展示（§10-42）。
  * M4：`tier` 由多窗宿主驱动降频；`syncPeriod + syncSeq` 承载一次性「同步周期」。
  */
 @ComponentV2
@@ -170,6 +171,19 @@ export struct DetailContent {
   /** pane / window 为紧凑版；page 为全量（INV-D3：window 每实例独立 VM）。 */
   private isCompact(): boolean {
     return this.mode !== 'page';
+  }
+
+  /**
+   * 平板 xl 右栏（§10-83）：宽度足够时按设计稿保留通栏动作栏与内容 Tab，
+   * 因此「有没有底栏」不再只由 mode 决定；多窗实例（window）与窄嵌入仍为紧凑版。
+   */
+  private paneFull(): boolean {
+    return this.mode === 'pane' && this.contentWidth >= PANE_FULL_MIN_VP;
+  }
+
+  /** 紧凑壳：只有窄嵌入 / 多窗实例才没有动作栏，平板右栏有。 */
+  private compactShell(): boolean {
+    return this.isCompact() && !this.paneFull();
   }
 
   private narrowBook(): boolean {
@@ -339,7 +353,7 @@ export struct DetailContent {
         .alignItems(VerticalAlign.Top)
       }
 
-      if (!this.isCompact()) {
+      if (!this.compactShell()) {
         ContentTabs({ wide: this.contentWidth >= 840 })
       }
       }
@@ -388,7 +402,7 @@ export struct DetailContent {
           .width('100%')
           .layoutWeight(1)
       } else {
-        if (this.isCompact()) {
+        if (this.compactShell()) {
           Scroll() {
             this.mainContent()
           }

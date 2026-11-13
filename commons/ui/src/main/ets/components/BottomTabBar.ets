@@ -1,5 +1,5 @@
-import { AppColor, AppDim } from 'commons_ui';
 import { LayoutConst } from 'commons_basic';
+import { AppColor, AppDim } from '../theme/TokenRegistry';
 
 /** 底部导航的单个 Tab：图标 + 文字，选中态用主题强调色，整块可点。 */
 @ComponentV2
@@ -36,8 +36,8 @@ struct TabBarItem {
 
 /**
  * 自绘底部导航栏（不是系统 Tabs 默认 bar）：
- * 贴底固定、铺满整宽（不是悬浮胶囊），顶部一条 0.5vp 分割线与内容区分隔；
- * 内容区由 TabShell 的 Column 让位，页面不再为底栏预留高度。
+ * 贴底固定、铺满所给宽度，顶部一条 0.5vp 分割线与内容区分隔；
+ * 常规由 TabShell 的 Column 让位；平板 xl 分栏时改由左列承载（§10-83），右栏因此能贴到窗口底部。
  * 底部安全区由自身 padding 吃掉，白底一直铺到导航条下沿。
  */
 @ComponentV2
