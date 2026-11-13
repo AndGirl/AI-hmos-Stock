@@ -9,6 +9,7 @@ import { PkPage } from './PkPage';
 import { SearchRoutePage } from './SearchPage';
 import { AddWatchlistPage } from './AddWatchlistPage';
 import { OrdersPage } from './OrdersPage';
+import { PositionsPage } from './PositionsPage';
 import { NotFoundPage } from './NotFoundPage';
 
 /**
@@ -33,6 +34,8 @@ struct Index {
       AddWatchlistPage()
     } else if (name === RouteName.ORDERS) {
       OrdersPage()
+    } else if (name === RouteName.POSITIONS) {
+      PositionsPage()
     } else {
       NotFoundPage()
     }

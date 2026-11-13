@@ -98,6 +98,15 @@
       ],
     },
     {
+      name: 'account',
+      srcPath: './features/account',
+      targets: [
+        {
+          name: 'default',
+        },
+      ],
+    },
+    {
       name: 'commons_ui',
       srcPath: './commons/ui',
       targets: [

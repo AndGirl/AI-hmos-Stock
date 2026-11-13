@@ -1,4 +1,4 @@
-﻿import {
+import {
   AddWatchlistFrom,
   AddWatchlistParam,
   DetailFrom,
@@ -6,6 +6,7 @@
   NotFoundParam,
   OrdersParam,
   PkParam,
+  PositionsParam,
   RouteName,
   SearchFrom,
   SearchParam
@@ -99,6 +100,12 @@ export class AppServices {
   pushOrders(): void {
     const param: OrdersParam = {};
     this.stack.pushPathByName(RouteName.ORDERS, param);
+  }
+
+  /** 持仓与收益（M11-2）：委托页「持仓」互跳进入。 */
+  pushPositions(): void {
+    const param: PositionsParam = {};
+    this.stack.pushPathByName(RouteName.POSITIONS, param);
   }
 
   pushNotFound(code?: string): void {

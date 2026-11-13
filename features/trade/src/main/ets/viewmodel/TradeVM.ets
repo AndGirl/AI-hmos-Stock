@@ -3,6 +3,7 @@ import { AnalyticsHost, AnalyticsParam, ConnectionHost, ConnectionHub } from 'co
 import {
   AccountInfo,
   AuthSession,
+  DataServices,
   MockFaults,
   OrderDraft,
   OrderResult,
@@ -316,7 +317,7 @@ export class TradeVM {
       return;
     }
     this.accountText = account.maskNo;
-    this.holdText = formatQty(account.holdQty);
+    this.holdText = formatQty(this.holdQtyOf(account));
     this.recomputeCanBuy();
     this.qty = this.maxQty() >= LOT_SIZE ? Math.min(Math.max(this.qty, LOT_SIZE), this.maxQty()) : 0;
     this.syncQty();
@@ -513,6 +514,17 @@ export class TradeVM {
     this.accounts = [];
   }
 
+  /**
+   * 当前标的的已持有数量（M11 修）：原来直接取 `AccountInfo.holdQty`（账户全部持仓的合计股数），
+   * 持仓多于 1 只时「已持有」会显示别的标的的数量。改为按 `accountId + code` 从
+   * `trade_account_v1` 取单只持仓；账户数据在 `loadContext` 里已加载。
+   */
+  private holdQtyOf(account: AccountInfo): number {
+    const store = DataServices.tradeAccount();
+    const holding = store.holdingOf(account.id, this.codeText);
+    return holding !== undefined ? holding.qty : 0;
+  }
+
   private applyContext(ctx: TradeContext): void {
     this.tradable = ctx.tradable;
     this.accounts = ctx.accounts;
@@ -524,7 +536,7 @@ export class TradeVM {
     const account: AccountInfo | null = this.activeAccount();
     if (account !== null) {
       this.accountText = account.maskNo;
-      this.holdText = formatQty(account.holdQty);
+      this.holdText = formatQty(this.holdQtyOf(account));
     }
     this.price = defaultPrice(ctx.tradable.last, ctx.tradable.prevClose, ctx.tradable.limitDown,
       ctx.tradable.limitUp);

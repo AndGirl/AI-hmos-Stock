@@ -10,11 +10,13 @@ export class RouteName {
   static readonly ADD_WATCHLIST: string = 'addWatchlist';
   /** 当日委托（M10-4）：自选页标题「委托」进入。 */
   static readonly ORDERS: string = 'orders';
+  /** 持仓与收益（M11-2）：委托页「持仓」互跳进入。 */
+  static readonly POSITIONS: string = 'positions';
   static readonly NOT_FOUND: string = 'notFound';
 }
 
-/** 详情入口来源：列表 / 卡片 / 搜索 / 深链。 */
-export type DetailFrom = 'list' | 'card' | 'search' | 'deeplink';
+/** 详情入口来源：列表 / 卡片 / 搜索 / 深链 / 持仓。 */
+export type DetailFrom = 'list' | 'card' | 'search' | 'deeplink' | 'positions';
 
 export interface DetailParam {
   code: string;
@@ -56,4 +58,9 @@ export interface NotFoundParam {
 /** 当日委托参数（M10-4）：当前无入参，保留结构便于后续「按标的过滤」只加不改。 */
 export interface OrdersParam {
   code?: string;
+}
+
+/** 持仓参数（M11-2）：当前无入参，保留结构便于后续「按账户/分组」只加不改。 */
+export interface PositionsParam {
+  accountId?: string;
 }
