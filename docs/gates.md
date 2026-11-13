@@ -3,13 +3,16 @@
 > 对应设计 §3.1.10（分层校验 R-01~R-09）、§6.3（占位文案校验）、§6.6（工程红线与 CI 门禁）。
 > 目标：让「分层被破坏 / 占位文案漂移 / 硬编码」在提交前失败，而不是靠评审记忆。
 
-## 1. 三道门禁
+## 1. 六道门禁
 
 | # | 门禁 | 脚本 | 运行位置 | 说明 |
 |---|---|---|---|---|
-| 1 | 占位文案静态单测 | `scripts/check-coming-soon.mjs` | CI + 本地 | 5 条 `coming_soon_*` 文案格式、禁用词、版本号、标点/emoji；代码禁止硬编码 |
-| 2 | 分层架构红线 | `scripts/check-architecture.mjs` | CI + 本地 | R-01~R-09，静态扫描 import 与关键字 |
-| 3 | CodeLinter | `devecocli check lint` | 本地 `scripts/gate.ps1` | 依赖 HarmonyOS SDK，GitHub 托管 runner 无 SDK |
+| 1 | 版本一致性 | `scripts/check-version.mjs` | CI + 本地 | V-01~V-03，9 模块与 `app.json5` 一致 |
+| 2 | 占位文案静态单测 | `scripts/check-coming-soon.mjs` | CI + 本地 | 2 条 `coming_soon_*` 文案格式、禁用词、标点/emoji；代码禁止硬编码 |
+| 3 | 分层架构红线 | `scripts/check-architecture.mjs` | CI + 本地 | R-01~R-09，静态扫描 import 与关键字 |
+| 4 | 深色 token 完整性 | `scripts/check-dark-tokens.mjs` | CI + 本地 | D-01~D-03：base/dark 键集合一致、`TokenRegistry` 全量、`.ets` 无颜色字面量 |
+| 5 | 对比度与红绿可辨 | `scripts/check-contrast.mjs` | CI + 本地 | C-01~C-04：dark 文本 ≥4.5、非文本 ≥3、涨跌 ΔE ≥20 且亮度差 ≥15%；base 只报告 |
+| 6 | CodeLinter | `devecocli check lint` | 本地 `scripts/gate.ps1` | 依赖 HarmonyOS SDK，GitHub 托管 runner 无 SDK |
 
 一键本地执行：
 
@@ -21,8 +24,11 @@ powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 单独执行：
 
 ```powershell
+node scripts/check-version.mjs
 node scripts/check-coming-soon.mjs
 node scripts/check-architecture.mjs
+node scripts/check-dark-tokens.mjs
+node scripts/check-contrast.mjs
 devecocli check lint
 ```
 
@@ -60,9 +66,30 @@ devecocli check lint
 2. 设计文档 §3.1.10 白名单；
 3. `scripts/check-architecture.mjs` 的 `ALLOWED_FEATURE_EDGES`。
 
+## 3.1 深色 token 门禁（D-01~D-03）
+
+| 规则 | 脚本判定 |
+|---|---|
+| D-01 | `commons/ui` 与 `products/entry` 各自的 `base` / `dark` color 键集合完全一致（不允许多键/漏键） |
+| D-02 | `TokenRegistry` 引用的每个 `app.color.*` 必须同时存在于 base 与 dark |
+| D-03 | `.ets` 源码（剔除注释后）不得出现 `#RGB` / `#RRGGBB` / `#AARRGGBB` 颜色字面量，也不得用 `Color.White` 等系统色做业务语义 |
+
+负向探针：dark 漏 `color_accent_soft`、或任一 `.ets` 写 `#FFFFFF`，脚本必须失败。
+
+## 3.2 对比度门禁（C-01~C-04）
+
+| 规则 | 脚本判定 |
+|---|---|
+| C-01 | dark 文本对 ≥4.5:1（`text_primary/secondary`、`price_*`、`accent`、`error`、`tag_*`、`chart_avg`、`orderbook_title_text`、`text_on_accent/accent_fill`、`accent/accent_soft`） |
+| C-02 | dark 状态类非文本对 ≥3:1（`accent`、`accent_fill`、`price_up/down` 对 `bg_page/bg_surface`） |
+| C-03 | base 与 dark 的涨跌红绿 ΔE76 ≥20 且相对亮度差 ≥15% |
+| C-04 | base 浅色只输出「阶段一现状报告」，不失败；需要收紧时设 `STRICT_LIGHT=1` |
+
+半透明色（`bar_shadow`/`scrim`/`transparent`）与 `disabled_text`、装饰性 `divider*` 不参与断言，详见 [phase2-tokens.md](phase2-tokens.md)。
+
 ## 4. CI 现状与边界
 
-- `.github/workflows/gate.yml` 在 push/PR 时只跑第 1、2 道（纯 Node，无 SDK）。
+- `.github/workflows/gate.yml` 在 push/PR 时只跑第 1~5 道（纯 Node，无 SDK）。
 - 第 3 道 CodeLinter、构建、Hypium 需要 DevEco Studio / Command Line Tools，当前在本地 `scripts/gate.ps1` 执行；后续可接带 SDK 的自托管 runner。
 - 目前没有 Hypium 单元测试工程；占位文案用静态脚本承担「防漂移」职责。M1 起如需纯函数单测（几何/排序/校验），再在 `features/*/src/test` 建 Hypium local test，并纳入 `gate.ps1`。
   - M6 已在 `features/search/src/test` 落地第一组纯函数单测（`MatchRules` / `SearchQuery`），当前通过 `devecocli local test` 手动执行，尚未并入 `gate.ps1`。

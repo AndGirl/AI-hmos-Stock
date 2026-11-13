@@ -255,7 +255,7 @@ export struct TradeConfirmView {
     .height(48)
     .borderRadius(24)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor(this.ctaEnabled() ? AppColor.accent : AppColor.disabledBg)
+    .backgroundColor(this.ctaEnabled() ? AppColor.accentFill : AppColor.disabledBg)
     .margin({ top: this.keyboardUp ? 8 : 16 })
     .accessibilityGroup(true)
     .accessibilityText($r('app.string.trade_confirm_buy'))

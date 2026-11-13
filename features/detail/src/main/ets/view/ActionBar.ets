@@ -51,7 +51,7 @@ export struct ActionBar {
         .textAlign(TextAlign.Center)
         .height(44)
         .width('42%')
-        .backgroundColor(this.tradeEnabled ? AppColor.accent : AppColor.disabledBg)
+        .backgroundColor(this.tradeEnabled ? AppColor.accentFill : AppColor.disabledBg)
         .borderRadius(AppDim.pillRadius)
         .margin({ right: AppDim.gap16 })
         .onClick(() => {

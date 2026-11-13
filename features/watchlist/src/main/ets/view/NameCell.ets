@@ -49,7 +49,7 @@ export struct NameCell {
         width: this.selected ? 0 : 1,
         color: this.selected ? AppColor.accent : AppColor.disabledText
       })
-      .backgroundColor(this.selected ? AppColor.accent : AppColor.transparent)
+      .backgroundColor(this.selected ? AppColor.accentFill : AppColor.transparent)
       .margin({ right: AppDim.gap8 })
       .accessibilityText(this.selected ? $r('app.string.watch_select_a11y') :
         $r('app.string.watch_select_a11y_off'))

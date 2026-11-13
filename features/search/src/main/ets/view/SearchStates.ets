@@ -78,7 +78,7 @@ export struct SearchStatesView {
           Button($r('app.string.retry'))
             .height(AppDim.touchMin)
             .padding({ left: AppDim.gap24, right: AppDim.gap24 })
-            .backgroundColor(AppColor.accent)
+            .backgroundColor(AppColor.accentFill)
             .fontColor(AppColor.textOnAccent)
             .fontSize(14)
             .margin({ top: AppDim.gap12 })

@@ -21,3 +21,7 @@ jobs:
         run: node scripts/check-coming-soon.mjs
       - name: 分层架构门禁（R-01~R-09）
         run: node scripts/check-architecture.mjs
+      - name: 深色 token 门禁（D-01~D-03）
+        run: node scripts/check-dark-tokens.mjs
+      - name: 对比度门禁（C-01~C-04）
+        run: node scripts/check-contrast.mjs

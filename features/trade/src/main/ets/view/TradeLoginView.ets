@@ -67,7 +67,7 @@ export struct TradeLoginView {
       .height(48)
       .borderRadius(24)
       .justifyContent(FlexAlign.Center)
-      .backgroundColor(AppColor.accent)
+      .backgroundColor(AppColor.accentFill)
       .margin({ top: 20 })
       .enabled(!this.vm.loggingIn)
       .onClick(() => {

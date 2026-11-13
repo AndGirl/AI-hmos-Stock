@@ -283,7 +283,7 @@ export struct AddWatchlistPanel {
         .height(44)
         .width('100%')
         .textAlign(TextAlign.Center)
-        .backgroundColor(this.vm.pickedCount > 0 ? AppColor.accent : AppColor.disabledBg)
+        .backgroundColor(this.vm.pickedCount > 0 ? AppColor.accentFill : AppColor.disabledBg)
         .borderRadius(AppDim.pillRadius)
         .enabled(this.vm.pickedCount > 0 && !this.vm.submitting)
         .accessibilityText($r('app.string.add_join'))

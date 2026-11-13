@@ -23,11 +23,16 @@ import { DeepLinkHandler } from '../router/DeepLinkHandler';
 
 const DOMAIN = 0x0000;
 
+/** 系统 ColorMode → 应用外观名（未知/未设置按浅色）。 */
+function colorModeName(mode: ConfigurationConstant.ColorMode | undefined): string {
+  return mode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'dark' : 'light';
+}
+
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     try {
-      // 本期只交付浅色 token，强制浅色避免系统深色下出现未定义配色（§6.2）。
-      this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT);
+      // M12-2：不再强制浅色，跟随系统深/浅色（深色资源见 commons/ui/resources/dark）。
+      this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
@@ -38,6 +43,13 @@ export default class EntryAbility extends UIAbility {
       hilog.info(DOMAIN, 'testTag', 'fontSizeScale=%{public}s', `${this.context.config.fontSizeScale}`);
     } catch (err) {
       hilog.warn(DOMAIN, 'testTag', 'read fontSizeScale failed: %{public}s', JSON.stringify(err));
+    }
+    // 深浅色（M12-2）：首帧前写入，图表等命令式绘制组件据此解析配色。
+    try {
+      ConfigHost.updateColorMode(colorModeName(this.context.config.colorMode));
+      hilog.info(DOMAIN, 'testTag', 'colorMode=%{public}s', colorModeName(this.context.config.colorMode));
+    } catch (err) {
+      hilog.warn(DOMAIN, 'testTag', 'read colorMode failed: %{public}s', JSON.stringify(err));
     }
     // 存储入口注入（§5.5）：搜索历史 / 自选写盘都在首帧前具备能力。
     StorageAdapter.init(this.context);
@@ -69,7 +81,11 @@ export default class EntryAbility extends UIAbility {
 
   onConfigurationUpdate(newConfig: Configuration): void {
     ConfigHost.update(newConfig.fontSizeScale);
-    hilog.info(DOMAIN, 'testTag', 'onConfigurationUpdate fontSizeScale=%{public}s', `${newConfig.fontSizeScale}`);
+    // M12-2 / M12-5：热切深浅色只更新配置，不触发任何 load()（状态保留）。
+    const mode: string = colorModeName(newConfig.colorMode);
+    ConfigHost.updateColorMode(mode);
+    hilog.info(DOMAIN, 'testTag', 'onConfigurationUpdate fontSizeScale=%{public}s colorMode=%{public}s',
+      `${newConfig.fontSizeScale}`, mode);
   }
 
   onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {

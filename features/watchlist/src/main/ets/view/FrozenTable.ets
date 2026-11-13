@@ -201,8 +201,8 @@ export struct FrozenTable {
           if (this.delayed && index === 2) {
             Text($r('app.string.conn_delayed_badge'))
               .fontSize(9)
-              .fontColor(AppColor.textOnAccent)
-              .backgroundColor(AppColor.textSecondary)
+              .fontColor(AppColor.bgPage)
+              .backgroundColor(AppColor.textPrimary)
               .borderRadius(2)
               .padding({ left: 3, right: 3 })
               .margin({ left: 3 })

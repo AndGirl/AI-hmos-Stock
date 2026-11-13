@@ -1,4 +1,5 @@
 import { promptAction } from '@kit.ArkUI';
+import { common, ConfigurationConstant } from '@kit.AbilityKit';
 import { BottomTabBar, AppColor, AppDim, StateMode, StateView } from 'commons_ui';
 import {
   BackDispatcher,
@@ -131,7 +132,7 @@ export struct WatchlistPage {
     const b2: promptAction.Button = { text: '网络…', color: AppColor.debug };
     const b3: promptAction.Button = { text: '场景…（空态/失败/填满）', color: AppColor.debug };
     const b4: promptAction.Button = { text: '重置（字号 + 网络 + 数据）', color: AppColor.debug };
-    const b5: promptAction.Button = { text: '清除视图记忆（回列表）', color: AppColor.debug };
+    const b5: promptAction.Button = { text: '外观…（跟随系统/浅色/深色）', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
       promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4, b5];
     this.getUIContext().getPromptAction().showActionMenu({
@@ -158,10 +159,35 @@ export struct WatchlistPage {
       // 重置：字号/网络恢复，并把自选恢复为 45 只种子
       this.vm.resetAll();
     } else if (index === 5) {
-      // 清除视图记忆（M8-4）：删 view_pref_v1 并回列表，用于验收「冷启不闪烁」的重复试验。
-      this.vm.debugClearViewPref();
-      this.toast('已清除视图记忆，回到列表视图');
+      this.openAppearanceMenu();
     }
+  }
+
+  /**
+   * 二级：外观（M12-2 验收通道，仅 debug）。
+   * 系统层没有可脚本化的深色开关，取证时用这里切换；release 始终 COLOR_MODE_NOT_SET 跟随系统。
+   */
+  private openAppearanceMenu(): void {
+    const b0: promptAction.Button = { text: '跟随系统', color: AppColor.debug };
+    const b1: promptAction.Button = { text: '浅色', color: AppColor.debug };
+    const b2: promptAction.Button = { text: '深色', color: AppColor.debug };
+    const buttons: [promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2];
+    this.getUIContext().getPromptAction().showActionMenu({ title: '外观', buttons: buttons })
+      .then((res: promptAction.ActionMenuSuccessResponse): void => {
+        const context: common.Context | undefined = this.getUIContext().getHostContext();
+        if (context === undefined) {
+          return;
+        }
+        const app = context.getApplicationContext();
+        if (res.index === 0) {
+          app.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
+        } else if (res.index === 1) {
+          app.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT);
+        } else if (res.index === 2) {
+          app.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_DARK);
+        }
+      }).catch((): void => {
+    });
   }
 
   /** 二级：数据场景（M7 验收：空态、失败态、50 上限；M8 追加 200 卡压测）。 */
@@ -174,8 +200,9 @@ export struct WatchlistPage {
       text: stress ? '退出卡片压测（恢复真实数据）' : '卡片压测 200（仅卡片态，不落盘）',
       color: AppColor.debug
     };
+    const b4: promptAction.Button = { text: '清除视图记忆（回列表）', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
-      promptAction.Button] = [b0, b1, b2, b3];
+      promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4];
     this.getUIContext().getPromptAction().showActionMenu({ title: '场景', buttons: buttons })
       .then((res: promptAction.ActionMenuSuccessResponse): void => {
         if (res.index === 0) {
@@ -196,6 +223,10 @@ export struct WatchlistPage {
           }
           const count: number = this.vm.debugBuildStressRows();
           this.toast(`已生成 ${count} 张压测卡（不落盘）`);
+        } else if (res.index === 4) {
+          // 清除视图记忆（M8-4）：删 view_pref_v1 并回列表，用于验收「冷启不闪烁」的重复试验。
+          this.vm.debugClearViewPref();
+          this.toast('已清除视图记忆，回到列表视图');
         }
       }).catch((): void => {
     });
@@ -629,7 +660,7 @@ export struct WatchlistPage {
         .height(44)
         .padding({ left: AppDim.gap24, right: AppDim.gap24 })
         .textAlign(TextAlign.Center)
-        .backgroundColor(AppColor.accent)
+        .backgroundColor(AppColor.accentFill)
         .borderRadius(AppDim.pillRadius)
         .margin({ top: AppDim.gap24 })
         .accessibilityText($r('app.string.watch_add_entry'))
@@ -715,7 +746,7 @@ export struct WatchlistPage {
         .height(40)
         .width(96)
         .textAlign(TextAlign.Center)
-        .backgroundColor(AppColor.accent)
+        .backgroundColor(AppColor.accentFill)
         .borderRadius(AppDim.pillRadius)
         .margin({ left: AppDim.gap8 })
         .onClick(() => {
@@ -741,7 +772,7 @@ export struct WatchlistPage {
         .height(40)
         .padding({ left: AppDim.gap24, right: AppDim.gap24 })
         .textAlign(TextAlign.Center)
-        .backgroundColor(AppColor.accent)
+        .backgroundColor(AppColor.accentFill)
         .borderRadius(AppDim.pillRadius)
         .accessibilityText($r('app.string.watch_add_entry'))
         .onClick(() => {

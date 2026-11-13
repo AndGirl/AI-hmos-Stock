@@ -13,6 +13,8 @@ export class AppColor {
   static readonly priceDown: Resource = $r('app.color.color_price_down');
   static readonly priceFlat: Resource = $r('app.color.color_price_flat');
   static readonly accent: Resource = $r('app.color.color_accent');
+  /** 实心强调底（红底白字按钮/勾选）：与 accent 分离以保证 M12 白字对比度 ≥4.5:1。 */
+  static readonly accentFill: Resource = $r('app.color.color_accent_fill');
   static readonly divider: Resource = $r('app.color.color_divider');
   static readonly dividerStrong: Resource = $r('app.color.color_divider_strong');
   static readonly tagFin: Resource = $r('app.color.color_tag_fin');

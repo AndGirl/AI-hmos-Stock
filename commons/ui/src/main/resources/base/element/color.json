@@ -9,6 +9,7 @@
     {"name": "color_price_down", "value": "#00A870"},
     {"name": "color_price_flat", "value": "#6B6B70"},
     {"name": "color_accent", "value": "#E8342A"},
+    {"name": "color_accent_fill", "value": "#D92D24"},
     {"name": "color_divider", "value": "#EDEDED"},
     {"name": "color_tag_fin", "value": "#7C4DFF"},
     {"name": "color_tag_star", "value": "#FF7A00"},

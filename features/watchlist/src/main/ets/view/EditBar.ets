@@ -50,7 +50,7 @@ export struct EditBar {
         .height(40)
         .padding({ left: AppDim.gap16, right: AppDim.gap16 })
         .textAlign(TextAlign.Center)
-        .backgroundColor(this.count > 0 ? AppColor.accent : AppColor.disabledBg)
+        .backgroundColor(this.count > 0 ? AppColor.accentFill : AppColor.disabledBg)
         .borderRadius(AppDim.pillRadius)
         .margin({ left: AppDim.gap8 })
         .enabled(this.count > 0)

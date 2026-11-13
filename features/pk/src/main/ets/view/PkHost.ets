@@ -189,7 +189,7 @@ export struct PkHost {
         .height(44)
         .width(180)
         .textAlign(TextAlign.Center)
-        .backgroundColor(AppColor.accent)
+        .backgroundColor(AppColor.accentFill)
         .borderRadius(AppDim.pillRadius)
         .margin({ top: AppDim.gap24 })
         .onClick(() => {

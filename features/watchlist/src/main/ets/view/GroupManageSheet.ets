@@ -166,7 +166,7 @@ export struct GroupManageSheet {
           .height(40)
           .padding({ left: AppDim.gap16, right: AppDim.gap16 })
           .textAlign(TextAlign.Center)
-          .backgroundColor(AppColor.accent)
+          .backgroundColor(this.input.trim().length > 0 ? AppColor.accentFill : AppColor.disabledBg)
           .opacity(this.input.trim().length > 0 ? 1 : 0.4)
           .borderRadius(AppDim.pillRadius)
           .margin({ left: AppDim.gap8 })
