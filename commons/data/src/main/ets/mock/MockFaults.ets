@@ -26,6 +26,15 @@ export class MockFaults {
   /** 慢请求（M6：把 Mock 时延拉到 1.5s，用于截取「搜索中」态）。 */
   static searchSlow: boolean = false;
 
+  /** 行情限流（M9-4：通道持续下发 429，用于验收降频/轮询/恢复）。 */
+  static quoteRateLimited: boolean = false;
+  /** 429 建议等待毫秒（缺省 0 表示按 5s 下限）。 */
+  static quoteRetryAfterMs: number = 0;
+  /** 鉴权失败（M9-2：刷新一次票据仍失败 → unauthorized）。 */
+  static quoteUnauthorized: boolean = false;
+  /** 异常帧注入（M9-5：按序注入 时间回退 / 价格越界 / 超涨跌停 / 空帧）。 */
+  static quoteBadFrames: boolean = false;
+
   /** 未开户 / 无权限：入口禁用并 toast「请先开通交易账户」（FR-07.10）。 */
   static tradeNoAccount: boolean = false;
   /** 断线：弹窗内提示条 + 主按钮禁用（CC-7.6）。 */
@@ -48,6 +57,10 @@ export class MockFaults {
     MockFaults.searchRateLimited = false;
     MockFaults.failHot = false;
     MockFaults.searchSlow = false;
+    MockFaults.quoteRateLimited = false;
+    MockFaults.quoteRetryAfterMs = 0;
+    MockFaults.quoteUnauthorized = false;
+    MockFaults.quoteBadFrames = false;
     MockFaults.tradeNoAccount = false;
     MockFaults.tradeOffline = false;
     MockFaults.tradeClosed = false;

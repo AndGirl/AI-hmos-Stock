@@ -13,6 +13,9 @@ import { SearchHistoryStore } from './store/SearchHistoryStore';
 import { WatchlistStore } from './store/WatchlistStore';
 import { WatchlistSyncService } from './store/WatchlistSyncService';
 import { ViewPrefStore } from './store/ViewPrefStore';
+import { QuoteCacheStore } from './store/QuoteCacheStore';
+import { QuoteChannel } from './real/QuoteChannel';
+import { AppConfig, QuoteSource } from './real/AppConfig';
 
 /**
  * 数据装配点：全工程唯一允许 `new Mock*` / `new Real*` 的地方（R-05）。
@@ -20,6 +23,9 @@ import { ViewPrefStore } from './store/ViewPrefStore';
  */
 export class DataServices {
   private static quote: QuoteProvider | undefined = undefined;
+  /** 底层数据源（Mock）；通道模式下由 `QuoteChannel` 包一层。 */
+  private static quoteRaw: QuoteProvider | undefined = undefined;
+  private static quoteChannelInstance: QuoteChannel | undefined = undefined;
   private static watch: WatchlistProvider | undefined = undefined;
   private static detail: DetailProvider | undefined = undefined;
   private static trade: TradeProvider | undefined = undefined;
@@ -30,12 +36,38 @@ export class DataServices {
   private static watchStore: WatchlistStore | undefined = undefined;
   private static pendingSync: WatchlistSyncService | undefined = undefined;
   private static viewPreferences: ViewPrefStore | undefined = undefined;
+  private static quoteCacheStore: QuoteCacheStore | undefined = undefined;
 
+  /**
+   * 行情源（M9-2）：按 `AppConfig.quoteSource` 装配。
+   * - `sandbox`（默认）：`QuoteChannel` 包住本地 Mock，获得 鉴权/帧校验/限流降级/健康状态；
+   * - `mock`：直连本地 Mock，最短链路（排查通道问题时可回退）。
+   * 本方法仍是全工程唯一 `new Mock*` 之处（R-05）。
+   */
   static quoteProvider(): QuoteProvider {
     if (DataServices.quote === undefined) {
-      DataServices.quote = new MockQuoteProvider();
+      const raw: QuoteProvider = new MockQuoteProvider();
+      DataServices.quoteRaw = raw;
+      if (AppConfig.useChannel()) {
+        const channel: QuoteChannel = new QuoteChannel(raw);
+        DataServices.quoteChannelInstance = channel;
+        DataServices.quote = channel;
+      } else {
+        DataServices.quote = raw;
+      }
     }
     return DataServices.quote;
+  }
+
+  /** 通道实例（仅通道模式下存在；调试面板/验收断言用）。 */
+  static quoteChannel(): QuoteChannel | undefined {
+    DataServices.quoteProvider();
+    return DataServices.quoteChannelInstance;
+  }
+
+  /** 当前数据源（只读，供调试面板展示）。 */
+  static quoteSource(): QuoteSource {
+    return AppConfig.quoteSource;
   }
 
   static watchlistProvider(): WatchlistProvider {
@@ -121,5 +153,16 @@ export class DataServices {
       DataServices.viewPreferences = new ViewPrefStore();
     }
     return DataServices.viewPreferences;
+  }
+
+  /**
+   * 行情缓存（M9-6）：`quote_cache_v1` 的唯一入口。
+   * 冷启由 EntryAbility 预热读盘；页面在等网络前先渲染缓存（AC-111 ≤800ms 出内容）。
+   */
+  static quoteCache(): QuoteCacheStore {
+    if (DataServices.quoteCacheStore === undefined) {
+      DataServices.quoteCacheStore = new QuoteCacheStore();
+    }
+    return DataServices.quoteCacheStore;
   }
 }

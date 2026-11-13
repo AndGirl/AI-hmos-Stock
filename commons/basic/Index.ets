@@ -9,6 +9,12 @@ export {
   NetState
 } from './src/main/ets/services/ConnectionHub';
 export {
+  QuoteHealth,
+  QuoteHealthHost,
+  QuoteHealthMode,
+  QuoteTokenState
+} from './src/main/ets/services/QuoteHealth';
+export {
   AnalyticsEvent,
   AnalyticsHost,
   AnalyticsHub,

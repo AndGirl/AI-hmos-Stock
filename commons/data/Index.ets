@@ -5,6 +5,7 @@
 export {
   ConnectionState,
   Market,
+  QuoteCapabilities,
   QuoteError,
   QuoteErrorReason,
   QuoteListener,
@@ -117,6 +118,7 @@ export {
 export { LocalSearchIndex, SearchMatch } from './src/main/ets/provider/LocalSearchIndex';
 export { buildHotWords, buildSearchEntries } from './src/main/ets/mock/SearchSeeds';
 export { StorageAdapter } from './src/main/ets/store/StorageAdapter';
+export { QuoteCacheStore } from './src/main/ets/store/QuoteCacheStore';
 export { SearchHistoryStore } from './src/main/ets/store/SearchHistoryStore';
 export {
   RemoveSnapshot,
@@ -148,4 +150,66 @@ export {
   WATCHLIST_MAX_ITEMS,
   WATCHLIST_MAX_USER_GROUPS
 } from './src/main/ets/rules/WatchlistRules';
+export {
+  BoardKind,
+  boardOf,
+  deriveLimitDown,
+  deriveLimitUp,
+  isStName,
+  LIMIT_RATIO_BSE,
+  LIMIT_RATIO_CHINEXT,
+  LIMIT_RATIO_MAIN,
+  LIMIT_RATIO_ST,
+  LIMIT_RATIO_STAR,
+  LIMIT_TOLERANCE_RATIO,
+  LimitPair,
+  limitRatioOf,
+  PRICE_MAX,
+  PRICE_MIN,
+  priceInRange,
+  priceWithinLimits,
+  resolveLimits
+} from './src/main/ets/rules/LimitRules';
+export {
+  applyPatch,
+  decideSeq,
+  mergePatch,
+  QuoteSnapshotLike,
+  SEQ_NONE,
+  SeqDecision,
+  SeqVerdict,
+  seqOf
+} from './src/main/ets/rules/QuoteMergeRules';
+export {
+  BAD_FRAME_RESUBSCRIBE_THRESHOLD,
+  FrameReference,
+  FrameStats,
+  FrameValidator,
+  FrameVerdict,
+  hasMutableField
+} from './src/main/ets/rules/FrameValidator';
+export {
+  POLL_INTERVAL_MS,
+  QuoteMode,
+  RATE_LIMIT_STREAK_TO_POLL,
+  RateLimitPolicy,
+  RateLimitState,
+  RECOVER_QUIET_MS,
+  THROTTLE_INTERVAL_MS
+} from './src/main/ets/rules/RateLimitRules';
+export {
+  cacheable,
+  cacheTtlMs,
+  capEntries,
+  endOfDay,
+  isTradingStatus,
+  pruneExpired,
+  QUOTE_CACHE_MAX,
+  QUOTE_CACHE_TTL_TRADING_MS,
+  QuoteCacheEntry
+} from './src/main/ets/rules/QuoteCacheRules';
+export { hashSeed, SESSION_SEED, SeededRandom } from './src/main/ets/mock/SeededRandom';
+export { AppConfig, QuoteSource } from './src/main/ets/real/AppConfig';
+export { AuthClient } from './src/main/ets/real/AuthClient';
+export { ChannelEntry, QuoteChannel } from './src/main/ets/real/QuoteChannel';
 

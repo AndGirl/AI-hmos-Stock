@@ -201,8 +201,9 @@ export struct WatchlistPage {
       color: AppColor.debug
     };
     const b4: promptAction.Button = { text: '清除视图记忆（回列表）', color: AppColor.debug };
+    const b5: promptAction.Button = { text: '行情通道…（M9 限流/鉴权/坏帧）', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
-      promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4];
+      promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4, b5];
     this.getUIContext().getPromptAction().showActionMenu({ title: '场景', buttons: buttons })
       .then((res: promptAction.ActionMenuSuccessResponse): void => {
         if (res.index === 0) {
@@ -227,6 +228,49 @@ export struct WatchlistPage {
           // 清除视图记忆（M8-4）：删 view_pref_v1 并回列表，用于验收「冷启不闪烁」的重复试验。
           this.vm.debugClearViewPref();
           this.toast('已清除视图记忆，回到列表视图');
+        } else if (res.index === 5) {
+          this.openQuoteMenu();
+        }
+      }).catch((): void => {
+    });
+  }
+
+  /**
+   * 二级：行情通道（M9-4 限流降频 / M9-2 鉴权 / M9-5 异常帧）。
+   * 全部只写 MockFaults，通道的下一个 1s tick 会把它翻译成可见状态（banner/日志）。
+   */
+  private openQuoteMenu(): void {
+    const b0: promptAction.Button = { text: '正常（清除注入）', color: AppColor.debug };
+    const b1: promptAction.Button = { text: '限流 429（降频 5s）', color: AppColor.debug };
+    const b2: promptAction.Button = { text: '鉴权失败 401', color: AppColor.debug };
+    const b3: promptAction.Button = { text: '异常帧注入（时间/越界/超限）', color: AppColor.debug };
+    const b4: promptAction.Button = { text: '恢复通道（打印统计）', color: AppColor.debug };
+    const b5: promptAction.Button = { text: '清除行情缓存', color: AppColor.debug };
+    const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
+      promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4, b5];
+    this.getUIContext().getPromptAction().showActionMenu({ title: '行情通道', buttons: buttons })
+      .then((res: promptAction.ActionMenuSuccessResponse): void => {
+        if (res.index === 0) {
+          this.vm.applyQuoteRateLimit(false, 0);
+          this.vm.applyQuoteUnauthorized(false);
+          this.vm.applyQuoteBadFrames(false);
+          this.toast('已清除行情注入');
+        } else if (res.index === 1) {
+          this.vm.applyQuoteRateLimit(true, 0);
+          this.toast('已注入 429（5s 后可见降频提示）');
+        } else if (res.index === 2) {
+          this.vm.applyQuoteUnauthorized(true);
+          this.toast('已注入 401（下一次心跳进未授权态）');
+        } else if (res.index === 3) {
+          this.vm.applyQuoteBadFrames(true);
+          this.toast('已注入异常帧（计数见恢复时统计）');
+        } else if (res.index === 4) {
+          this.toast(this.vm.recoverQuoteChannel());
+        } else if (res.index === 5) {
+          this.vm.clearQuoteCache().then((): void => {
+            this.toast('已清除行情缓存');
+          }).catch((): void => {
+          });
         }
       }).catch((): void => {
     });

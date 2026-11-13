@@ -7,6 +7,7 @@ import {
   QuotePatch,
   QuoteSink,
   QuoteSnapshot,
+  QuoteChannel,
   RemoveSnapshot,
   SearchProvider,
   SinkSubscription,
@@ -401,6 +402,60 @@ export class WatchlistVM {
       hub.force(fault);
     }
     hilog.info(0x0001, 'ConnLog', 'net_fault=%{public}s state=%{public}s', fault, hub.state);
+  }
+
+  /**
+   * 调试（M9-4）：注入行情限流。`retryAfterMs` 为 0 时按 5s 下限。
+   * 通道的下一个 1s tick 会把它变成「已降频」，并写 QuoteHealth 驱动提示条。
+   */
+  applyQuoteRateLimit(on: boolean, retryAfterMs: number): void {
+    MockFaults.quoteRateLimited = on;
+    MockFaults.quoteRetryAfterMs = on ? retryAfterMs : 0;
+    hilog.info(0x0001, 'QuoteLog', 'quote_rate_limit on=%{public}s retryAfter=%{public}d',
+      `${on}`, retryAfterMs);
+  }
+
+  /** 调试（M9-2）：注入鉴权失败（401 → 刷新一次 → 仍失败 → 未授权）。 */
+  applyQuoteUnauthorized(on: boolean): void {
+    MockFaults.quoteUnauthorized = on;
+    hilog.info(0x0001, 'QuoteLog', 'quote_unauthorized on=%{public}s', `${on}`);
+  }
+
+  /** 调试（M9-5）：注入异常帧（时间回退/价格越界/超涨跌停/空帧轮转）。 */
+  applyQuoteBadFrames(on: boolean): void {
+    MockFaults.quoteBadFrames = on;
+    hilog.info(0x0001, 'QuoteLog', 'quote_bad_frames on=%{public}s', `${on}`);
+  }
+
+  /** 调试：恢复行情通道（清限流 + 清鉴权锁定 + 重订阅），返回统计串。 */
+  recoverQuoteChannel(): string {
+    MockFaults.quoteRateLimited = false;
+    MockFaults.quoteRetryAfterMs = 0;
+    MockFaults.quoteUnauthorized = false;
+    MockFaults.quoteBadFrames = false;
+    const channel: QuoteChannel | undefined = DataServices.quoteChannel();
+    if (channel === undefined) {
+      return 'quote_source=mock（未启用通道）';
+    }
+    channel.recover(Date.now());
+    const text: string = channel.stats();
+    hilog.info(0x0001, 'QuoteLog', 'quote_recover %{public}s', text);
+    return text;
+  }
+
+  /** 调试：行情通道统计（AC-106/107/109/110 的断言来源）。 */
+  quoteChannelStats(): string {
+    const channel: QuoteChannel | undefined = DataServices.quoteChannel();
+    if (channel === undefined) {
+      return 'quote_source=mock（未启用通道）';
+    }
+    return channel.stats();
+  }
+
+  /** 调试（M9-6）：清空行情缓存（`quote_cache_v1`）。 */
+  async clearQuoteCache(): Promise<void> {
+    await DataServices.quoteCache().clear();
+    hilog.info(0x0001, 'QuoteLog', 'quote_cache_cleared');
   }
 
   /**

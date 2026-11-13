@@ -1,7 +1,9 @@
+import authClientTest from './AuthClient.test';
 import contractTest from './ContractTest.test';
 import frameValidatorTest from './FrameValidator.test';
 import limitRulesTest from './LimitRules.test';
 import quoteCacheRulesTest from './QuoteCacheRules.test';
+import quoteChannelTest from './QuoteChannel.test';
 import quoteMergeRulesTest from './QuoteMergeRules.test';
 import rateLimitRulesTest from './RateLimitRules.test';
 
@@ -16,4 +18,6 @@ export default function testsuite(): void {
   rateLimitRulesTest();
   quoteCacheRulesTest();
   contractTest();
+  authClientTest();
+  quoteChannelTest();
 }
