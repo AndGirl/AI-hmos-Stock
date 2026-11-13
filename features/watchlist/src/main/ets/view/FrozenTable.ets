@@ -42,6 +42,8 @@ export struct FrozenTable {
   @Param scrollSeq: number = 0;
   /** 多选比价态（FR-08.1）：行内出现选中圈与浅强调底。 */
   @Param selectMode: boolean = false;
+  /** 编辑模式（M7-5）：同一套勾选视觉，行为由外层决定。 */
+  @Param editMode: boolean = false;
   @Param selectedCodes: string[] = [];
   /** 断线置灰（CC-7.6）：只灰数据行，表头与名称列保持可读。 */
   @Param offline: boolean = false;
@@ -239,6 +241,7 @@ export struct FrozenTable {
                 row: row,
                 metrics: this.metrics,
                 selectMode: this.selectMode,
+                editMode: this.editMode,
                 selected: this.isSelected(row.code),
                 onTap: (code: string): void => {
                   this.onRowTap(code);
@@ -291,6 +294,7 @@ export struct FrozenTable {
                     row: row,
                     metrics: this.metrics,
                     selectMode: this.selectMode,
+                    editMode: this.editMode,
                     selected: this.isSelected(row.code),
                     onTap: (code: string): void => {
                       this.onRowTap(code);
@@ -316,7 +320,7 @@ export struct FrozenTable {
           .width(this.metrics.numericWidth)
           .height('100%')
           // 滑动条已隐藏（产品要求），底部仅保留 8vp 呼吸位
-          .padding({ bottom: AppDim.gap8 })
+          // .padding({ bottom: AppDim.gap8 })
           .backgroundColor(AppColor.bgPage)
         }
         .scrollable(ScrollDirection.Horizontal)

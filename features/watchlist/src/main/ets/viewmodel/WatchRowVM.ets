@@ -141,6 +141,8 @@ export class WatchRowVM {
   @Trace groups: string[] = [];
   @Trace suspended: boolean = false;
   @Trace isNew: boolean = false;
+  /** 待同步（M7-7）：离线加入、尚未与账号同步的条目标「待同步」。 */
+  @Trace pending: boolean = false;
   @Trace quote: SymbolQuote = new SymbolQuote();
   @Trace cells: string[] = [];
   @Trace dir: number = DIR_FLAT;
@@ -204,6 +206,9 @@ export class WatchRowVM {
     }
     if (this.isNew) {
       parts.push('新股');
+    }
+    if (this.pending) {
+      parts.push('待同步');
     }
     return parts.join('，');
   }

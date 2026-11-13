@@ -9,6 +9,8 @@ export struct NameCell {
   @Param metrics: TableMetrics = emptyMetrics();
   /** 多选比价态（FR-08.1）：左侧出现选中圈，整行浅强调底。 */
   @Param selectMode: boolean = false;
+  /** 编辑模式（M7-5）：同样出现选中圈，但行为是「勾选/移出」。 */
+  @Param editMode: boolean = false;
   @Param selected: boolean = false;
   @Event onTap: (code: string) => void = (code: string): void => {
   };
@@ -59,10 +61,10 @@ export struct NameCell {
         .width(this.metrics.nameWidth)
         .height(this.metrics.rowHeight)
         .backgroundColor(this.selected ? AppColor.accentSoft : this.flashColor())
-        .opacity(this.selected ? 1 : (this.selectMode ? 0.12 : this.flashAlpha))
+        .opacity(this.selected ? 1 : ((this.selectMode || this.editMode) ? 0.12 : this.flashAlpha))
 
       Row() {
-        if (this.selectMode) {
+        if (this.selectMode || this.editMode) {
           this.selectMark()
         }
 
@@ -100,6 +102,17 @@ export struct NameCell {
                 .padding({ left: 2, right: 2 })
                 .margin({ left: AppDim.gap4 })
             }
+            // 离线加入的自选（M7-7）：标「待同步」，联网后由同步服务清零。
+            if (this.row.pending) {
+              Text($r('app.string.watch_pending_tag'))
+                .fontSize(10)
+                .fontColor(AppColor.textSecondary)
+                .borderWidth(0.5)
+                .borderColor(AppColor.divider)
+                .borderRadius(2)
+                .padding({ left: 2, right: 2 })
+                .margin({ left: AppDim.gap4 })
+            }
           }
           .margin({ top: 2 })
         }
@@ -109,7 +122,7 @@ export struct NameCell {
       .width(this.metrics.nameWidth)
       .height(this.metrics.rowHeight)
       .padding({
-        left: this.selectMode ? AppDim.gap8 : AppDim.gap12,
+        left: (this.selectMode || this.editMode) ? AppDim.gap8 : AppDim.gap12,
         right: AppDim.gap4
       })
       .alignItems(VerticalAlign.Center)

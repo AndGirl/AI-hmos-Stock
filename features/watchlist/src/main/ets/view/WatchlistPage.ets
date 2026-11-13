@@ -1,9 +1,8 @@
 import { promptAction } from '@kit.ArkUI';
-import { BottomTabBar, AppColor, AppDim, showComingSoon, StateMode, StateView } from 'commons_ui';
+import { BottomTabBar, AppColor, AppDim, StateMode, StateView } from 'commons_ui';
 import {
   BreakpointHost,
   BreakpointService,
-  ComingSoonText,
   ConfigHost,
   ConfigService,
   ConnectionHost,
@@ -14,11 +13,14 @@ import {
 } from 'commons_basic';
 import { DetailAction, DetailContent, showDetailActionMenu } from 'detail';
 import { DEBUG } from '../../../../BuildProfile';
-import { WatchlistVM } from '../viewmodel/WatchlistVM';
+import { GroupEditReason, WATCHLIST_GROUP_NAME_MAX, WatchlistVM } from '../viewmodel/WatchlistVM';
 import { SortKey } from '../viewmodel/WatchlistVM';
 import { IndexStrip } from './IndexStrip';
 import { GroupTabs } from './GroupTabs';
 import { FrozenTable } from './FrozenTable';
+import { EditBar } from './EditBar';
+import { UndoBar } from './UndoBar';
+import { GroupManageSheet } from './GroupManageSheet';
 
 const SKELETON_ROWS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const SKELETON_CELLS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -30,24 +32,31 @@ const SKELETON_CELLS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const NARROW_PANE_TEST_VP: number = 0;
 
 /**
- * 自选列表页（FR-02）：指数条 + 分组 Tab + 11 列冻结表。
+ * 自选列表页（FR-02 / M7）：指数条 + 分组 Tab + 11 列冻结表。
  * 状态：骨架（加载）→ 内容 / 空态 / 失败可重试；单行刷新由 VM 的 @Trace 行对象驱动。
+ * M7 新增：底部「添加自选」胶囊、编辑模式（行前勾选 + 移出 + 二次确认）、5s 撤销条、分组管理。
  */
 @ComponentV2
 export struct WatchlistPage {
-  @Param onOpenDetail: (code: string) => void = () => {
+  @Param onOpenDetail: (code: string) => void = (code: string): void => {
   };
-  @Param onOpenPk: (codes: string[]) => void = () => {
+  @Param onOpenPk: (codes: string[]) => void = (codes: string[]): void => {
   };
   /** 平板 xl 右栏动作栏的「去交易」（§10-83）：弹窗归属窗口，由壳层挂载（INV-T4）。 */
-  @Param onOpenTrade: (code: string) => void = () => {
+  @Param onOpenTrade: (code: string) => void = (code: string): void => {
   };
   /** 空态「搜索添加」（M6-6）：进全屏搜索页，由壳层装配路由。 */
-  @Param onOpenSearch: () => void = () => {
+  @Param onOpenSearch: () => void = (): void => {
+  };
+  /** 添加自选（M7-7）：`groupId` 为当前分组（作为目标分组默认值），空串表示由板块派生。 */
+  @Param onOpenAdd: (groupId: string) => void = (groupId: string): void => {
+  };
+  /** 详情/右栏「自选设置」（M7-7）：带 code 打开添加页。 */
+  @Param onOpenAddForCode: (code: string) => void = (code: string): void => {
   };
   /** xl 分栏时底栏由本页左列承载（§10-83）：当前选中 Tab 与切换回调由壳层注入。 */
   @Param bottomBarIndex: number = 2;
-  @Param onSelectBottomTab: (index: number) => void = () => {
+  @Param onSelectBottomTab: (index: number) => void = (index: number): void => {
   };
   @Local vm: WatchlistVM = new WatchlistVM();
   @Local breakpoint: BreakpointService = BreakpointHost.getService();
@@ -57,6 +66,8 @@ export struct WatchlistPage {
   @Local perfRunning: boolean = false;
   /** xl 分栏右栏当前标的（M2：详情 pane 形态，点行只换 code 不路由）。 */
   @Local paneCode: string = '';
+  /** 分组管理浮层（M7-6）：页面内 Stack 承载，避免跨窗弹层（INV-T4）。 */
+  @Local groupSheet: boolean = false;
 
   aboutToAppear(): void {
     this.syncLayout();
@@ -73,7 +84,8 @@ export struct WatchlistPage {
 
   /**
    * 调试面板（仅 debug 构建；长按标题触发）：
-   * 字号档位、空态/失败态注入、帧率采样。release 由 BuildProfile.DEBUG=false 关闭。
+   * 字号档位、空态/失败态注入、帧率采样、填满至 50（AC-96）。
+   * release 由 BuildProfile.DEBUG=false 关闭。
    */
   private openDebugMenu(): void {
     if (!DEBUG) {
@@ -85,11 +97,10 @@ export struct WatchlistPage {
     };
     const b1: promptAction.Button = { text: '字号…', color: AppColor.debug };
     const b2: promptAction.Button = { text: '网络…', color: AppColor.debug };
-    const b3: promptAction.Button = { text: '清空自选（空态）', color: AppColor.debug };
-    const b4: promptAction.Button = { text: '模拟加载失败', color: AppColor.debug };
-    const b5: promptAction.Button = { text: '重置（字号 + 网络 + 数据）', color: AppColor.debug };
+    const b3: promptAction.Button = { text: '场景…（空态/失败/填满）', color: AppColor.debug };
+    const b4: promptAction.Button = { text: '重置（字号 + 网络 + 数据）', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
-      promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4, b5];
+      promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4];
     this.getUIContext().getPromptAction().showActionMenu({
       title: '调试面板（debug）',
       buttons: buttons
@@ -107,16 +118,33 @@ export struct WatchlistPage {
     } else if (index === 2) {
       this.openNetMenu();
     } else if (index === 3) {
-      // 真实清空（Store 落盘），不是展示层置空
-      this.vm.clearAll();
+      this.openSceneMenu();
     } else if (index === 4) {
-      this.vm.applyMockFault(true);
-    } else if (index === 5) {
       ConfigHost.getService().apply(1.0);
       this.vm.applyNetFault('none');
       // 重置：字号/网络恢复，并把自选恢复为 45 只种子
       this.vm.resetAll();
     }
+  }
+
+  /** 二级：数据场景（M7 验收：空态、失败态、50 上限）。 */
+  private openSceneMenu(): void {
+    const b0: promptAction.Button = { text: '清空自选（空态）', color: AppColor.debug };
+    const b1: promptAction.Button = { text: '模拟加载失败', color: AppColor.debug };
+    const b2: promptAction.Button = { text: '填满至 50（AC-96）', color: AppColor.debug };
+    const buttons: [promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2];
+    this.getUIContext().getPromptAction().showActionMenu({ title: '场景', buttons: buttons })
+      .then((res: promptAction.ActionMenuSuccessResponse): void => {
+        if (res.index === 0) {
+          // 真实清空（Store 落盘），不是展示层置空
+          this.vm.clearAll();
+        } else if (res.index === 1) {
+          this.vm.applyMockFault(true);
+        } else if (res.index === 2) {
+          this.vm.debugFillToLimit();
+        }
+      }).catch((): void => {
+    });
   }
 
   /** 二级：字号档位（M5-3 端到端用）。 */
@@ -190,6 +218,15 @@ export struct WatchlistPage {
     this.syncLayout();
   }
 
+  /** 联网后待同步清零：提示一次（M7-7 / AC-96），提示后清计数以允许下一次再提示。 */
+  @Monitor('vm.syncedCount')
+  onPendingSynced(): void {
+    if (this.vm.syncedCount > 0) {
+      this.toast($r('app.string.watch_synced_toast', `${this.vm.syncedCount}`));
+      this.vm.syncedCount = 0;
+    }
+  }
+
   /** 列表可用宽：sm/md/lg 单列全宽（屏宽 − 32 内边距）；xl 取左栏 523vp（设计 §5.2.9）。 */
   private syncLayout(): void {
     const screenWidth: number = this.breakpoint.viewportWidth > 0 ? this.breakpoint.viewportWidth : 360;
@@ -221,8 +258,14 @@ export struct WatchlistPage {
     this.onOpenDetail(code);
   }
 
-  /** 多选态下点行 = 切换选中（FR-08.1 第三入口）；达 3 只上限提示不加入。 */
+  /**
+   * 行点击优先级（M7-5）：编辑态 = 勾选（不跳详情）> 比价多选 = 切换选中 > 常规 = 进详情/右栏。
+   */
   private handleRowTap(code: string): void {
+    if (this.vm.editMode) {
+      this.vm.toggleEditSelect(code);
+      return;
+    }
     if (!this.vm.selectMode) {
       this.openRow(code);
       return;
@@ -230,6 +273,15 @@ export struct WatchlistPage {
     if (!this.vm.toggleSelect(code)) {
       this.toast($r('app.string.watch_select_max'));
     }
+  }
+
+  private handleRowLongPress(code: string): void {
+    // 编辑态里长按与点击等价，避免和「勾选」两套语义打架。
+    if (this.vm.editMode) {
+      this.vm.toggleEditSelect(code);
+      return;
+    }
+    this.enterSelect(code);
   }
 
   private enterSelect(code: string): void {
@@ -252,9 +304,151 @@ export struct WatchlistPage {
     this.getUIContext().getPromptAction().showToast({ message: message, duration: 1800 });
   }
 
+  /** 添加自选：当前分组作为目标分组默认值（「全部」不预置，交给板块派生）。 */
+  private openAdd(): void {
+    const groupId: string = this.vm.selectedGroupId === 'all' ? '' : this.vm.selectedGroupId;
+    this.onOpenAdd(groupId);
+  }
+
+  /** 编辑模式「移出」二次确认（AC-98）。 */
+  private confirmRemoveSelected(): void {
+    if (this.vm.editSelected.length === 0) {
+      return;
+    }
+    this.getUIContext().showAlertDialog({
+      title: $r('app.string.watch_remove_confirm'),
+      message: $r('app.string.watch_remove_confirm_desc'),
+      primaryButton: {
+        value: $r('app.string.watch_select_cancel'),
+        action: (): void => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.watch_edit_remove_all'),
+        action: (): void => {
+          this.vm.removeEditSelected();
+        }
+      }
+    });
+  }
+
+  /** 分组展示名（弹窗标题用）：用户组用 name，遗留 `user` 组与系统组走 i18n（View 负责中文）。 */
+  private groupNameOf(id: string): string {
+    for (let i = 0; i < this.vm.groups.length; i++) {
+      const group = this.vm.groups[i];
+      if (group.id !== id) {
+        continue;
+      }
+      if (group.name.length > 0) {
+        return group.name;
+      }
+      break;
+    }
+    return this.stringOf(this.groupLabelRes(id));
+  }
+
+  /** 取资源字符串（异步能力不可用/异常时回落空串，不阻塞确认框）。 */
+  private stringOf(res: Resource): string {
+    try {
+      const ctx = this.getUIContext().getHostContext();
+      if (ctx === undefined) {
+        return '';
+      }
+      return ctx.resourceManager.getStringSync(res.id);
+    } catch (err) {
+      return '';
+    }
+  }
+
+  private groupLabelRes(id: string): Resource {
+    if (id === 'user') {
+      return $r('app.string.watch_group_user');
+    }
+    if (id === 'fin') {
+      return $r('app.string.watch_group_fin');
+    }
+    if (id === 'star') {
+      return $r('app.string.watch_group_star');
+    }
+    if (id === 'kcb') {
+      return $r('app.string.watch_group_kcb');
+    }
+    return $r('app.string.watch_group_all');
+  }
+
+  /** 删除分组二次确认（AC-99）：提示「只删归属不删股票」。 */
+  private confirmDeleteGroup(id: string): void {
+    this.getUIContext().showAlertDialog({
+      title: $r('app.string.group_delete_confirm', this.groupNameOf(id)),
+      message: $r('app.string.group_delete_desc'),
+      primaryButton: {
+        value: $r('app.string.group_cancel'),
+        action: (): void => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.group_delete'),
+        action: (): void => {
+          this.vm.deleteGroup(id).then((reason: GroupEditReason): void => {
+            this.toast(this.groupReasonText(reason, 'deleted'));
+          });
+        }
+      }
+    });
+  }
+
+  /** 分组编辑结论 → 文案（VM 只回枚举，中文留在 View）。 */
+  private groupReasonText(reason: GroupEditReason, ok: string): ResourceStr {
+    if (reason === 'limit') {
+      return $r('app.string.group_limit');
+    }
+    if (reason === 'empty') {
+      return $r('app.string.group_name_empty');
+    }
+    if (reason === 'too_long') {
+      return $r('app.string.group_name_too_long');
+    }
+    if (reason === 'emoji') {
+      return $r('app.string.group_name_emoji');
+    }
+    if (reason === 'duplicate') {
+      return $r('app.string.group_name_duplicate');
+    }
+    if (reason === 'system_readonly') {
+      return $r('app.string.group_readonly');
+    }
+    if (ok === 'created') {
+      return $r('app.string.group_created', this.groupSheetNewName);
+    }
+    if (ok === 'renamed') {
+      return $r('app.string.group_renamed');
+    }
+    if (ok === 'deleted') {
+      return $r('app.string.group_deleted');
+    }
+    return $r('app.string.add_failed');
+  }
+
+  /** 新建成功提示要带组名：由 sheet 的上抛参数暂存。 */
+  private groupSheetNewName: string = '';
+
+  private handleCreateGroup(name: string): void {
+    this.groupSheetNewName = name;
+    this.vm.createGroup(name).then((reason: GroupEditReason): void => {
+      this.toast(this.groupReasonText(reason, 'created'));
+    });
+  }
+
+  private handleRenameGroup(id: string, name: string): void {
+    this.groupSheetNewName = name;
+    this.vm.renameGroup(id, name).then((reason: GroupEditReason): void => {
+      this.toast(this.groupReasonText(reason, 'renamed'));
+    });
+  }
+
   private handlePaneAction(code: string, action: DetailAction): void {
     if (action === 'watchlist') {
-      showComingSoon(this.getUIContext(), ComingSoonText.ADD_WATCHLIST);
+      this.onOpenAddForCode(code);
       return;
     }
     if (action === 'pk') {
@@ -275,14 +469,12 @@ export struct WatchlistPage {
   }
 
   /**
-   * 自选全空引导（2026-11-13 需求变更）：
-   * 不再用通用占位 + 单个「搜索添加」，改为「图标位 + 标题 + 一句说明 + 主按钮（去行情）+ 文字链（搜索添加）」。
-   * 基线 §4.1 规则 6「空态最多一个操作入口」经确认放宽为「一个主按钮 + 一个文字链」。
+   * 自选全空引导（2026-11-13 需求变更，M7 调整主按钮）：
+   * 主按钮从「去行情加自选」换成「添加自选」（M7 已落地添加页），文字链保留「搜索添加」。
    */
   @Builder
   emptyGuide() {
     Column() {
-      // 用「自选」Tab 同款图标，避免通用占位图（相框）被误读成加载失败
       Image($r('app.media.ic_tab_watchlist'))
         .width(64)
         .height(64)
@@ -302,8 +494,7 @@ export struct WatchlistPage {
         .maxLines(2)
         .margin({ top: AppDim.gap8, left: AppDim.gap24, right: AppDim.gap24 })
 
-      // 主入口：切到「行情」Tab（index=3），用户可直接点行尾「＋」
-      Text($r('app.string.watch_empty_go_market'))
+      Text($r('app.string.watch_add_entry'))
         .fontSize(15)
         .fontColor(AppColor.textOnAccent)
         .height(44)
@@ -312,12 +503,11 @@ export struct WatchlistPage {
         .backgroundColor(AppColor.accent)
         .borderRadius(AppDim.pillRadius)
         .margin({ top: AppDim.gap24 })
-        .accessibilityText($r('app.string.watch_empty_go_market'))
+        .accessibilityText($r('app.string.watch_add_entry'))
         .onClick(() => {
-          this.onSelectBottomTab(3);
+          this.openAdd();
         })
 
-      // 次要入口：全屏搜索页（沿用 M6 三入口之一）
       Text($r('app.string.empty_watchlist_action_search'))
         .fontSize(13)
         .fontColor(AppColor.textSecondary)
@@ -411,6 +601,31 @@ export struct WatchlistPage {
     .border({ width: { top: 0.5 }, color: AppColor.divider })
   }
 
+  /** 底部「添加自选」胶囊（M7-7 E1）：列表滚动区之外、底栏之上。 */
+  @Builder
+  addCapsule() {
+    Row() {
+      Text($r('app.string.watch_add_entry'))
+        .fontSize(14)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColor.textOnAccent)
+        .height(40)
+        .padding({ left: AppDim.gap24, right: AppDim.gap24 })
+        .textAlign(TextAlign.Center)
+        .backgroundColor(AppColor.accent)
+        .borderRadius(AppDim.pillRadius)
+        .accessibilityText($r('app.string.watch_add_entry'))
+        .onClick(() => {
+          this.openAdd();
+        })
+    }
+    .width('100%')
+    .height(52)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor(AppColor.bgPage)
+  }
+
   @Builder
   hDivider() {
     Divider()
@@ -419,177 +634,293 @@ export struct WatchlistPage {
       .width('100%')
   }
 
-  build() {
+  /** 分组管理浮层：底部半屏 + 遮罩，点遮罩关闭（M7-6）。 */
+  @Builder
+  groupManageOverlay() {
     Column() {
-      Row() {
-        if (this.vm.selectMode) {
-          Text($r('app.string.watch_select_count', this.vm.selectedCodes.length.toString()))
-            .fontSize(22)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(AppColor.textPrimary)
-          Blank()
-          Text($r('app.string.watch_select_cancel'))
-            .fontSize(13)
-            .fontColor(AppColor.textSecondary)
-            .height(32)
-            .padding({ left: AppDim.gap8, right: AppDim.gap8 })
-            .onClick(() => {
-              this.vm.cancelSelect();
-            })
-        } else {
-          Text($r('app.string.watchlist_title'))
-            .fontSize(30)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(AppColor.textPrimary)
-        }
-      }
-      .width('100%')
-      .padding({ left: AppDim.gap16, right: AppDim.gap16, top: AppDim.gap16, bottom: AppDim.gap4 })
-      .gesture(
-        LongPressGesture({ repeat: false })
-          .onAction(() => {
-            this.openDebugMenu();
-          })
-      )
+      Column()
+        .width('100%')
+        .layoutWeight(1)
+        .backgroundColor(AppColor.scrim)
+        .onClick(() => {
+          this.groupSheet = false;
+        })
 
-      Row() {
-        Column() {
-          // 自选全空时指数条/分组页签/卡片·排序全无意义，整段隐藏，只留引导式空态。
-          if (this.vm.emptyKind !== 'all') {
-            // 分组为空时指数条也没有条目，只留「推荐」卡会显得空荡，一并隐藏。
-            if (this.vm.rowCount > 0) {
-              IndexStrip({
-                source: this.vm.indexBarSource(),
-                version: this.vm.stripVersion
+      GroupManageSheet({
+        groups: this.vm.groups,
+        nameMax: WATCHLIST_GROUP_NAME_MAX,
+        onCreate: (name: string): void => {
+          this.handleCreateGroup(name);
+        },
+        onRename: (id: string, name: string): void => {
+          this.handleRenameGroup(id, name);
+        },
+        onDelete: (id: string): void => {
+          this.confirmDeleteGroup(id);
+        },
+        onClose: (): void => {
+          this.groupSheet = false;
+        }
+      })
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.End)
+  }
+
+  build() {
+    Stack({ alignContent: Alignment.Bottom }) {
+      Column() {
+        Row() {
+          if (this.vm.editMode) {
+            Text($r('app.string.watch_select_count', this.vm.editSelected.length.toString()))
+              .fontSize(22)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(AppColor.textPrimary)
+            Blank()
+            Text($r('app.string.watch_edit_done'))
+              .fontSize(14)
+              .fontColor(AppColor.accent)
+              .height(32)
+              .padding({ left: AppDim.gap8, right: AppDim.gap8 })
+              .onClick(() => {
+                this.vm.exitEdit();
+              })
+          } else if (this.vm.selectMode) {
+            Text($r('app.string.watch_select_count', this.vm.selectedCodes.length.toString()))
+              .fontSize(22)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(AppColor.textPrimary)
+            Blank()
+            Text($r('app.string.watch_select_cancel'))
+              .fontSize(13)
+              .fontColor(AppColor.textSecondary)
+              .height(32)
+              .padding({ left: AppDim.gap8, right: AppDim.gap8 })
+              .onClick(() => {
+                this.vm.cancelSelect();
+              })
+          } else {
+            Text($r('app.string.watchlist_title'))
+              .fontSize(30)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(AppColor.textPrimary)
+              .layoutWeight(1)
+            // M7-5/M7-6 入口：编辑 / 管理（分组栏右侧留给 M8 的卡片切换与排序）。
+            if (this.vm.state !== 'loading' && this.vm.emptyKind !== 'all') {
+              Text($r('app.string.watch_manage'))
+                .fontSize(13)
+                .fontColor(AppColor.textSecondary)
+                .height(32)
+                .padding({ left: AppDim.gap8, right: AppDim.gap8 })
+                .onClick(() => {
+                  this.groupSheet = true;
+                })
+              Text($r('app.string.watch_edit'))
+                .fontSize(13)
+                .fontColor(AppColor.textSecondary)
+                .height(32)
+                .padding({ left: AppDim.gap8, right: AppDim.gap8 })
+                .onClick(() => {
+                  this.vm.toggleEdit();
+                })
+            }
+          }
+        }
+        .width('100%')
+        .padding({ left: AppDim.gap16, right: AppDim.gap16, top: AppDim.gap16, bottom: AppDim.gap4 })
+        .alignItems(VerticalAlign.Center)
+        .gesture(
+          LongPressGesture({ repeat: false })
+            .onAction(() => {
+              this.openDebugMenu();
+            })
+        )
+
+        Row() {
+          Column() {
+            // 自选全空时指数条/分组页签/卡片·排序全无意义，整段隐藏，只留引导式空态。
+            if (this.vm.emptyKind !== 'all') {
+              // 分组为空时指数条也没有条目，只留「推荐」卡会显得空荡，一并隐藏。
+              if (this.vm.rowCount > 0) {
+                IndexStrip({
+                  source: this.vm.indexBarSource(),
+                  version: this.vm.stripVersion
+                })
+
+                this.hDivider()
+              }
+
+              GroupTabs({
+                groups: this.vm.groups,
+                onSelect: (id: string): void => {
+                  this.vm.selectGroup(id);
+                },
+                onLongPress: (id: string): void => {
+                  // 长按分组 = 进分组管理（M7-6），并停在该分组上下文里。
+                  this.groupSheet = true;
+                }
               })
 
               this.hDivider()
             }
 
-            GroupTabs({
-              groups: this.vm.groups,
-              onSelect: (id: string): void => {
-                this.vm.selectGroup(id);
-              }
-            })
-
-            this.hDivider()
-          }
-
-      if (this.vm.state === 'loading') {
-        this.skeleton()
-      } else if (this.vm.state === 'error') {
-        StateView({
-          mode: StateMode.ERROR,
-          stateDesc: $r('app.string.watch_list_failed'),
-          showAction: true,
-          actionLabel: $r('app.string.retry'),
-          onAction: (): void => {
-            this.vm.retry();
-          }
-        })
-          .width('100%')
-          .layoutWeight(1)
-      } else if (this.vm.emptyKind === 'all') {
-        this.emptyGuide()
-      } else if (this.vm.state === 'empty') {
-        // 分组为空但自选有票：只提示换分组，不复用「暂无自选」（2026-11-13）。
-        StateView({
-          mode: StateMode.EMPTY,
-          stateDesc: $r('app.string.watch_group_empty_desc'),
-          showAction: true,
-          actionLabel: $r('app.string.watch_group_empty_action'),
-          iconRes: $r('app.media.ic_tab_watchlist'),
-          onAction: (): void => {
-            this.vm.selectGroup('all');
-          }
-        })
-          .width('100%')
-          .layoutWeight(1)
-      } else {
-        FrozenTable({
-          rows: this.vm.rows,
-          metrics: this.vm.metrics,
-          sortKey: this.vm.sortKey,
-          sortDir: this.vm.sortDir,
-          initialVOffset: this.vm.vOffset,
-          initialHOffset: this.vm.hOffset,
-          scrollToIndex: this.vm.scrollIndex,
-          scrollSeq: this.vm.scrollSeq,
-          autoScroll: this.perfRunning,
-          selectMode: this.vm.selectMode,
-          selectedCodes: this.vm.selectedCodes,
-          offline: this.hub.state === 'offline',
-          delayed: this.hub.state === 'delayed',
-          onSort: (key: SortKey): void => {
-            this.vm.cycleSort(key);
-          },
-          onRowTap: (code: string): void => {
-            this.handleRowTap(code);
-          },
-          onRowLongPress: (code: string): void => {
-            this.enterSelect(code);
-          },
-          onScrollY: (offset: number): void => {
-            this.vm.onVerticalOffset(offset);
-          },
-          onScrollX: (offset: number): void => {
-            this.vm.onHorizontalOffset(offset);
-          }
-        })
-        }
-
-          if (this.vm.selectMode) {
-            this.selectBar()
-          }
-
-          // xl 分栏：底栏收进左列，右栏（含动作栏）才能贴到窗口底部（§10-83 / 设计稿）。
-          if (this.breakpoint.isSplit) {
-            BottomTabBar({
-              currentIndex: this.bottomBarIndex,
-              bottomInset: this.safeArea.bottomInset,
-              onSelect: (index: number): void => {
-                this.onSelectBottomTab(index);
-              }
-            })
-          }
-        }
-        .width(this.breakpoint.isSplit ? 523 : '100%')
-        .height('100%')
-
-        if (this.breakpoint.isSplit) {
-          // xl 右栏：详情 pane 形态（与 page 共用 DetailContent，compact 打开）。
-          Column() {
-            if (this.effectivePaneCode().length > 0) {
-              DetailContent({
-                code: this.effectivePaneCode(),
-                mode: 'pane',
-                contentWidth: this.paneWidth(),
-                bottomInset: this.safeArea.bottomInset,
-                onAction: (action: DetailAction): void => {
-                  this.handlePaneAction(this.effectivePaneCode(), action);
+            if (this.vm.state === 'loading') {
+              this.skeleton()
+            } else if (this.vm.state === 'error') {
+              StateView({
+                mode: StateMode.ERROR,
+                stateDesc: $r('app.string.watch_list_failed'),
+                showAction: true,
+                actionLabel: $r('app.string.retry'),
+                onAction: (): void => {
+                  this.vm.retry();
                 }
               })
-            } else {
+                .width('100%')
+                .layoutWeight(1)
+            } else if (this.vm.emptyKind === 'all') {
+              this.emptyGuide()
+            } else if (this.vm.state === 'empty') {
+              // 分组为空但自选有票：只提示换分组，不复用「暂无自选」（2026-11-13）。
               StateView({
                 mode: StateMode.EMPTY,
-                stateDesc: $r('app.string.empty_watchlist_desc')
+                stateDesc: $r('app.string.watch_group_empty_desc'),
+                showAction: true,
+                actionLabel: $r('app.string.watch_group_empty_action'),
+                iconRes: $r('app.media.ic_tab_watchlist'),
+                onAction: (): void => {
+                  this.vm.selectGroup('all');
+                }
               })
                 .width('100%')
-                .height('100%')
+                .layoutWeight(1)
+            } else {
+              FrozenTable({
+                rows: this.vm.rows,
+                metrics: this.vm.metrics,
+                sortKey: this.vm.sortKey,
+                sortDir: this.vm.sortDir,
+                initialVOffset: this.vm.vOffset,
+                initialHOffset: this.vm.hOffset,
+                scrollToIndex: this.vm.scrollIndex,
+                scrollSeq: this.vm.scrollSeq,
+                autoScroll: this.perfRunning,
+                selectMode: this.vm.selectMode,
+                editMode: this.vm.editMode,
+                selectedCodes: this.vm.editMode ? this.vm.editSelected : this.vm.selectedCodes,
+                offline: this.hub.state === 'offline',
+                delayed: this.hub.state === 'delayed',
+                onSort: (key: SortKey): void => {
+                  this.vm.cycleSort(key);
+                },
+                onRowTap: (code: string): void => {
+                  this.handleRowTap(code);
+                },
+                onRowLongPress: (code: string): void => {
+                  this.handleRowLongPress(code);
+                },
+                onScrollY: (offset: number): void => {
+                  this.vm.onVerticalOffset(offset);
+                },
+                onScrollX: (offset: number): void => {
+                  this.vm.onHorizontalOffset(offset);
+                }
+              })
+            }
+
+            // 底部胶囊（M7-7 E1）：常规态才出现（编辑/多选态有各自的底栏）；
+            // 分组空态也保留，便于直接补股票。
+            if (!this.vm.editMode && !this.vm.selectMode && this.vm.state !== 'loading' &&
+              this.vm.state !== 'error' && this.vm.emptyKind !== 'all') {
+              this.addCapsule()
+            }
+
+            if (this.vm.selectMode) {
+              this.selectBar()
+            }
+
+            if (this.vm.editMode) {
+              EditBar({
+                count: this.vm.editSelected.length,
+                allSelected: this.vm.isAllSelected(),
+                onSelectAll: (): void => {
+                  this.vm.selectAllRows();
+                },
+                onCancel: (): void => {
+                  this.vm.exitEdit();
+                },
+                onRemove: (): void => {
+                  this.confirmRemoveSelected();
+                }
+              })
+            }
+
+            // 撤销条（M7-4）：底栏上方，全局单条。
+            if (this.vm.undoVisible) {
+              UndoBar({
+                count: this.vm.undoCount,
+                seconds: this.vm.undoLeft,
+                onUndo: (): void => {
+                  this.vm.undoRemove();
+                }
+              })
+            }
+
+            // xl 分栏：底栏收进左列，右栏（含动作栏）才能贴到窗口底部（§10-83 / 设计稿）。
+            if (this.breakpoint.isSplit) {
+              BottomTabBar({
+                currentIndex: this.bottomBarIndex,
+                bottomInset: this.safeArea.bottomInset,
+                onSelect: (index: number): void => {
+                  this.onSelectBottomTab(index);
+                }
+              })
             }
           }
+          .width(this.breakpoint.isSplit ? 523 : '100%')
           .height('100%')
-          .width(this.paneWidth())
-          .border({ width: { left: 0.5 }, color: AppColor.divider })
+
+          if (this.breakpoint.isSplit) {
+            // xl 右栏：详情 pane 形态（与 page 共用 DetailContent，compact 打开）。
+            Column() {
+              if (this.effectivePaneCode().length > 0) {
+                DetailContent({
+                  code: this.effectivePaneCode(),
+                  mode: 'pane',
+                  contentWidth: this.paneWidth(),
+                  bottomInset: this.safeArea.bottomInset,
+                  onAction: (action: DetailAction): void => {
+                    this.handlePaneAction(this.effectivePaneCode(), action);
+                  }
+                })
+              } else {
+                StateView({
+                  mode: StateMode.EMPTY,
+                  stateDesc: $r('app.string.empty_watchlist_desc')
+                })
+                  .width('100%')
+                  .height('100%')
+              }
+            }
+            .height('100%')
+            .width(this.paneWidth())
+            .border({ width: { left: 0.5 }, color: AppColor.divider })
+          }
         }
+        .width('100%')
+        .layoutWeight(1)
+        .alignItems(VerticalAlign.Top)
       }
       .width('100%')
-      .layoutWeight(1)
-      .alignItems(VerticalAlign.Top)
+      .height('100%')
+      .backgroundColor(AppColor.bgPage)
+
+      if (this.groupSheet) {
+        this.groupManageOverlay()
+      }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(AppColor.bgPage)
   }
 }

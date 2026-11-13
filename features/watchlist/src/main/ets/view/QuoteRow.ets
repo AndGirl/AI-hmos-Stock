@@ -14,6 +14,8 @@ export struct QuoteRow {
   @Param metrics: TableMetrics = emptyMetrics();
   /** 多选比价态：整行浅强调底（与名称列同色，保证跨列视觉一致）。 */
   @Param selectMode: boolean = false;
+  /** 编辑模式（M7-5）：与多选态同一套选中底。 */
+  @Param editMode: boolean = false;
   @Param selected: boolean = false;
   @Event onTap: (code: string) => void = () => {
   };
@@ -52,7 +54,7 @@ export struct QuoteRow {
         .width(this.metrics.numericWidth)
         .height(this.metrics.rowHeight)
         .backgroundColor(this.selected ? AppColor.accentSoft : this.flashColor())
-        .opacity(this.selected ? 1 : (this.selectMode ? 0.12 : this.flashAlpha))
+        .opacity(this.selected ? 1 : ((this.selectMode || this.editMode) ? 0.12 : this.flashAlpha))
 
       Row() {
         ForEach(CELL_INDEXES, (index: number) => {

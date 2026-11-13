@@ -1,18 +1,27 @@
 import {
   ConnectionState,
   DataServices,
+  GroupEditReason,
   MockFaults,
   NetFault,
   QuotePatch,
   QuoteSink,
   QuoteSnapshot,
+  RemoveSnapshot,
+  SearchProvider,
   SinkSubscription,
+  StockBrowsePage,
+  WatchAddInput,
+  WatchGroup,
   WatchItem,
+  WatchlistAddOutcome,
   WatchlistChange,
   WatchlistChangeListener,
+  WatchlistGroupOutcome,
+  WatchlistRemoveOutcome,
   WatchlistStore
 } from 'commons_data';
-import { ConnectionHost, ConnectionHub } from 'commons_basic';
+import { AnalyticsHost, AnalyticsHub, AnalyticsParam, ConnectionHost, ConnectionHub } from 'commons_basic';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { compareRows, nextSortDir, SortDir, SortKey } from '../repository/SortRules';
 import { computeTableMetrics, TableMetrics } from '../repository/TableMetrics';
@@ -30,10 +39,13 @@ export type WatchPageState = 'loading' | 'content' | 'empty' | 'error';
  */
 export type WatchEmptyKind = 'none' | 'all' | 'group';
 
-/** 分组 Tab：文案由 View 按 id 走 i18n。 */
+/** 分组 Tab：系统组的文案由 View 按 id 走 i18n；用户组直接用 name（M7-6 修 T-03）。 */
 @ObservedV2
 export class GroupTabVM {
   id: string = '';
+  @Trace name: string = '';
+  @Trace system: boolean = false;
+  @Trace isUser: boolean = false;
   @Trace count: number = 0;
   @Trace selected: boolean = false;
 
@@ -87,15 +99,29 @@ export class WatchlistVM {
   /** 新增行定位（M7-4 提前）：自选页据此 scrollToIndex 并高亮新行。 */
   @Trace scrollIndex: number = -1;
   @Trace scrollSeq: number = 0;
+  /** 编辑模式（M7-5）：行前勾选、底部「移出（N）」，与比价多选互斥。 */
+  @Trace editMode: boolean = false;
+  @Trace editSelected: string[] = [];
+  /** 撤销条（M7-4）：5s 内可恢复原位置与原分组。 */
+  @Trace undoVisible: boolean = false;
+  @Trace undoCount: number = 0;
+  @Trace undoLeft: number = 0;
+  /** 联网后清零的待同步条数（视图提示一次）。 */
+  @Trace syncedCount: number = 0;
 
   private repo: WatchlistRepository = new WatchlistRepository();
   private store: WatchlistStore = DataServices.watchlistStore();
+  private analytics: AnalyticsHub = AnalyticsHost.get();
+  private undoSnapshots: RemoveSnapshot[] = [];
+  private undoTimer: number = -1;
   private storeListener: WatchlistChangeListener = (change: WatchlistChange): void => {
     this.onStoreChanged(change);
   };
   private storeAttached: boolean = false;
   private syncing: boolean = false;
   private pendingFocus: string = '';
+  /** 同步进行中又来了变更：结束后必须再同步一次（分组变更没有焦点 code，不能只靠 pendingFocus）。 */
+  private pendingSync: boolean = false;
   private allRows: WatchRowVM[] = [];
   private rowByCode: Map<string, WatchRowVM> = new Map<string, WatchRowVM>();
   private indexBar: IndexBarDataSource = new IndexBarDataSource();
@@ -228,10 +254,203 @@ export class WatchlistVM {
     this.subscribe();
     this.attachStore();
     this.syncFromStore('');
+    // 回到前台补一次待同步（网络恢复时页面可能不在前台）。
+    DataServices.watchlistSync().trySync();
+  }
+
+  /** 编辑模式开关（M7-5）：与比价多选互斥，退出时清空勾选。 */
+  toggleEdit(): void {
+    if (this.editMode) {
+      this.exitEdit();
+      return;
+    }
+    this.selectMode = false;
+    this.selectedCodes = [];
+    this.editMode = true;
+    this.editSelected = [];
+    hilog.info(0x0001, 'WatchLog', 'edit_mode=on');
+  }
+
+  exitEdit(): void {
+    if (!this.editMode && this.editSelected.length === 0) {
+      return;
+    }
+    this.editMode = false;
+    this.editSelected = [];
+    hilog.info(0x0001, 'WatchLog', 'edit_mode=off');
+  }
+
+  isEditSelected(code: string): boolean {
+    return this.editSelected.indexOf(code) >= 0;
+  }
+
+  /** 编辑态点行 = 勾选（AC-98），不跳详情。 */
+  toggleEditSelect(code: string): void {
+    const index: number = this.editSelected.indexOf(code);
+    if (index >= 0) {
+      this.editSelected.splice(index, 1);
+      return;
+    }
+    this.editSelected.push(code);
+  }
+
+  /** 全选/取消全选：只作用于当前分组可见行；「是否全选」按包含关系判断（不是数量相等）。 */
+  selectAllRows(): void {
+    if (this.isAllSelected()) {
+      this.editSelected = [];
+      return;
+    }
+    const codes: string[] = [];
+    for (let i = 0; i < this.rows.length; i++) {
+      codes.push(this.rows[i].code);
+    }
+    this.editSelected = codes;
+  }
+
+  /** 当前分组可见行是否已全选（两个分组行数相同时不能只看长度）。 */
+  isAllSelected(): boolean {
+    if (this.rows.length === 0) {
+      return false;
+    }
+    for (let i = 0; i < this.rows.length; i++) {
+      if (this.editSelected.indexOf(this.rows[i].code) < 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  clearEditSelection(): void {
+    this.editSelected = [];
+  }
+
+  /**
+   * 移出所选中（AC-98）：确认框在 View，成功后排一条 5s 撤销（AC-97）。
+   * 返回实际移出条数。
+   */
+  async removeEditSelected(): Promise<number> {
+    if (this.editSelected.length === 0) {
+      return 0;
+    }
+    const codes: string[] = this.editSelected.slice();
+    const outcome: WatchlistRemoveOutcome = await this.store.remove(codes);
+    this.exitEdit();
+    if (outcome.removed.length > 0) {
+      this.startUndo(outcome.snapshots);
+      this.analytics.track('watch_remove_batch', [
+        new AnalyticsParam('count', `${outcome.removed.length}`)
+      ]);
+    }
+    this.syncFromStore('');
+    return outcome.removed.length;
+  }
+
+  /** 撤销移出（AC-97）：恢复原位置 + 原分组 + 原 addedAt/pending。 */
+  async undoRemove(): Promise<boolean> {
+    if (!this.undoVisible) {
+      return false;
+    }
+    const snapshots: RemoveSnapshot[] = this.undoSnapshots.slice();
+    this.stopUndo();
+    const restored: number = await this.store.restore(snapshots);
+    // 恢复的条目可能带着旧 pending：在线时立刻清一次，避免"待同步"残留到下次进页面。
+    DataServices.watchlistSync().trySync();
+    this.syncFromStore('');
+    return restored > 0;
+  }
+
+  /** 分组管理（M7-6）：返回值直接是拒绝原因，文案在 View 翻译。 */
+  async createGroup(name: string): Promise<GroupEditReason> {
+    const outcome: WatchlistGroupOutcome = await this.store.createGroup(name);
+    if (outcome.succeeded()) {
+      this.analytics.track('watch_group_create', []);
+      this.syncFromStore('');
+    }
+    return outcome.reason;
+  }
+
+  async renameGroup(id: string, name: string): Promise<GroupEditReason> {
+    const outcome: WatchlistGroupOutcome = await this.store.renameGroup(id, name);
+    if (outcome.succeeded()) {
+      this.analytics.track('watch_group_rename', []);
+      this.syncFromStore('');
+    }
+    return outcome.reason;
+  }
+
+  async deleteGroup(id: string): Promise<GroupEditReason> {
+    const outcome: WatchlistGroupOutcome = await this.store.deleteGroup(id);
+    if (outcome.succeeded()) {
+      if (this.selectedGroupId === id) {
+        this.selectedGroupId = 'all';
+        this.updateGroupSelection();
+      }
+      this.analytics.track('watch_group_delete', [
+        new AnalyticsParam('reassigned', `${outcome.reassigned.length}`)
+      ]);
+      this.syncFromStore('');
+    }
+    return outcome.reason;
+  }
+
+  /** 用户组数量（分组管理页头 / ≤7 判断）。 */
+  userGroupCount(): number {
+    return this.store.userGroupCount();
+  }
+
+  /**
+   * 调试面板：把自选填到 50 上限（AC-96 上限/部分成功用例需要确定初态）。
+   * 只加真实存在的股票（搜索结果里的股票），保证列表显示正常。
+   */
+  async debugFillToLimit(): Promise<number> {
+    const provider: SearchProvider = DataServices.searchProvider();
+    if (provider.browse === undefined) {
+      return 0;
+    }
+    const page: StockBrowsePage = await provider.browse(0, 100, 0);
+    const inputs: WatchAddInput[] = [];
+    for (let i = 0; i < page.items.length; i++) {
+      if (page.items[i].kind === 'stock') {
+        inputs.push(new WatchAddInput(page.items[i].code, []));
+      }
+    }
+    const outcome: WatchlistAddOutcome = await this.store.addMany(inputs, false);
+    this.syncFromStore('');
+    hilog.info(0x0001, 'WatchLog', 'debug_fill added=%{public}d', outcome.added.length);
+    return outcome.added.length;
+  }
+
+  private startUndo(snapshots: RemoveSnapshot[]): void {
+    this.stopUndo();
+    if (snapshots.length === 0) {
+      return;
+    }
+    this.undoSnapshots = snapshots;
+    this.undoCount = snapshots.length;
+    this.undoLeft = 5;
+    this.undoVisible = true;
+    this.undoTimer = setInterval((): void => {
+      this.undoLeft--;
+      if (this.undoLeft <= 0) {
+        this.stopUndo();
+      }
+    }, 1000);
+  }
+
+  private stopUndo(): void {
+    if (this.undoTimer !== -1) {
+      clearInterval(this.undoTimer);
+      this.undoTimer = -1;
+    }
+    this.undoVisible = false;
+    this.undoCount = 0;
+    this.undoLeft = 0;
+    this.undoSnapshots = [];
   }
 
   dispose(): void {
     this.loadToken++;
+    this.stopUndo();
     this.disposeQuotes();
     this.detachStore();
   }
@@ -239,6 +458,10 @@ export class WatchlistVM {
   selectGroup(id: string): void {
     if (id === this.selectedGroupId) {
       return;
+    }
+    // 编辑态切分组会留下"看不见的勾选"（移出会删掉屏幕上没有的行）：先退出编辑。
+    if (this.editMode) {
+      this.exitEdit();
     }
     this.selectedGroupId = id;
     this.updateGroupSelection();
@@ -331,6 +554,7 @@ export class WatchlistVM {
       const reused: WatchRowVM | undefined = previousRows.get(item.code);
       const row: WatchRowVM = reused !== undefined ? reused : new WatchRowVM(item.code, item.code, item.groups);
       row.groups = item.groups;
+      row.pending = item.pending;
       const snapshot: QuoteSnapshot | undefined = data.quotes.get(item.code);
       if (snapshot !== undefined) {
         row.updateFromSnapshot(snapshot);
@@ -340,20 +564,62 @@ export class WatchlistVM {
     }
     const previousGroups: GroupTabVM[] = this.groups;
     this.groups = [];
+    let selectionFound: boolean = false;
     for (let i = 0; i < data.groups.length; i++) {
-      const id: string = data.groups[i].id;
-      let group: GroupTabVM | undefined = undefined;
+      const group: WatchGroup = data.groups[i];
+      const id: string = group.id;
+      let tab: GroupTabVM | undefined = undefined;
       for (let j = 0; j < previousGroups.length; j++) {
         if (previousGroups[j].id === id) {
-          group = previousGroups[j];
+          tab = previousGroups[j];
           break;
         }
       }
-      this.groups.push(group !== undefined ? group : new GroupTabVM(id));
+      const next: GroupTabVM = tab !== undefined ? tab : new GroupTabVM(id);
+      next.name = group.name;
+      next.system = group.type === 'system';
+      next.isUser = group.type === 'user';
+      this.groups.push(next);
+      if (id === this.selectedGroupId) {
+        selectionFound = true;
+      }
     }
+    // 当前分组被删除（M7-6）：回落到「全部」，不能停在已不存在的分组。
+    if (!selectionFound) {
+      this.selectedGroupId = 'all';
+    }
+    // P3（M6 评审遗留）：撤出/删除后清掉多选与编辑态里已不存在的 code，
+    // 否则比价会把已删标的带进 PK、编辑「移出」会带着幽灵项。
+    this.pruneSelection();
     this.updateGroupCounts();
     this.updateGroupSelection();
     this.rebuild();
+  }
+
+  /** 选中集合与现有行对齐（只保留仍存在且在当前可见集合里的 code）。 */
+  private pruneSelection(): void {
+    if (this.selectedCodes.length > 0) {
+      const next: string[] = [];
+      for (let i = 0; i < this.selectedCodes.length; i++) {
+        if (this.rowByCode.has(this.selectedCodes[i])) {
+          next.push(this.selectedCodes[i]);
+        }
+      }
+      if (next.length !== this.selectedCodes.length) {
+        this.selectedCodes = next;
+      }
+    }
+    if (this.editSelected.length > 0) {
+      const nextEdit: string[] = [];
+      for (let i = 0; i < this.editSelected.length; i++) {
+        if (this.rowByCode.has(this.editSelected[i])) {
+          nextEdit.push(this.editSelected[i]);
+        }
+      }
+      if (nextEdit.length !== this.editSelected.length) {
+        this.editSelected = nextEdit;
+      }
+    }
   }
 
   private subscribe(): void {
@@ -411,9 +677,16 @@ export class WatchlistVM {
     if (!this.loaded) {
       return;
     }
-    // 只有「新增」才定位高亮；删除后不滚动、不切分组（避免把用户从当前分组踢回全部）。
+    if (change.pendingSynced > 0) {
+      this.syncedCount = change.pendingSynced;
+    }
+    // 只有「新增」才定位高亮；删除/分组变更后不滚动、不切分组（避免把用户从当前分组踢回全部）。
+    // 有排序时不滚动（AC-97：有排序按序落位、不动滚动）。
     const added: string[] = change.added;
-    const focus: string = added.length > 0 ? added[added.length - 1] : '';
+    let focus: string = '';
+    if (added.length > 0 && this.sortKey === null) {
+      focus = added[added.length - 1];
+    }
     this.syncFromStore(focus);
   }
 
@@ -423,7 +696,10 @@ export class WatchlistVM {
    */
   private async syncFromStore(focusCode: string): Promise<void> {
     if (this.syncing) {
-      this.pendingFocus = focusCode;
+      this.pendingSync = true;
+      if (focusCode.length > 0) {
+        this.pendingFocus = focusCode;
+      }
       return;
     }
     this.syncing = true;
@@ -443,8 +719,10 @@ export class WatchlistVM {
     } finally {
       this.syncing = false;
       const pending: string = this.pendingFocus;
+      const needAgain: boolean = this.pendingSync;
       this.pendingFocus = '';
-      if (pending.length > 0) {
+      this.pendingSync = false;
+      if (needAgain || pending.length > 0) {
         this.syncFromStore(pending);
       }
     }
@@ -452,6 +730,10 @@ export class WatchlistVM {
 
   /** 定位新行：当前分组看不到时回落到「全部」，最终滚动 + 一次 320ms 高亮。 */
   private focusRow(code: string): void {
+    // 有排序时不滚动（AC-97：按序落位、不打断当前手势）。
+    if (this.sortKey !== null) {
+      return;
+    }
     let index: number = -1;
     for (let i = 0; i < this.rows.length; i++) {
       if (this.rows[i].code === code) {
@@ -527,3 +809,6 @@ export function emptyMetrics(): TableMetrics {
 
 export { SortDir, SortKey } from '../repository/SortRules';
 export { TableMetrics, NUMERIC_SORT_KEYS } from '../repository/TableMetrics';
+// 分组容量/组名长度：View 不直接 import commons_data（R-07），由 VM 转出常量与类型。
+export type { GroupEditReason } from 'commons_data';
+export { WATCHLIST_GROUP_NAME_MAX, WATCHLIST_MAX_USER_GROUPS } from 'commons_data';

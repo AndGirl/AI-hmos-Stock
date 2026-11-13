@@ -1,7 +1,7 @@
 import { AppColor, AppDim } from 'commons_ui';
 import { GroupTabVM } from '../viewmodel/WatchlistVM';
 
-/** 分组 Tab 最多展示 5 个（含「全部」），超出后横向滑动查看。 */
+/** 分组 Tab 超过 5 个后横向滑动查看（每个 Tab 保持自然宽度，不截断名称）。 */
 const MAX_VISIBLE_GROUPS: number = 5;
 /** 右侧两个占位符（卡片切换 / 排序）的尺寸。 */
 const PLACEHOLDER_SIZE: number = 32;
@@ -9,35 +9,33 @@ const PLACEHOLDER_SIZE: number = 32;
 /**
  * 分组 Tab：全部 + 系统组（融/创）+ 用户组，显示只数，选中红色下划线 3vp（FR-02.5）。
  * - 最多展示 5 个，最少 1 个（「全部」）；可横向滑动，内容始终居左；
- * - 最右侧固定预留两个占位符（卡片切换 / 排序），不随 Tab 横滑移动。
+ * - 最右侧固定预留两个占位符（卡片切换 / 排序），不随 Tab 横滑移动；
+ * - 用户组直接渲染 `name`（M7-6 关闭 T-03），系统组仍走 i18n；长按进入分组管理。
  */
 @ComponentV2
 export struct GroupTabs {
   @Param groups: GroupTabVM[] = [];
-  @Event onSelect: (id: string) => void = () => {
+  @Event onSelect: (id: string) => void = (id: string): void => {
   };
-  @Local barWidth: number = 0;
+  @Event onLongPress: (id: string) => void = (id: string): void => {
+  };
 
-  /** 超过 5 个时每个 Tab 最多占 1/5 视口，保证「最多展示 5 个」且其余可横滑。 */
-  private tabMaxWidth(): number {
-    if (this.groups.length <= MAX_VISIBLE_GROUPS || this.barWidth <= 0) {
-      return 10000;
+  private labelOf(group: GroupTabVM): ResourceStr {
+    if (group.isUser && group.name.length > 0) {
+      return group.name;
     }
-    return this.barWidth / MAX_VISIBLE_GROUPS;
-  }
-
-  private labelOf(id: string): Resource {
-    if (id === 'fin') {
+    // 阶段一遗留的用户组 id `user` 没有自带 name（显示名走 i18n），改名后才有 name。
+    if (group.id === 'user') {
+      return $r('app.string.watch_group_user');
+    }
+    if (group.id === 'fin') {
       return $r('app.string.watch_group_fin');
     }
-    if (id === 'star') {
+    if (group.id === 'star') {
       return $r('app.string.watch_group_star');
     }
-    if (id === 'kcb') {
+    if (group.id === 'kcb') {
       return $r('app.string.watch_group_kcb');
-    }
-    if (id === 'user') {
-      return $r('app.string.watch_group_user');
     }
     return $r('app.string.watch_group_all');
   }
@@ -63,7 +61,7 @@ export struct GroupTabs {
           ListItem() {
             Column() {
               Row() {
-                Text(this.labelOf(group.id))
+                Text(this.labelOf(group))
                   .fontSize(16)
                   .fontWeight(group.selected ? FontWeight.Bold : FontWeight.Medium)
                   .fontColor(group.selected ? AppColor.accent : AppColor.textSecondary)
@@ -88,21 +86,23 @@ export struct GroupTabs {
               left: this.groups.length >= MAX_VISIBLE_GROUPS ? AppDim.gap8 : AppDim.gap12,
               right: this.groups.length >= MAX_VISIBLE_GROUPS ? AppDim.gap8 : AppDim.gap12
             })
-            .constraintSize({ maxWidth: this.tabMaxWidth() })
             .onClick(() => {
               this.onSelect(group.id);
             })
+            .gesture(
+              LongPressGesture({ repeat: false })
+                .onAction(() => {
+                  this.onLongPress(group.id);
+                })
+            )
           }
-        }, (group: GroupTabVM) => group.id)
+        }, (group: GroupTabVM) => `${group.id}-${group.name}`)
       }
       .listDirection(Axis.Horizontal)
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.None)
       .layoutWeight(1)
       .height(40)
-      .onAreaChange((oldValue: Area, newValue: Area): void => {
-        this.barWidth = Number(newValue.width);
-      })
 
       this.placeholder($r('app.string.watch_entry_card'))
       this.placeholder($r('app.string.watch_entry_sort'))
