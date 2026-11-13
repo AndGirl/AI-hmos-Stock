@@ -1,6 +1,6 @@
 {
   "name": "search",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "基础特性层 · 搜索（M6，含 M7 添加页复用）",
   "main": "Index.ets",
   "author": "",
