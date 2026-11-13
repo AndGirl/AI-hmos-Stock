@@ -7,7 +7,7 @@
 
 | # | 门禁 | 脚本 | 运行位置 | 说明 |
 |---|---|---|---|---|
-| 1 | 版本一致性 | `scripts/check-version.mjs` | CI + 本地 | V-01~V-03，9 模块与 `app.json5` 一致 |
+| 1 | 版本一致性 | `scripts/check-version.mjs` | CI + 本地 | V-01~V-03，10 模块（含 M11 新增 `account`）与 `app.json5` 一致 |
 | 2 | 占位文案静态单测 | `scripts/check-coming-soon.mjs` | CI + 本地 | 2 条 `coming_soon_*` 文案格式、禁用词、标点/emoji；代码禁止硬编码 |
 | 3 | 分层架构红线 | `scripts/check-architecture.mjs` | CI + 本地 | R-01~R-09，静态扫描 import 与关键字 |
 | 4 | 契约完整性 | `scripts/check-contracts.mjs` | CI + 本地 | K-01~K-04：Provider 接口有实现、必需方法齐备、装配点覆盖、M9 可选成员不得写成必需 |
@@ -75,7 +75,7 @@ devecocli check lint
 | K-01 | 每个 `*Provider` 接口至少有一个实现类 |
 | K-02 | 每个实现类实现该接口的全部**必需**成员（带 `?` 的可选成员可缺省） |
 | K-03 | 每个 `*Provider` 接口必须出现在装配点 `commons/data/src/main/ets/DataServices.ets` |
-| K-04 | 契约 v1.1 的可选成员（`onError` / `capabilities` / `chartPage` / `seq` / `retryAfterMs` / `browse`）必须是 `?` 形式 |
+| K-04 | 契约 v1.1 的可选成员（`onError` / `capabilities` / `chartPage` / `seq` / `retryAfterMs` / `browse` / `listOrders` / `cancelOrder` / `openAccount` / `positionOf`）必须是 `?` 形式 |
 
 背景：M9 起 Provider 走「只加不改」，最容易出的是「接口加了方法、某个实现忘了写」或「把可选成员写成必需」——这两类编译期都不一定报错，所以在提交前静态拦一次。扫描范围只到 `commons/data/src/main/ets`（**不含测试**，测试里的桩实现不受约束）。
 

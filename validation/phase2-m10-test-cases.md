@@ -92,7 +92,7 @@
 | 117-2 | 卖出成交 | 现金增加、持仓减少（清零则移除） | 单测 `sell_reduces_holding_and_adds_cash` |
 | 117-3 | 挂单冻结 | 可买 = 现金 − 冻结；撤单/成交释放 | 单测 `freeze_reduces_available` / `cancel_pending_releases_freeze` |
 | 117-4 | 成交后不轮询 | 回执驱动刷新（本地即时）；持仓页展示留 M11 | 代码 |
-| 117-5 | 详情/弹窗「已持有」 | 待 M11 持仓页与详情联动 | **未做** |
+| 117-5 | 详情/弹窗「已持有」 | M11 收口：交易弹窗「已持有」改为按标的取数（原取账户合计）；详情页徽标不做。证据 `shots/phase2/m11/06-trade-held-per-code.png` | 已修（M11） |
 
 ---
 

@@ -79,6 +79,29 @@ push ──429→ throttled（5s） ──累计 3 次→ polling（HTTP 快照 
 | 排序 | **不参与排序**（沿用列头快照序） |
 | 不入缓存 | 价格类字段全空（停牌/未开盘）的快照 |
 
+### 1.5 持仓契约（M11-1，客户端已实现）
+
+| 契约 | 签名 | 说明 | 缺省行为 |
+|---|---|---|---|
+| `PositionProvider.positions(accountId?)` | `Promise<Position[]>` | 主账户持仓快照；`accountId` 可选（缺省 = 账户列表第一个） | 无持仓返回 `[]` |
+| `PositionProvider.summary(accountId?)` | `Promise<PositionSummary>` | 市值/当日/累计/成本/只数/未估值只数 | 汇总为空时全 0 |
+| `PositionProvider.positionOf?(code)` | `Promise<Position \| null>` | 单标的持仓（详情「已持有」用）；**可选成员**，缺失时调用方按 0 处理 | 无持仓返回 `null` |
+| `Position` | `{code,name,qty,available,costPrice,last,prevClose,marketValue,pnl,pnlRatio,weight,dayPnl,costBasis,status,accountId}` | 只读快照，Provider 每次按「持仓 + 行情快照」现算，**不落盘** | — |
+| `PositionSummary` | `{marketValue,dayPnl,totalPnl,costTotal,count,unvalued}` + `ratio()` | `unvalued` = 无有效价的只数 | — |
+| `costBasis` | `'withFee' \| 'withoutFee'` | 本期恒 `withoutFee`（本地撮合不计佣金/印花税） | 字段只读 |
+
+**实现与口径**：
+
+- 客户端实现 `provider/LocalPositionProvider.ets`（命名与 M10 的 `LocalTradeProvider` 一致）；
+- 估值/盈亏/仓位/排序全部是纯函数：`rules/PositionRules.ets`，口径见
+  [phase2-position-metrics.md](phase2-position-metrics.md)；
+- **不设 `subscribe`**：行情推送统一走 `QuoteBus`（`DataServices.quoteBus()`），持仓页不新建通道；
+- 持仓来源 `trade_account_v1.holdings[]`，M11 增 `lastPrice` 字段（最近一次有效价，旧 JSON 缺字段回落成本价）；
+- 停牌/退市快照 `last`/`prevClose` 均为 `null` 时用 `lastPrice` 估值、当日盈亏计 0。
+
+**接本地后端时**：`GET /accounts/{id}/positions` 返回同形 `Position[]` 即可；
+服务端只需给「数量/成本 + 最新价 + 昨收」，估值与盈亏口径仍由客户端按同一套纯函数计算（便于与单测对齐）。
+
 ---
 
 ## 2. 前后端协议（下一轮实现后端时按此施工）
