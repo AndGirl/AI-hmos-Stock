@@ -13,11 +13,17 @@ export class HoldRecord {
   code: string;
   qty: number;
   costPrice: number;
+  /**
+   * 最近一次有效价（M11 新增）：停牌/退市行情快照无价时用它估值。
+   * 旧版本 JSON 没有该字段，还原时回落成本价（见 `restore`）。
+   */
+  lastPrice: number;
 
-  constructor(code: string, qty: number, costPrice: number) {
+  constructor(code: string, qty: number, costPrice: number, lastPrice?: number) {
     this.code = code;
     this.qty = qty;
     this.costPrice = costPrice;
+    this.lastPrice = lastPrice !== undefined && lastPrice > 0 ? lastPrice : costPrice;
   }
 }
 
@@ -101,7 +107,10 @@ export class TradeAccountStore {
       const record: AccountRecord = new AccountRecord(item.id, item.maskNo, item.cash, item.frozen, item.opened);
       const holds: HoldRecord[] = item.holdings !== undefined && item.holdings !== null ? item.holdings : [];
       for (let j = 0; j < holds.length; j++) {
-        record.holdings.push(new HoldRecord(holds[j].code, holds[j].qty, holds[j].costPrice));
+        // 旧版本没有 lastPrice：回落成本价，停牌估值不会变成 0。
+        const raw: HoldRecord = holds[j];
+        const last: number = raw.lastPrice !== undefined && raw.lastPrice > 0 ? raw.lastPrice : raw.costPrice;
+        record.holdings.push(new HoldRecord(raw.code, raw.qty, raw.costPrice, last));
       }
       result.push(record);
     }
@@ -117,11 +126,44 @@ export class TradeAccountStore {
         new AccountRecord(seed.id, seed.maskNo, seed.available, 0, seed.opened);
       if (seed.holdQty > 0) {
         // 种子持仓没有成本价：按一次「历史买入」给个确定值，避免 0 成本导致收益率除零。
-        record.holdings.push(new HoldRecord('600519', seed.holdQty, 1500));
+        // M11：`lastPrice` 给一个确定的有效价，停牌时估值可用。
+        record.holdings.push(new HoldRecord('600519', seed.holdQty, 1500, 1680));
+      }
+      // M11-1：主账户给 3 只样例持仓，持仓页冷启即有内容，且盈亏有正有负便于验排序/合计。
+      // 代码避开 M10 单测用到的 000001 / 600519。
+      if (i === 0) {
+        record.holdings.push(new HoldRecord('601318', 1000, 45, 48.9));
+        record.holdings.push(new HoldRecord('000858', 200, 150, 142.8));
+        record.holdings.push(new HoldRecord('600036', 300, 30, 34.6));
       }
       result.push(record);
     }
     return result;
+  }
+
+  /** 主账户 id：账户列表第一个（与交易弹窗默认账户一致；持仓页只展示主账户）。 */
+  primaryId(): string {
+    return this.accounts.length > 0 ? this.accounts[0].id : '';
+  }
+
+  /**
+   * 记录最近一次有效价（M11：停牌估值的兜底）。
+   * 返回是否发生变化（避免每次刷新都写盘）。
+   */
+  noteLastPrice(accountId: string, code: string, price: number): boolean {
+    if (!Number.isFinite(price) || price <= 0) {
+      return false;
+    }
+    const holding: HoldRecord | undefined = this.holdingOf(accountId, code);
+    if (holding === undefined) {
+      return false;
+    }
+    if (holding.lastPrice === price) {
+      return false;
+    }
+    holding.lastPrice = price;
+    this.markDirty();
+    return true;
   }
 
   ready(): boolean {
@@ -256,18 +298,20 @@ export class TradeAccountStore {
       record.cash = round2(Math.max(0, record.cash - amount));
       const holding: HoldRecord | undefined = this.holdingOf(id, code);
       if (holding === undefined) {
-        record.holdings.push(new HoldRecord(code, qty, price));
+        record.holdings.push(new HoldRecord(code, qty, price, price));
       } else {
         const totalCost: number = holding.costPrice * holding.qty + amount;
         const totalQty: number = holding.qty + qty;
         holding.costPrice = totalQty > 0 ? round2(totalCost / totalQty) : price;
         holding.qty = totalQty;
+        holding.lastPrice = price;
       }
     } else {
       record.cash = round2(record.cash + amount);
       const holding: HoldRecord | undefined = this.holdingOf(id, code);
       if (holding !== undefined) {
         holding.qty = Math.max(0, holding.qty - qty);
+        holding.lastPrice = price;
         if (holding.qty === 0) {
           record.holdings = record.holdings.filter((item: HoldRecord): boolean => item.code !== code);
         }
@@ -281,6 +325,24 @@ export class TradeAccountStore {
     await this.load();
     this.accounts = this.seed();
     this.markDirty();
+    await this.flush();
+  }
+
+  /** 调试（M11）：清空持仓并立即落盘（验持仓页空态；现金不变）。 */
+  async clearHoldings(accountId?: string): Promise<void> {
+    await this.load();
+    if (accountId !== undefined && accountId.length > 0) {
+      const record: AccountRecord | undefined = this.record(accountId);
+      if (record !== undefined) {
+        record.holdings = [];
+        this.markDirty();
+      }
+    } else {
+      for (let i = 0; i < this.accounts.length; i++) {
+        this.accounts[i].holdings = [];
+      }
+      this.markDirty();
+    }
     await this.flush();
   }
 

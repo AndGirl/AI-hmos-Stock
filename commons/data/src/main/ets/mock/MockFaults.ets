@@ -48,6 +48,9 @@ export class MockFaults {
   /** 网关超时：2s 进入「结果未知」，禁止自动重发（FR-07.8）。 */
   static tradeTimeout: boolean = false;
 
+  /** 持仓加载失败（M11-2：验证持仓页失败态与重试，AC-119）。 */
+  static failPositions: boolean = false;
+
   static reset(): void {
     MockFaults.failWatchlist = false;
     MockFaults.failDetail = false;
@@ -67,5 +70,6 @@ export class MockFaults {
     MockFaults.tradeFundShort = false;
     MockFaults.tradeReject = false;
     MockFaults.tradeTimeout = false;
+    MockFaults.failPositions = false;
   }
 }

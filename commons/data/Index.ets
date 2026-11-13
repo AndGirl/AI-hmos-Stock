@@ -72,6 +72,29 @@ export {
   Tradable
 } from './src/main/ets/model/TradeModels';
 export {
+  CostBasis,
+  Position,
+  PositionError,
+  PositionErrorReason,
+  PositionProvider,
+  PositionSummary
+} from './src/main/ets/model/PositionModels';
+export {
+  applyWeights,
+  compareNullable,
+  computePosition,
+  isSuspendedStatus,
+  nextPositionSortDir,
+  POSITION_SORT_KEYS,
+  PositionBasis,
+  PositionSortDir,
+  PositionSortKey,
+  sortPositions,
+  summarizePositions,
+  valuationPriceOf,
+  valueOfPosition
+} from './src/main/ets/rules/PositionRules';
+export {
   AccountDelta,
   applyFill,
   CancelDecision,
@@ -91,6 +114,7 @@ export { JournalEntry, OrderJournalStore } from './src/main/ets/store/OrderJourn
 export { AccountRecord, DEFAULT_CASH, HoldRecord, TradeAccountStore } from './src/main/ets/store/TradeAccountStore';
 export { TRADE_ORDERS_MAX, TradeOrderStore } from './src/main/ets/store/TradeOrderStore';
 export { LocalTradeProvider } from './src/main/ets/provider/LocalTradeProvider';
+export { LocalPositionProvider } from './src/main/ets/provider/LocalPositionProvider';
 export { TradeAuth } from './src/main/ets/mock/TradeSeeds';
 export { QuoteSink, QuoteBus, SinkSubscription } from './src/main/ets/bus/QuoteBus';
 export {

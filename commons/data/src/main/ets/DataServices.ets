@@ -4,6 +4,7 @@ import { MockQuoteProvider } from './provider/MockQuoteProvider';
 import { MockDetailProvider } from './provider/MockDetailProvider';
 import { MockWatchlistProvider, WatchlistProvider } from './provider/WatchlistProvider';
 import { TradeProvider } from './model/TradeModels';
+import { PositionProvider } from './model/PositionModels';
 import { QuoteBus } from './bus/QuoteBus';
 import { DetailSubscriptionRegistry } from './bus/DetailSubscriptionRegistry';
 import { MockSearchProvider } from './provider/MockSearchProvider';
@@ -16,6 +17,7 @@ import { QuoteCacheStore } from './store/QuoteCacheStore';
 import { QuoteChannel } from './real/QuoteChannel';
 import { AppConfig, QuoteSource } from './real/AppConfig';
 import { LocalTradeProvider } from './provider/LocalTradeProvider';
+import { LocalPositionProvider } from './provider/LocalPositionProvider';
 import { TradeAccountStore } from './store/TradeAccountStore';
 import { TradeOrderStore } from './store/TradeOrderStore';
 import { OrderJournalStore } from './store/OrderJournalStore';
@@ -32,6 +34,7 @@ export class DataServices {
   private static watch: WatchlistProvider | undefined = undefined;
   private static detail: DetailProvider | undefined = undefined;
   private static trade: TradeProvider | undefined = undefined;
+  private static position: PositionProvider | undefined = undefined;
   private static bus: QuoteBus | undefined = undefined;
   private static detailSubsRegistry: DetailSubscriptionRegistry | undefined = undefined;
   private static search: SearchProvider | undefined = undefined;
@@ -110,6 +113,18 @@ export class DataServices {
       DataServices.accountStore = new TradeAccountStore();
     }
     return DataServices.accountStore;
+  }
+
+  /**
+   * 持仓与收益（M11）：与交易同源（同一份账户/持仓 + 同一个行情 provider）。
+   * 只做装配，估值/盈亏公式在 `rules/PositionRules`。
+   */
+  static positionProvider(): PositionProvider {
+    if (DataServices.position === undefined) {
+      DataServices.position = new LocalPositionProvider(DataServices.quoteProvider(),
+        DataServices.tradeAccount());
+    }
+    return DataServices.position;
   }
 
   /** 委托库（M10，`trade_orders_v1`）。 */
