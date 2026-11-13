@@ -1,12 +1,12 @@
 import {
   DataServices,
-  QuotePatch,
+  MockFaults,
   QuoteSnapshot,
   QuoteSink,
   SinkSubscription,
   WatchGroup,
   WatchItem,
-  WatchlistRaw
+  WatchlistSnapshot
 } from 'commons_data';
 
 /** 仓储归一化后的自选数据：分组、条目、快照（含指数）。 */
@@ -22,21 +22,26 @@ export class WatchlistData {
 }
 
 /**
- * L2 仓储：组合 commons/data 的 provider / bus，向上只输出实体。
+ * L2 仓储：组合 commons/data 的 store / provider / bus，向上只输出实体。
+ * 数据集合以 `WatchlistStore` 为唯一来源（P0 数据同源）；`MockWatchlistProvider`
+ * 只保留指数条配置，自选集合不再从它读取。
  * 不返回中文文案、不做 UI 副作用（附录 C 第 13 条）。
  */
 export class WatchlistRepository {
   async load(): Promise<WatchlistData> {
-    const provider = DataServices.watchlistProvider();
-    const raw: WatchlistRaw = await provider.load();
+    if (MockFaults.failWatchlist) {
+      throw new Error('mock watchlist failure');
+    }
+    const store = DataServices.watchlistStore();
+    const snapshot: WatchlistSnapshot = await store.snapshot();
     const data: WatchlistData = new WatchlistData();
-    data.groups = raw.groups;
-    data.items = raw.items;
-    data.indexSet = provider.indexSet();
+    data.groups = snapshot.groups;
+    data.items = snapshot.items;
+    data.indexSet = DataServices.watchlistProvider().indexSet();
 
     const codes: string[] = [];
-    for (let i = 0; i < raw.items.length; i++) {
-      codes.push(raw.items[i].code);
+    for (let i = 0; i < data.items.length; i++) {
+      codes.push(data.items[i].code);
     }
     const indexCodes: string[] = [];
     data.indexSet.forEach((list: string[]): void => {

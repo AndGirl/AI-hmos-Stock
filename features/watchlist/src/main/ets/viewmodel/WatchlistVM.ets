@@ -1,12 +1,16 @@
 import {
   ConnectionState,
+  DataServices,
   MockFaults,
   NetFault,
   QuotePatch,
   QuoteSink,
   QuoteSnapshot,
   SinkSubscription,
-  WatchItem
+  WatchItem,
+  WatchlistChange,
+  WatchlistChangeListener,
+  WatchlistStore
 } from 'commons_data';
 import { ConnectionHost, ConnectionHub } from 'commons_basic';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -17,6 +21,14 @@ import { IndexBarDataSource } from './IndexBarDataSource';
 import { WatchRowVM } from './WatchRowVM';
 
 export type WatchPageState = 'loading' | 'content' | 'empty' | 'error';
+
+/**
+ * 空态范围（M6 追加）：
+ * 'all' 自选一只都没有（引导式空态，隐藏指数条/分组页签）；
+ * 'group' 当前分组为空但其它分组有票（「该分组暂无股票」+ 查看全部）；
+ * 'none' 非空态。
+ */
+export type WatchEmptyKind = 'none' | 'all' | 'group';
 
 /** 分组 Tab：文案由 View 按 id 走 i18n。 */
 @ObservedV2
@@ -56,6 +68,8 @@ class VmSink implements QuoteSink {
 @ObservedV2
 export class WatchlistVM {
   @Trace state: WatchPageState = 'loading';
+  /** 空态范围：区分「自选全空」与「当前分组为空」，两者文案与结构不同。 */
+  @Trace emptyKind: WatchEmptyKind = 'none';
   @Trace rows: WatchRowVM[] = [];
   @Trace groups: GroupTabVM[] = [];
   @Trace selectedGroupId: string = 'all';
@@ -70,8 +84,18 @@ export class WatchlistVM {
   /** 多选比价（FR-08.1 第三入口）：长按进入，2–3 只，顺序即 PK 窗序。 */
   @Trace selectMode: boolean = false;
   @Trace selectedCodes: string[] = [];
+  /** 新增行定位（M7-4 提前）：自选页据此 scrollToIndex 并高亮新行。 */
+  @Trace scrollIndex: number = -1;
+  @Trace scrollSeq: number = 0;
 
   private repo: WatchlistRepository = new WatchlistRepository();
+  private store: WatchlistStore = DataServices.watchlistStore();
+  private storeListener: WatchlistChangeListener = (change: WatchlistChange): void => {
+    this.onStoreChanged(change);
+  };
+  private storeAttached: boolean = false;
+  private syncing: boolean = false;
+  private pendingFocus: string = '';
   private allRows: WatchRowVM[] = [];
   private rowByCode: Map<string, WatchRowVM> = new Map<string, WatchRowVM>();
   private indexBar: IndexBarDataSource = new IndexBarDataSource();
@@ -116,6 +140,7 @@ export class WatchlistVM {
       this.applyData(data);
       this.loaded = true;
       this.subscribe();
+      this.attachStore();
     } catch (err) {
       if (token !== this.loadToken) {
         return;
@@ -142,13 +167,37 @@ export class WatchlistVM {
   }
 
   /**
-   * 调试面板用：注入 Mock 故障（空自选 / 加载失败）。
+   * 调试面板用：注入「自选加载失败」。
    * 放在 VM 是为了让 view 不直接依赖 commons_data（R-07）。
    */
-  applyMockFault(empty: boolean, fail: boolean): void {
-    MockFaults.emptyWatchlist = empty;
+  applyMockFault(fail: boolean): void {
     MockFaults.failWatchlist = fail;
     this.reload();
+  }
+
+  /**
+   * 调试面板用：**真实清空**自选数据（2026-11-13 需求变更）。
+   * 不只做展示层置空：Store 立即落盘，杀进程/重启后仍为空；分组定义保留。
+   */
+  async clearAll(): Promise<void> {
+    const removed: number = await this.store.clear();
+    hilog.info(0x0001, 'WatchLog', 'clear_all removed=%{public}d', removed);
+    if (this.loaded) {
+      this.syncFromStore('');
+    }
+  }
+
+  /** 调试面板用：「重置」把自选恢复为 45 只 Mock 种子并落盘。 */
+  async resetAll(): Promise<void> {
+    MockFaults.failWatchlist = false;
+    await this.store.resetToSeeds();
+    hilog.info(0x0001, 'WatchLog', 'reset_seeds');
+    if (!this.loaded) {
+      // 「模拟加载失败」后 loaded=false：重置必须重新走一次正常加载，否则停在错误态。
+      await this.load();
+      return;
+    }
+    this.syncFromStore('');
   }
 
   /**
@@ -168,18 +217,23 @@ export class WatchlistVM {
     hilog.info(0x0001, 'ConnLog', 'net_fault=%{public}s state=%{public}s', fault, hub.state);
   }
 
+  /**
+   * Tab 重新可见（或页面恢复）时调用：
+   * 重订阅行情 + 补订阅 Store + 重读一次 Store（覆盖隐藏期间的变更）。
+   */
   resume(): void {
-    if (this.loaded) {
-      this.subscribe();
+    if (!this.loaded) {
+      return;
     }
+    this.subscribe();
+    this.attachStore();
+    this.syncFromStore('');
   }
 
   dispose(): void {
     this.loadToken++;
-    if (this.sub !== undefined) {
-      this.sub.unsubscribe();
-      this.sub = undefined;
-    }
+    this.disposeQuotes();
+    this.detachStore();
   }
 
   selectGroup(id: string): void {
@@ -303,7 +357,8 @@ export class WatchlistVM {
   }
 
   private subscribe(): void {
-    this.dispose();
+    // 只清理行情订阅：不能复用 dispose()，否则会连同 Store 监听一起摘掉（多只添加只同步第一只的根因）
+    this.disposeQuotes();
     const codes: string[] = [];
     for (let i = 0; i < this.allRows.length; i++) {
       codes.push(this.allRows[i].code);
@@ -320,11 +375,102 @@ export class WatchlistVM {
     this.sub = this.repo.subscribe(codes, sink);
   }
 
+  /** 仅退订行情；页面级 dispose 才解绑 Store 监听。 */
+  private disposeQuotes(): void {
+    if (this.sub !== undefined) {
+      this.sub.unsubscribe();
+      this.sub = undefined;
+    }
+  }
+
   private onPatch(patch: QuotePatch): void {
     const row: WatchRowVM | undefined = this.rowByCode.get(patch.code);
     if (row !== undefined && !this.frozen) {
       row.applyPatch(patch);
     }
+  }
+
+  /** P0 数据同源：订阅 Store 变更，搜索页加自选 / 撤出自选后自选页即时刷新。 */
+  private attachStore(): void {
+    if (this.storeAttached) {
+      return;
+    }
+    this.store.subscribe(this.storeListener);
+    this.storeAttached = true;
+  }
+
+  private detachStore(): void {
+    if (!this.storeAttached) {
+      return;
+    }
+    this.store.unsubscribe(this.storeListener);
+    this.storeAttached = false;
+  }
+
+  private onStoreChanged(change: WatchlistChange): void {
+    if (!this.loaded) {
+      return;
+    }
+    // 只有「新增」才定位高亮；删除后不滚动、不切分组（避免把用户从当前分组踢回全部）。
+    const added: string[] = change.added;
+    const focus: string = added.length > 0 ? added[added.length - 1] : '';
+    this.syncFromStore(focus);
+  }
+
+  /**
+   * 增量同步（不切骨架）：重读 Store 快照 → 复用旧行、补新行 → 重订阅 → 定位并高亮新行。
+   * 等同 M7-4 的「乐观插入 + 滚动高亮」，此处 Store 为本地写，延迟可忽略。
+   */
+  private async syncFromStore(focusCode: string): Promise<void> {
+    if (this.syncing) {
+      this.pendingFocus = focusCode;
+      return;
+    }
+    this.syncing = true;
+    const token: number = this.loadToken;
+    try {
+      const data: WatchlistData = await this.repo.load();
+      if (token !== this.loadToken || !this.loaded) {
+        return;
+      }
+      this.applyData(data);
+      this.subscribe();
+      if (focusCode.length > 0) {
+        this.focusRow(focusCode);
+      }
+    } catch (err) {
+      // 同步失败保留旧列表，不打断阅读（下次变更/进入页面再试）
+    } finally {
+      this.syncing = false;
+      const pending: string = this.pendingFocus;
+      this.pendingFocus = '';
+      if (pending.length > 0) {
+        this.syncFromStore(pending);
+      }
+    }
+  }
+
+  /** 定位新行：当前分组看不到时回落到「全部」，最终滚动 + 一次 320ms 高亮。 */
+  private focusRow(code: string): void {
+    let index: number = -1;
+    for (let i = 0; i < this.rows.length; i++) {
+      if (this.rows[i].code === code) {
+        index = i;
+        break;
+      }
+    }
+    if (index < 0) {
+      if (this.selectedGroupId !== 'all') {
+        this.selectedGroupId = 'all';
+        this.updateGroupSelection();
+        this.rebuild();
+        this.focusRow(code);
+      }
+      return;
+    }
+    this.scrollIndex = index;
+    this.scrollSeq++;
+    this.rows[index].quote.flashSeq++;
   }
 
   private updateGroupCounts(): void {
@@ -366,6 +512,8 @@ export class WatchlistVM {
     this.rows = source;
     this.rowCount = source.length;
     this.state = source.length === 0 ? 'empty' : 'content';
+    // 全空与分组空要分开：全空走引导式空态，分组空只提示换分组，不能误报「暂无自选」。
+    this.emptyKind = source.length > 0 ? 'none' : (this.allRows.length === 0 ? 'all' : 'group');
     // 指数条与列表逐股票一一对应：集合与顺序都由 rows 驱动。
     this.indexBar.setItems(source);
     this.stripVersion++;

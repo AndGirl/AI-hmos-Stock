@@ -37,6 +37,9 @@ export struct FrozenTable {
   @Param initialHOffset: number = 0;
   /** 调试用：持续等速滚动（帧率采样时提供稳定负载）。 */
   @Param autoScroll: boolean = false;
+  /** 新增行定位（M7-4 提前）：scrollSeq 变化时滚动到 scrollToIndex。 */
+  @Param scrollToIndex: number = -1;
+  @Param scrollSeq: number = 0;
   /** 多选比价态（FR-08.1）：行内出现选中圈与浅强调底。 */
   @Param selectMode: boolean = false;
   @Param selectedCodes: string[] = [];
@@ -76,6 +79,15 @@ export struct FrozenTable {
   @Monitor('autoScroll')
   onAutoScrollChanged(): void {
     this.syncAutoScroll();
+  }
+
+  /** 新增自选后滚动到新行（无排序时即末尾）。 */
+  @Monitor('scrollSeq')
+  onScrollRequest(): void {
+    if (this.scrollToIndex < 0 || this.scrollToIndex >= this.rows.length) {
+      return;
+    }
+    this.vScroller.scrollToIndex(this.scrollToIndex, true, ScrollAlign.START);
   }
 
   private syncAutoScroll(): void {

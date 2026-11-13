@@ -42,6 +42,9 @@ export struct WatchlistPage {
   /** 平板 xl 右栏动作栏的「去交易」（§10-83）：弹窗归属窗口，由壳层挂载（INV-T4）。 */
   @Param onOpenTrade: (code: string) => void = () => {
   };
+  /** 空态「搜索添加」（M6-6）：进全屏搜索页，由壳层装配路由。 */
+  @Param onOpenSearch: () => void = () => {
+  };
   /** xl 分栏时底栏由本页左列承载（§10-83）：当前选中 Tab 与切换回调由壳层注入。 */
   @Param bottomBarIndex: number = 2;
   @Param onSelectBottomTab: (index: number) => void = () => {
@@ -104,13 +107,15 @@ export struct WatchlistPage {
     } else if (index === 2) {
       this.openNetMenu();
     } else if (index === 3) {
-      this.vm.applyMockFault(true, false);
+      // 真实清空（Store 落盘），不是展示层置空
+      this.vm.clearAll();
     } else if (index === 4) {
-      this.vm.applyMockFault(false, true);
+      this.vm.applyMockFault(true);
     } else if (index === 5) {
       ConfigHost.getService().apply(1.0);
       this.vm.applyNetFault('none');
-      this.vm.applyMockFault(false, false);
+      // 重置：字号/网络恢复，并把自选恢复为 45 只种子
+      this.vm.resetAll();
     }
   }
 
@@ -170,6 +175,14 @@ export struct WatchlistPage {
   @Monitor('breakpoint.viewportWidth')
   onViewportChanged(): void {
     this.syncLayout();
+  }
+
+  /** Tab 切回自选时补一次 Store 重读（覆盖页面隐藏期间漏掉的变更）。 */
+  @Monitor('bottomBarIndex')
+  onAppTabChanged(): void {
+    if (this.bottomBarIndex === 2) {
+      this.vm.resume();
+    }
   }
 
   @Monitor('config.fontScale')
@@ -259,6 +272,67 @@ export struct WatchlistPage {
       this.onOpenTrade(code);
       return;
     }
+  }
+
+  /**
+   * 自选全空引导（2026-11-13 需求变更）：
+   * 不再用通用占位 + 单个「搜索添加」，改为「图标位 + 标题 + 一句说明 + 主按钮（去行情）+ 文字链（搜索添加）」。
+   * 基线 §4.1 规则 6「空态最多一个操作入口」经确认放宽为「一个主按钮 + 一个文字链」。
+   */
+  @Builder
+  emptyGuide() {
+    Column() {
+      // 用「自选」Tab 同款图标，避免通用占位图（相框）被误读成加载失败
+      Image($r('app.media.ic_tab_watchlist'))
+        .width(64)
+        .height(64)
+        .fillColor(AppColor.textSecondary)
+        .opacity(0.35)
+
+      Text($r('app.string.watch_empty_title'))
+        .fontSize(16)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColor.textPrimary)
+        .margin({ top: AppDim.gap16 })
+
+      Text($r('app.string.watch_empty_desc'))
+        .fontSize(13)
+        .fontColor(AppColor.textSecondary)
+        .textAlign(TextAlign.Center)
+        .maxLines(2)
+        .margin({ top: AppDim.gap8, left: AppDim.gap24, right: AppDim.gap24 })
+
+      // 主入口：切到「行情」Tab（index=3），用户可直接点行尾「＋」
+      Text($r('app.string.watch_empty_go_market'))
+        .fontSize(15)
+        .fontColor(AppColor.textOnAccent)
+        .height(44)
+        .padding({ left: AppDim.gap24, right: AppDim.gap24 })
+        .textAlign(TextAlign.Center)
+        .backgroundColor(AppColor.accent)
+        .borderRadius(AppDim.pillRadius)
+        .margin({ top: AppDim.gap24 })
+        .accessibilityText($r('app.string.watch_empty_go_market'))
+        .onClick(() => {
+          this.onSelectBottomTab(3);
+        })
+
+      // 次要入口：全屏搜索页（沿用 M6 三入口之一）
+      Text($r('app.string.empty_watchlist_action_search'))
+        .fontSize(13)
+        .fontColor(AppColor.textSecondary)
+        .height(44)
+        .padding({ left: AppDim.gap12, right: AppDim.gap12 })
+        .textAlign(TextAlign.Center)
+        .margin({ top: AppDim.gap8 })
+        .onClick(() => {
+          this.onOpenSearch();
+        })
+    }
+    .width('100%')
+    .layoutWeight(1)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
   }
 
   @Builder
@@ -380,21 +454,27 @@ export struct WatchlistPage {
 
       Row() {
         Column() {
-          IndexStrip({
-            source: this.vm.indexBarSource(),
-            version: this.vm.stripVersion
-          })
+          // 自选全空时指数条/分组页签/卡片·排序全无意义，整段隐藏，只留引导式空态。
+          if (this.vm.emptyKind !== 'all') {
+            // 分组为空时指数条也没有条目，只留「推荐」卡会显得空荡，一并隐藏。
+            if (this.vm.rowCount > 0) {
+              IndexStrip({
+                source: this.vm.indexBarSource(),
+                version: this.vm.stripVersion
+              })
 
-          this.hDivider()
+              this.hDivider()
+            }
 
-      GroupTabs({
-        groups: this.vm.groups,
-        onSelect: (id: string): void => {
-          this.vm.selectGroup(id);
-        }
-      })
+            GroupTabs({
+              groups: this.vm.groups,
+              onSelect: (id: string): void => {
+                this.vm.selectGroup(id);
+              }
+            })
 
-      this.hDivider()
+            this.hDivider()
+          }
 
       if (this.vm.state === 'loading') {
         this.skeleton()
@@ -410,14 +490,18 @@ export struct WatchlistPage {
         })
           .width('100%')
           .layoutWeight(1)
+      } else if (this.vm.emptyKind === 'all') {
+        this.emptyGuide()
       } else if (this.vm.state === 'empty') {
+        // 分组为空但自选有票：只提示换分组，不复用「暂无自选」（2026-11-13）。
         StateView({
           mode: StateMode.EMPTY,
-          stateDesc: $r('app.string.empty_watchlist_desc'),
+          stateDesc: $r('app.string.watch_group_empty_desc'),
           showAction: true,
-          actionLabel: $r('app.string.action_add_watchlist'),
+          actionLabel: $r('app.string.watch_group_empty_action'),
+          iconRes: $r('app.media.ic_tab_watchlist'),
           onAction: (): void => {
-            showComingSoon(this.getUIContext(), ComingSoonText.ADD_WATCHLIST);
+            this.vm.selectGroup('all');
           }
         })
           .width('100%')
@@ -430,6 +514,8 @@ export struct WatchlistPage {
           sortDir: this.vm.sortDir,
           initialVOffset: this.vm.vOffset,
           initialHOffset: this.vm.hOffset,
+          scrollToIndex: this.vm.scrollIndex,
+          scrollSeq: this.vm.scrollSeq,
           autoScroll: this.perfRunning,
           selectMode: this.vm.selectMode,
           selectedCodes: this.vm.selectedCodes,

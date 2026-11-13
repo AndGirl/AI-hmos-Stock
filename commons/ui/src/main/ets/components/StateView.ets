@@ -20,6 +20,8 @@ export struct StateView {
   @Param showAction: boolean = false;
   @Param actionLabel: ResourceStr = '';
   @Param retrying: boolean = false;
+  /** 图标位可替换：默认统一灰占位图；自选空态等页面可传自己的语义图标（2026-11-13）。 */
+  @Param iconRes: Resource = $r('app.media.ic_placeholder');
   @Event onAction: () => void = () => {
   };
 
@@ -36,7 +38,7 @@ export struct StateView {
           .fontColor(AppColor.textSecondary)
           .margin({ top: AppDim.gap8 })
       } else {
-        Image($r('app.media.ic_placeholder'))
+        Image(this.iconRes)
           .width(64)
           .height(64)
           .fillColor(AppColor.textSecondary)
