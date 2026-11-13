@@ -112,5 +112,15 @@ export default function quoteCacheRulesTest(): void {
       expect(cacheable(snapshot('600519', 10, 'open'))).assertTrue();
       expect(cacheable(snapshot('600519', null, 'open'))).assertFalse();
     });
+
+    it('suspended_snapshot_is_cacheable', 0, () => {
+      // 停牌快照价格为空但不再变化：必须可缓存，否则有 1 只停牌时冷启永远命中不了缓存
+      const suspended: QuoteSnapshot = snapshot('600000', null, 'open');
+      suspended.status = 'suspended';
+      expect(cacheable(suspended)).assertTrue();
+      const delisted: QuoteSnapshot = snapshot('600001', null, 'open');
+      delisted.status = 'delisted';
+      expect(cacheable(delisted)).assertTrue();
+    });
   });
 }

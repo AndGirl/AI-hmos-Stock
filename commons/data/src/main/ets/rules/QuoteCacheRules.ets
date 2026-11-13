@@ -77,7 +77,15 @@ export function capEntries(entries: QuoteCacheEntry[]): QuoteCacheEntry[] {
   return sorted.slice(sorted.length - QUOTE_CACHE_MAX);
 }
 
-/** 快照是否可进缓存：价格类字段全空（停牌/未开盘）时不缓存，避免冷启渲染一屏 `--`。 */
+/**
+ * 快照是否可进缓存：
+ * - 停牌/退市快照价格为空但**本身不再变化**，可以缓存（否则自选里只要有 1 只停牌，
+ *   缓存命中率就永远差 1 条，冷启永远走网络路径）；
+ * - 其余「没有最新价」的快照（未开盘/异常）不缓存，避免冷启渲染一屏 `--`。
+ */
 export function cacheable(snapshot: QuoteSnapshot): boolean {
+  if (snapshot.status === 'suspended' || snapshot.status === 'delisted') {
+    return true;
+  }
   return snapshot.last !== null && snapshot.last !== undefined;
 }

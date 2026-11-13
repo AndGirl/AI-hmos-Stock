@@ -209,6 +209,7 @@ export {
   QuoteCacheEntry
 } from './src/main/ets/rules/QuoteCacheRules';
 export { hashSeed, SESSION_SEED, SeededRandom } from './src/main/ets/mock/SeededRandom';
+export { SESSION_MODES, SessionMode, TradingSession } from './src/main/ets/mock/TradingSession';
 export { AppConfig, QuoteSource } from './src/main/ets/real/AppConfig';
 export { AuthClient } from './src/main/ets/real/AuthClient';
 export { ChannelEntry, QuoteChannel } from './src/main/ets/real/QuoteChannel';

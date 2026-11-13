@@ -1,6 +1,7 @@
 import {
   DataServices,
   MockFaults,
+  QuoteCacheStore,
   QuoteSnapshot,
   QuoteSink,
   SinkSubscription,
@@ -8,6 +9,7 @@ import {
   WatchItem,
   WatchlistSnapshot
 } from 'commons_data';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 /** 仓储归一化后的自选数据：分组、条目、快照（含指数）。 */
 export class WatchlistData {
@@ -52,12 +54,32 @@ export class WatchlistRepository {
       }
     });
     const all: string[] = codes.concat(indexCodes);
+    // M9-6 / AC-111：先看缓存。全部 code 都有新鲜缓存时**直接返回**（冷启 ≤800ms 出内容），
+    // 首个网络快照随后由 QuoteBus 推送补上（onPatch 增量刷新，不重建列表，避免位置抖动）。
+    // 必须先 await 读盘（EntryAbility 的预热是异步的，不等会读到空缓存）。
+    const cache: QuoteCacheStore = DataServices.quoteCache();
+    await cache.load();
+    const cachedQuotes: QuoteSnapshot[] = cache.cachedMany(all);
+    // 覆盖率 ≥90% 即视为命中：留一点余量给「刚加进来/刚过期」的个别标的，
+    // 缺的那几行显示 `--`，由 1s 内的推送补上（不为此整表等网络）。
+    const hit: boolean = all.length > 0 && cachedQuotes.length * 10 >= all.length * 9;
+    if (hit) {
+      for (let i = 0; i < cachedQuotes.length; i++) {
+        data.quotes.set(cachedQuotes[i].code, cachedQuotes[i]);
+      }
+      hilog.info(0x0001, 'QuoteLog', 'quote_cache_hit codes=%{public}d', all.length);
+      return data;
+    }
+    for (let i = 0; i < cachedQuotes.length; i++) {
+      data.quotes.set(cachedQuotes[i].code, cachedQuotes[i]);
+    }
     const snapshots: QuoteSnapshot[] = await DataServices.quoteProvider().getSnapshots(all);
     for (let i = 0; i < snapshots.length; i++) {
       data.quotes.set(snapshots[i].code, snapshots[i]);
     }
     // M9-6：把本次快照写进缓存，供下次冷启首帧直接渲染（≤800ms 出内容）。
-    DataServices.quoteCache().putAll(snapshots);
+    cache.putAll(snapshots);
+    hilog.info(0x0001, 'QuoteLog', 'quote_cache_miss filled=%{public}d', snapshots.length);
     return data;
   }
 

@@ -12,6 +12,7 @@ import { buildIndexSeeds, buildStockSeeds, IndexSeed, StockSeed } from '../mock/
 import { buildExtraStockSeeds, ExtraStockSeed } from '../mock/SearchSeeds';
 import { MockFaults, NetFault } from '../mock/MockFaults';
 import { hashSeed, SESSION_SEED, SeededRandom } from '../mock/SeededRandom';
+import { TradingSession } from '../mock/TradingSession';
 import { LimitPair, resolveLimits, round2 } from '../rules/LimitRules';
 
 const PUSH_INTERVAL_MS: number = 1000;
@@ -22,6 +23,8 @@ class QuoteState {
   name: string = '';
   market: Market = 'SH';
   status: TradeStatus = 'open';
+  /** 种子原始状态：停牌/退市标的不会被交易时段覆盖（M9 时段驱动器）。 */
+  seedStatus: TradeStatus = 'open';
   isNew: boolean = false;
   volatility: number = 1;
   floatShares: number = 2000000000;
@@ -182,6 +185,7 @@ export class MockQuoteProvider implements QuoteProvider {
       state.name = seed.name;
       state.market = seed.market;
       state.status = seed.status;
+      state.seedStatus = seed.status;
       state.isNew = seed.isNew;
       state.volatility = seed.volatility;
       state.last = seed.base;
@@ -235,6 +239,7 @@ export class MockQuoteProvider implements QuoteProvider {
       state.name = seed.name;
       state.market = seed.market;
       state.status = seed.status;
+      state.seedStatus = seed.status;
       state.isNew = seed.isNew;
       state.volatility = 1;
       const base: number = 8 + ((i * 23) % 380) / 2;
@@ -258,6 +263,7 @@ export class MockQuoteProvider implements QuoteProvider {
   }
 
   getSnapshots(codes: string[]): Promise<QuoteSnapshot[]> {
+    this.applySession();
     const result: QuoteSnapshot[] = [];
     for (let i = 0; i < codes.length; i++) {
       const state: QuoteState | undefined = this.states.get(codes[i]);
@@ -330,6 +336,7 @@ export class MockQuoteProvider implements QuoteProvider {
       return;
     }
     this.tickSeq++;
+    this.applySession();
     if (!this.gateNetwork()) {
       return;
     }
@@ -359,6 +366,24 @@ export class MockQuoteProvider implements QuoteProvider {
       const patch: QuotePatch = state.buildPatch();
       this.dispatch(patch);
     }
+  }
+
+  /**
+   * 把交易时段写到非停牌标的上（M9 时段驱动器）：
+   * 种子标记为停牌/退市的标的不受时段影响；其余按 `TradingSession` 当前状态同步，
+   * 于是「行情状态」与「交易弹窗能否下单」天然同源（交易侧直接读 quote.status）。
+   */
+  private applySession(): void {
+    const status: TradeStatus = TradingSession.resolve(new Date());
+    this.states.forEach((state: QuoteState): void => {
+      if (state.seedStatus === 'suspended' || state.seedStatus === 'delisted') {
+        return;
+      }
+      if (state.status !== status) {
+        state.status = status;
+        state.snapshotTime = Date.now();
+      }
+    });
   }
 
   private advance(state: QuoteState): void {

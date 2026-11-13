@@ -236,43 +236,91 @@ export struct WatchlistPage {
   }
 
   /**
-   * 二级：行情通道（M9-4 限流降频 / M9-2 鉴权 / M9-5 异常帧）。
-   * 全部只写 MockFaults，通道的下一个 1s tick 会把它翻译成可见状态（banner/日志）。
+   * 二级：行情通道（M9-4 限流降频 / M9-2 鉴权 / M9-5 异常帧 / 交易时段 / 采样导出）。
+   * 注入类只写 MockFaults，通道的下一个 1s tick 会把它翻译成可见状态（banner/日志）。
    */
   private openQuoteMenu(): void {
-    const b0: promptAction.Button = { text: '正常（清除注入）', color: AppColor.debug };
-    const b1: promptAction.Button = { text: '限流 429（降频 5s）', color: AppColor.debug };
-    const b2: promptAction.Button = { text: '鉴权失败 401', color: AppColor.debug };
-    const b3: promptAction.Button = { text: '异常帧注入（时间/越界/超限）', color: AppColor.debug };
-    const b4: promptAction.Button = { text: '恢复通道（打印统计）', color: AppColor.debug };
-    const b5: promptAction.Button = { text: '清除行情缓存', color: AppColor.debug };
+    const b0: promptAction.Button = { text: '限流 429（降频 5s）', color: AppColor.debug };
+    const b1: promptAction.Button = { text: '鉴权失败 401', color: AppColor.debug };
+    const b2: promptAction.Button = { text: '异常帧注入（时间/越界/超限）', color: AppColor.debug };
+    const b3: promptAction.Button = { text: '恢复通道（清注入 + 打印统计）', color: AppColor.debug };
+    const b4: promptAction.Button = { text: '交易时段…', color: AppColor.debug };
+    const b5: promptAction.Button = { text: '采样与缓存…', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
       promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4, b5];
     this.getUIContext().getPromptAction().showActionMenu({ title: '行情通道', buttons: buttons })
       .then((res: promptAction.ActionMenuSuccessResponse): void => {
         if (res.index === 0) {
-          this.vm.applyQuoteRateLimit(false, 0);
-          this.vm.applyQuoteUnauthorized(false);
-          this.vm.applyQuoteBadFrames(false);
-          this.toast('已清除行情注入');
-        } else if (res.index === 1) {
           this.vm.applyQuoteRateLimit(true, 0);
           this.toast('已注入 429（5s 后可见降频提示）');
-        } else if (res.index === 2) {
+        } else if (res.index === 1) {
           this.vm.applyQuoteUnauthorized(true);
           this.toast('已注入 401（下一次心跳进未授权态）');
-        } else if (res.index === 3) {
+        } else if (res.index === 2) {
           this.vm.applyQuoteBadFrames(true);
           this.toast('已注入异常帧（计数见恢复时统计）');
-        } else if (res.index === 4) {
+        } else if (res.index === 3) {
           this.toast(this.vm.recoverQuoteChannel());
+        } else if (res.index === 4) {
+          this.openSessionMenu();
         } else if (res.index === 5) {
+          this.openSampleMenu();
+        }
+      }).catch((): void => {
+    });
+  }
+
+  /** 三级：采样导出（M9-7 比对）与缓存清除（AC-111 冷启实验）。 */
+  private openSampleMenu(): void {
+    const b0: promptAction.Button = { text: '导出行情采样（比对用）', color: AppColor.debug };
+    const b1: promptAction.Button = { text: '清除行情缓存（下次冷启无缓存）', color: AppColor.debug };
+    const buttons: [promptAction.Button, promptAction.Button] = [b0, b1];
+    this.getUIContext().getPromptAction().showActionMenu({ title: '采样与缓存', buttons: buttons })
+      .then((res: promptAction.ActionMenuSuccessResponse): void => {
+        if (res.index === 0) {
+          this.vm.debugExportQuoteSamples().then((count: number): void => {
+            this.toast(`已导出 ${count} 条采样（hilog 标签 QuoteSample）`);
+          }).catch((): void => {
+          });
+        } else if (res.index === 1) {
           this.vm.clearQuoteCache().then((): void => {
             this.toast('已清除行情缓存');
           }).catch((): void => {
           });
         }
       }).catch((): void => {
+    });
+  }
+
+  /** 三级：交易时段（M9：盘前/竞价/午休/收盘/自动/演示开盘）。 */
+  private openSessionMenu(): void {
+    const b0: promptAction.Button = { text: '演示·连续竞价（默认）', color: AppColor.debug };
+    const b1: promptAction.Button = { text: '自动（按系统时间）', color: AppColor.debug };
+    const b2: promptAction.Button = { text: '盘前', color: AppColor.debug };
+    const b3: promptAction.Button = { text: '集合竞价', color: AppColor.debug };
+    const b4: promptAction.Button = { text: '午休', color: AppColor.debug };
+    const b5: promptAction.Button = { text: '收盘', color: AppColor.debug };
+    const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
+      promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4, b5];
+    this.getUIContext().getPromptAction().showActionMenu({
+      title: `交易时段（当前 ${this.vm.sessionMode()}）`,
+      buttons: buttons
+    }).then((res: promptAction.ActionMenuSuccessResponse): void => {
+      if (res.index === 0) {
+        this.vm.applySessionMode('demo-open');
+      } else if (res.index === 1) {
+        this.vm.applySessionMode('auto');
+      } else if (res.index === 2) {
+        this.vm.applySessionMode('pre');
+      } else if (res.index === 3) {
+        this.vm.applySessionMode('auction');
+      } else if (res.index === 4) {
+        this.vm.applySessionMode('lunch');
+      } else if (res.index === 5) {
+        this.vm.applySessionMode('closed');
+      }
+      this.toast(`交易时段：${this.vm.sessionMode()}`);
+    }).catch((): void => {
     });
   }
 

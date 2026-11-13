@@ -10,8 +10,10 @@ import {
   QuoteChannel,
   RemoveSnapshot,
   SearchProvider,
+  SessionMode,
   SinkSubscription,
   StockBrowsePage,
+  TradingSession,
   ViewPrefStore,
   WatchAddInput,
   WatchGroup,
@@ -34,6 +36,22 @@ import { CardVM } from './CardVM';
 import { WatchRowVM } from './WatchRowVM';
 
 export type WatchPageState = 'loading' | 'content' | 'empty' | 'error';
+
+/** 采样导出用：空值按 -1 输出（保持 JSON 合法且脚本可判停牌）。 */
+function numText(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return '-1';
+  }
+  return value.toFixed(2);
+}
+
+/** 昨收要 4 位：涨跌停由它乘出来，两位小数会让脚本复算产生 1 分钱的假差异。 */
+function numText4(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return '-1';
+  }
+  return value.toFixed(4);
+}
 
 /** 视图切换节流窗（M8-3：快速连点只生效一次）。 */
 const VIEW_TOGGLE_THROTTLE_MS: number = 200;
@@ -315,6 +333,7 @@ export class WatchlistVM {
     this.state = 'loading';
     this.dispose();
     const token: number = this.loadToken;
+    const startedAt: number = Date.now();
     try {
       // 视图偏好先读（M8-4）：出内容前必须知道列表还是卡片，否则冷启会「先列表后卡片」。
       const prefTask: Promise<void> = this.pref.load();
@@ -328,6 +347,9 @@ export class WatchlistVM {
       this.loaded = true;
       this.subscribe();
       this.attachStore();
+      // M9-6 / AC-111：出内容耗时打点（冷启命中缓存时应显著小于网络路径）。
+      hilog.info(0x0001, 'QuoteLog', 'watchlist_ready ms=%{public}d quotes=%{public}d',
+        Date.now() - startedAt, data.quotes.size);
     } catch (err) {
       if (token !== this.loadToken) {
         return;
@@ -427,7 +449,7 @@ export class WatchlistVM {
     hilog.info(0x0001, 'QuoteLog', 'quote_bad_frames on=%{public}s', `${on}`);
   }
 
-  /** 调试：恢复行情通道（清限流 + 清鉴权锁定 + 重订阅），返回统计串。 */
+  /** 调试：恢复行情通道（清限流 + 清鉴权锁定 + 重订阅），返回**恢复前**的统计串。 */
   recoverQuoteChannel(): string {
     MockFaults.quoteRateLimited = false;
     MockFaults.quoteRetryAfterMs = 0;
@@ -437,10 +459,12 @@ export class WatchlistVM {
     if (channel === undefined) {
       return 'quote_source=mock（未启用通道）';
     }
+    // 先取统计再恢复：recover 会清帧校验计数，取晚了就看不到丢弃数（AC-110 取证要它）。
+    const before: string = channel.stats();
     channel.recover(Date.now());
-    const text: string = channel.stats();
-    hilog.info(0x0001, 'QuoteLog', 'quote_recover %{public}s', text);
-    return text;
+    hilog.info(0x0001, 'QuoteLog', 'quote_recover before[%{public}s] after[%{public}s]',
+      before, channel.stats());
+    return before;
   }
 
   /** 调试：行情通道统计（AC-106/107/109/110 的断言来源）。 */
@@ -456,6 +480,68 @@ export class WatchlistVM {
   async clearQuoteCache(): Promise<void> {
     await DataServices.quoteCache().clear();
     hilog.info(0x0001, 'QuoteLog', 'quote_cache_cleared');
+  }
+
+  /**
+   * 调试（M9）：切换交易时段（盘前/竞价/午休/收盘/全部停牌/自动/演示开盘）。
+   * 行情状态与交易弹窗的时段限制同源（交易侧直接读 `quote.status`），切换后立刻拉一帧刷新。
+   */
+  applySessionMode(mode: SessionMode): void {
+    TradingSession.setMode(mode);
+    hilog.info(0x0001, 'QuoteLog', 'session_mode=%{public}s', mode);
+    this.refreshQuotesOnce();
+  }
+
+  /** 当前时段模式（调试面板展示）。 */
+  sessionMode(): SessionMode {
+    return TradingSession.current();
+  }
+
+  /** 拉一帧快照更新现有行（不重建数组，避免列表位置抖动）。 */
+  private refreshQuotesOnce(): void {
+    if (!this.loaded || this.allRows.length === 0) {
+      return;
+    }
+    const codes: string[] = [];
+    for (let i = 0; i < this.allRows.length; i++) {
+      codes.push(this.allRows[i].code);
+    }
+    DataServices.quoteProvider().getSnapshots(codes).then((list: QuoteSnapshot[]): void => {
+      for (let i = 0; i < list.length; i++) {
+        const row: WatchRowVM | undefined = this.rowByCode.get(list[i].code);
+        if (row !== undefined) {
+          row.updateFromSnapshot(list[i]);
+        }
+      }
+    }).catch((): void => {
+    });
+  }
+
+  /**
+   * 调试（M9-7）：导出当前行情采样到 hilog（`QUOTE_SAMPLE {json}`），
+   * 供 `scripts/compare-quote.mjs` 做涨跌停/价格区间的独立复算比对。
+   */
+  async debugExportQuoteSamples(): Promise<number> {
+    if (this.allRows.length === 0) {
+      return 0;
+    }
+    const codes: string[] = [];
+    for (let i = 0; i < this.allRows.length; i++) {
+      codes.push(this.allRows[i].code);
+    }
+    const snaps: QuoteSnapshot[] = await DataServices.quoteProvider().getSnapshots(codes);
+    for (let i = 0; i < snaps.length; i++) {
+      const s: QuoteSnapshot = snaps[i];
+      // hilog 不支持 %f：数值先格式化成字符串，再用 %s 输出（保持 JSON 可被脚本解析）。
+      const json: string = '{"code":"' + s.code + '","status":"' + s.status +
+        '","prevClose":' + numText4(s.prevClose) +
+        ',"last":' + numText(s.last) +
+        ',"limitUp":' + numText(s.limitUp) +
+        ',"limitDown":' + numText(s.limitDown) + '}';
+      hilog.info(0x0001, 'QuoteSample', 'QUOTE_SAMPLE %{public}s', json);
+    }
+    hilog.info(0x0001, 'QuoteSample', 'QUOTE_SAMPLE_DONE count=%{public}d', snaps.length);
+    return snaps.length;
   }
 
   /**
