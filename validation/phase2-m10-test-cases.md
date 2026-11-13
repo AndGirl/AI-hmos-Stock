@@ -112,10 +112,28 @@
 |---|---|---|
 | 1 | **卖出入口 UI** | provider/撮合/记账已支持卖出并有单测；`TradeSheet` 仍只有买入 |
 | 2 | 回执「查看委托」跳转 | 下单成功 Toast 有委托号，但未加跳转按钮 |
-| 3 | 撤单真机点验 | 需构造「挂单」场景（限价低于现价）后点撤单，尚未取证（逻辑与单测已覆盖） |
-| 4 | 未开户引导真机截图 | 调试入口已就位（委托页长按标题 → 模拟未开户），尚未截图 |
-| 5 | 分页/下拉刷新真机 | 需 >20 笔委托 |
+| 3 | 撤单真机点验 | ✅ 已补：限价 1500（低于现价）挂单 → 已报 → 撤单 → 已撤（见 §10） |
+| 4 | 未开户引导真机截图 | ✅ 已补：委托页长按标题 → 模拟未开户 → 引导卡 → 开通模拟账户回列表 |
+| 5 | 分页真机 | ✅ 已补：调试「生成测试委托 25 笔」→ 首屏 20 条 + 滚动到底自动加载余下 5 条（见 §10-6） |
 | 6 | 首笔风险揭示 | 归 M13（合规文案） |
+
+---
+
+## 10. 剩余取证（2026-11-14，Mate 60 Pro）
+
+| # | 场景 | 步骤 | 证据 |
+|---|---|---|---|
+| 10-1 | 挂单可撤 | 详情「去交易」→ 价格改 1500（低于现价）→ 买入 → 确认 → 已报（行尾「撤单」） | [06-order-pending-cancelable.png](../shots/phase2/m10/06-order-pending-cancelable.png) |
+| 10-2 | 撤单二次确认 | 点「撤单」→ 弹窗「确认撤回这笔委托？撤单后不可恢复。」 | [07-cancel-confirm.png](../shots/phase2/m10/07-cancel-confirm.png) |
+| 10-3 | 撤单回执 | 确认撤单 → 行状态就地变「已撤」、按钮消失、Toast「已撤单」 | [08-order-canceled.png](../shots/phase2/m10/08-order-canceled.png) |
+| 10-4 | 未开户引导 | 委托页长按标题 → 调试菜单 → 模拟未开户 → 整页引导卡 | [09-no-account-guide.png](../shots/phase2/m10/09-no-account-guide.png) |
+| 10-5 | 下拉刷新 | 列表下拉 → 重新加载第 0 页 | [10-pull-refresh.png](../shots/phase2/m10/10-pull-refresh.png) |
+| 10-6 | 分页与 7 状态 | 调试「生成测试委托 25 笔」（只写委托、不记账）→ 首屏 20 条，滚动到底自动加载余下 5 条 | [11-orders-paging.png](../shots/phase2/m10/11-orders-paging.png)、[12-orders-load-more.png](../shots/phase2/m10/12-orders-load-more.png) |
+| 10-7 | 状态筛选 | 点「废单」→ 只剩废单行，行内显示原因「可用资金不足」 | [13-orders-filter-rejected.png](../shots/phase2/m10/13-orders-filter-rejected.png) |
+
+> 调试造数（`OrderListVM.debugSeedOrders(25)`）：循环覆盖 7 种状态（待报/已报/部成/已成/已撤/废单/未知），`clientOrderId` 以 `DBG` 前缀避免与真实下单撞键；**只写 `trade_orders_v1`，不动账户资金与持仓**；用「清空委托」清理。入口：委托页长按标题 → 生成测试委托 25 笔（`DEBUG` 关闭时不可用）。
+
+> 撤单取证过程中发现并修复 1 个 P1 级缺陷：撤单成功后 `load()` 重建行对象，而 `ForEach` 以 `clientOrderId` 为 key 复用旧组件 → 界面卡在「撤单中」、按钮不再消失。改为**就地更新该行**（`state/cancelable/canceling`）后再取证。
 
 ---
 
