@@ -8,6 +8,7 @@ import { DetailPage } from './DetailPage';
 import { PkPage } from './PkPage';
 import { SearchRoutePage } from './SearchPage';
 import { AddWatchlistPage } from './AddWatchlistPage';
+import { OrdersPage } from './OrdersPage';
 import { NotFoundPage } from './NotFoundPage';
 
 /**
@@ -30,6 +31,8 @@ struct Index {
       SearchRoutePage()
     } else if (name === RouteName.ADD_WATCHLIST) {
       AddWatchlistPage()
+    } else if (name === RouteName.ORDERS) {
+      OrdersPage()
     } else {
       NotFoundPage()
     }

@@ -62,6 +62,9 @@ export struct WatchlistPage {
   /** 详情/右栏「自选设置」（M7-7）：带 code 打开添加页。 */
   @Param onOpenAddForCode: (code: string) => void = (code: string): void => {
   };
+  /** 当日委托（M10-4）：标题行「委托」进入；路由由壳层装配（本层不依赖 products）。 */
+  @Param onOpenOrders: () => void = (): void => {
+  };
   /** xl 分栏时底栏由本页左列承载（§10-83）：当前选中 Tab 与切换回调由壳层注入。 */
   @Param bottomBarIndex: number = 2;
   @Param onSelectBottomTab: (index: number) => void = (index: number): void => {
@@ -960,6 +963,15 @@ export struct WatchlistPage {
               .layoutWeight(1)
             // M7-5/M7-6 入口：编辑 / 管理（分组栏右侧留给 M8 的卡片切换与排序）。
             if (this.vm.state !== 'loading' && this.vm.emptyKind !== 'all') {
+              // M10-4：当日委托入口（不新增底部 Tab，避免动全局导航与既有证据）。
+              Text($r('app.string.trade_orders_title'))
+                .fontSize(13)
+                .fontColor(AppColor.textSecondary)
+                .height(32)
+                .padding({ left: AppDim.gap8, right: AppDim.gap8 })
+                .onClick(() => {
+                  this.onOpenOrders();
+                })
               Text($r('app.string.watch_manage'))
                 .fontSize(13)
                 .fontColor(AppColor.textSecondary)

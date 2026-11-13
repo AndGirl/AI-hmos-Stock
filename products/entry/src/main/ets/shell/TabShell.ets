@@ -102,6 +102,9 @@ export struct TabShell {
               onOpenAddForCode: (code: string): void => {
                 AppServices.get().pushAddWatchlist(code, '', 'pane');
               },
+              onOpenOrders: (): void => {
+                AppServices.get().pushOrders();
+              },
               bottomBarIndex: this.currentIndex,
               onSelectBottomTab: (index: number): void => {
                 this.tabsController.changeIndex(index);

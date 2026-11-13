@@ -8,6 +8,8 @@ export class RouteName {
   static readonly SEARCH: string = 'search';
   /** 添加自选（M7-7）：四入口统一走这一页。 */
   static readonly ADD_WATCHLIST: string = 'addWatchlist';
+  /** 当日委托（M10-4）：自选页标题「委托」进入。 */
+  static readonly ORDERS: string = 'orders';
   static readonly NOT_FOUND: string = 'notFound';
 }
 
@@ -48,5 +50,10 @@ export interface PkParam {
 }
 
 export interface NotFoundParam {
+  code?: string;
+}
+
+/** 当日委托参数（M10-4）：当前无入参，保留结构便于后续「按标的过滤」只加不改。 */
+export interface OrdersParam {
   code?: string;
 }

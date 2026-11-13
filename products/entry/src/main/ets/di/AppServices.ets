@@ -1,9 +1,10 @@
-import {
+﻿import {
   AddWatchlistFrom,
   AddWatchlistParam,
   DetailFrom,
   DetailParam,
   NotFoundParam,
+  OrdersParam,
   PkParam,
   RouteName,
   SearchFrom,
@@ -92,6 +93,12 @@ export class AppServices {
       param.from = from;
     }
     this.stack.pushPathByName(RouteName.PK, param);
+  }
+
+  /** 当日委托（M10-4）：自选页标题「委托」进入。 */
+  pushOrders(): void {
+    const param: OrdersParam = {};
+    this.stack.pushPathByName(RouteName.ORDERS, param);
   }
 
   pushNotFound(code?: string): void {
