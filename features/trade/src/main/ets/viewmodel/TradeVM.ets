@@ -122,6 +122,8 @@ export class TradeVM {
   private canBuy: number = 0;
   private clientOrderId: string = '';
   private submitToken: number = 0;
+  /** 上下文加载令牌：换标的/关闭后丢弃过期回执，避免旧价格/旧账户回填。 */
+  private loadToken: number = 0;
   private submitTimer: number = -1;
   private closeTimer: number = -1;
   private openStartMs: number = 0;
@@ -131,13 +133,21 @@ export class TradeVM {
     this.code = code;
     this.source = source;
     this.reset();
+    this.loadToken++;
+    const token: number = this.loadToken;
     this.phase = 'resolving';
     this.openStartMs = Date.now();
     this.repo.loadContext(code, source).then((ctx: TradeContext): void => {
+      if (token !== this.loadToken) {
+        return;
+      }
       this.applyContext(ctx);
       hilog.info(DOMAIN, 'TradePerf', 'context code=%{public}s ms=%{public}d source=%{public}s',
         this.code, Date.now() - this.openStartMs, source);
     }).catch((err: Error): void => {
+      if (token !== this.loadToken) {
+        return;
+      }
       hilog.info(DOMAIN, 'TradePerf', 'context_fail code=%{public}s ms=%{public}d', this.code,
         Date.now() - this.openStartMs);
       this.raiseToast('load_failed');
@@ -196,7 +206,9 @@ export class TradeVM {
     if (!this.canEdit()) {
       return;
     }
-    this.commitPending();
+    if (!this.commitPending()) {
+      return;
+    }
     this.price = stepPrice(this.price, delta, this.limitDown(), this.limitUp());
     this.clearErrors();
     this.hintCode = '';
@@ -210,7 +222,9 @@ export class TradeVM {
     if (!this.canEdit()) {
       return;
     }
-    this.commitPending();
+    if (!this.commitPending()) {
+      return;
+    }
     this.qty = stepQty(this.qty, delta, this.canBuy);
     this.clearErrors();
     this.hintCode = '';
@@ -241,13 +255,14 @@ export class TradeVM {
 
   /** 手输提交：空/非数字就地拒绝并保留原值；超区间修正到边界并说明。 */
   commitPrice(raw: string): void {
-    this.editing = '';
     const text: string = raw.trim();
     const value: number = text.length === 0 ? Number.NaN : Number(text);
     if (!Number.isFinite(value) || value <= 0) {
+      // 保留编辑态与错误，让用户就地改；不静默回退到上一次价格（FR-07.6）。
       this.priceError = 'price_empty';
       return;
     }
+    this.editing = '';
     let next: number = roundPrice(value);
     const up: number = this.limitUp();
     const down: number = this.limitDown();
@@ -269,13 +284,14 @@ export class TradeVM {
   }
 
   commitQty(raw: string): void {
-    this.editing = '';
     const text: string = raw.trim();
     const value: number = text.length === 0 ? Number.NaN : Number(text);
     if (!Number.isFinite(value) || value <= 0) {
+      // 同上：非法数量保留编辑态与错误。
       this.qtyError = 'qty_empty';
       return;
     }
+    this.editing = '';
     const commit: QtyCommit = commitQtyValue(value, this.canBuy);
     this.qty = commit.value;
     this.hintCode = commit.corrected ? 'qty_can_buy' : '';
@@ -311,9 +327,13 @@ export class TradeVM {
       return false;
     }
     // 点「买入」前先落定未提交的手输值（失焦/回车之外的第三条路径）。
-    this.commitPending();
+    // 顺序：先清旧错误 → 再落定输入；落定失败直接返回，禁止拿旧值进确认层。
     this.clearErrors();
     this.hintCode = '';
+    if (!this.commitPending()) {
+      hilog.info(DOMAIN, 'TradeLog', 'trade_validate_fail count=0 source=pending_input');
+      return false;
+    }
     const errors: FieldError[] = validateOrder(this.price, this.qty, this.limitUp(), this.limitDown(),
       this.canBuy);
     for (let i = 0; i < errors.length; i++) {
@@ -334,6 +354,11 @@ export class TradeVM {
   /** 确认层提交：按钮 loading、关闭入口失效、重复点击丢弃、2s 超时进入结果未知。 */
   submit(): void {
     if (this.submitting || this.unknown || this.phase !== 'confirm') {
+      return;
+    }
+    if (this.blockCode !== '') {
+      // 断线 / 非交易时段 / 资金不足：确认层同样不得提交（FR-07.10 / CC-7.6）。
+      hilog.info(DOMAIN, 'TradeLog', 'trade_submit_blocked block=%{public}s', this.blockCode);
       return;
     }
     const account: AccountInfo | null = this.activeAccount();
@@ -423,6 +448,7 @@ export class TradeVM {
     this.clearSubmitTimer();
     this.clearCloseTimer();
     this.submitToken++;
+    this.loadToken++;
   }
 
   /**
@@ -560,13 +586,20 @@ export class TradeVM {
     return this.phase === 'edit' && !this.submitting;
   }
 
-  /** 手输未失焦时直接点步进/买入：先按输入框内容提交，避免读旧值。 */
-  private commitPending(): void {
+  /**
+   * 手输未失焦时直接点步进/买入：先按输入框内容提交，避免读旧值。
+   * 返回 false 表示输入非法，调用方必须中止本次操作。
+   */
+  private commitPending(): boolean {
     if (this.editing === 'price') {
       this.commitPrice(this.priceInput);
-    } else if (this.editing === 'qty') {
-      this.commitQty(this.qtyInput);
+      return this.priceError === '';
     }
+    if (this.editing === 'qty') {
+      this.commitQty(this.qtyInput);
+      return this.qtyError === '';
+    }
+    return true;
   }
 
   private activeAccount(): AccountInfo | null {

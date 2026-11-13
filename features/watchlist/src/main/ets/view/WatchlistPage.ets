@@ -23,9 +23,6 @@ import { FrozenTable } from './FrozenTable';
 const SKELETON_ROWS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const SKELETON_CELLS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-/** 调试面板按钮色（非产品 UI，不走主题 token；面板本身 release 不展示）。 */
-const DEBUG_BTN_COLOR: string = '#E84026';
-
 /**
  * 窄窗验证开关：>0 时把 xl 右栏宽度压到该 vp，用于复现 FR-06 §2.6 的 pane <360vp 布局。
  * 真实窄窗由 M4 的多窗宿主创建，本期验证后保持 0。
@@ -81,13 +78,13 @@ export struct WatchlistPage {
     }
     const b0: promptAction.Button = {
       text: this.perfRunning ? '停止帧率采样' : '开始帧率采样（自动滚动）',
-      color: DEBUG_BTN_COLOR
+      color: AppColor.debug
     };
-    const b1: promptAction.Button = { text: '字号…', color: DEBUG_BTN_COLOR };
-    const b2: promptAction.Button = { text: '网络…', color: DEBUG_BTN_COLOR };
-    const b3: promptAction.Button = { text: '清空自选（空态）', color: DEBUG_BTN_COLOR };
-    const b4: promptAction.Button = { text: '模拟加载失败', color: DEBUG_BTN_COLOR };
-    const b5: promptAction.Button = { text: '重置（字号 + 网络 + 数据）', color: DEBUG_BTN_COLOR };
+    const b1: promptAction.Button = { text: '字号…', color: AppColor.debug };
+    const b2: promptAction.Button = { text: '网络…', color: AppColor.debug };
+    const b3: promptAction.Button = { text: '清空自选（空态）', color: AppColor.debug };
+    const b4: promptAction.Button = { text: '模拟加载失败', color: AppColor.debug };
+    const b5: promptAction.Button = { text: '重置（字号 + 网络 + 数据）', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
       promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4, b5];
     this.getUIContext().getPromptAction().showActionMenu({
@@ -119,9 +116,9 @@ export struct WatchlistPage {
 
   /** 二级：字号档位（M5-3 端到端用）。 */
   private openFontMenu(): void {
-    const b0: promptAction.Button = { text: '1.0×', color: DEBUG_BTN_COLOR };
-    const b1: promptAction.Button = { text: '1.3×', color: DEBUG_BTN_COLOR };
-    const b2: promptAction.Button = { text: '1.45×', color: DEBUG_BTN_COLOR };
+    const b0: promptAction.Button = { text: '1.0×', color: AppColor.debug };
+    const b1: promptAction.Button = { text: '1.3×', color: AppColor.debug };
+    const b2: promptAction.Button = { text: '1.45×', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2];
     this.getUIContext().getPromptAction().showActionMenu({ title: '字号', buttons: buttons })
       .then((res: promptAction.ActionMenuSuccessResponse): void => {
@@ -138,10 +135,10 @@ export struct WatchlistPage {
 
   /** 二级：网络故障（M5-1：weak / offline / delayed / 恢复）。 */
   private openNetMenu(): void {
-    const b0: promptAction.Button = { text: '正常', color: DEBUG_BTN_COLOR };
-    const b1: promptAction.Button = { text: '弱网（weak）', color: DEBUG_BTN_COLOR };
-    const b2: promptAction.Button = { text: '断线（offline）', color: DEBUG_BTN_COLOR };
-    const b3: promptAction.Button = { text: '延迟（delayed）', color: DEBUG_BTN_COLOR };
+    const b0: promptAction.Button = { text: '正常', color: AppColor.debug };
+    const b1: promptAction.Button = { text: '弱网（weak）', color: AppColor.debug };
+    const b2: promptAction.Button = { text: '断线（offline）', color: AppColor.debug };
+    const b3: promptAction.Button = { text: '延迟（delayed）', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
       promptAction.Button] = [b0, b1, b2, b3];
     this.getUIContext().getPromptAction().showActionMenu({ title: '网络状态', buttons: buttons })

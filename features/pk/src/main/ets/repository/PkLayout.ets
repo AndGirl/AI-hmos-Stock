@@ -53,7 +53,8 @@ export function windowRadius(count: number): number {
  * 三窗公式 `w = floor(viewport/3 + 6)` 与 `x = i*(w-12)` 保证整体不溢出。
  */
 export function computeLayout(count: number, viewport: number): SlotLayout[] {
-  const safeViewport: number = viewport > 0 ? viewport : 360;
+  // 下限保证三窗 `x = i*(w-12)` 不会落到负坐标（vp 极小只可能来自异常尺寸）。
+  const safeViewport: number = Math.max(viewport > 0 ? viewport : 360, PK_MAX_WINDOWS * PK_DECK_OVERLAP);
   if (count <= 0) {
     return [];
   }
@@ -89,6 +90,9 @@ export function layoutViolations(count: number, viewport: number): string[] {
     const slot: SlotLayout = slots[i];
     if (slot.x + slot.width > viewport + 0.5) {
       issues.push(`overflow i=${i} x=${slot.x} w=${slot.width} vp=${viewport}`);
+    }
+    if (slot.x < 0) {
+      issues.push(`negative_x i=${i} x=${slot.x}`);
     }
     if (slot.width <= 0) {
       issues.push(`zero_width i=${i}`);

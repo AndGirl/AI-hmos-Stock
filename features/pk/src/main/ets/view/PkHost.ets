@@ -124,7 +124,7 @@ export struct PkHost {
     if (!DEBUG) {
       return;
     }
-    const color: string = '#E84026';
+    const color: Resource = AppColor.debug;
     const b0: promptAction.Button = { text: '订阅统计（日志）', color: color };
     const b1: promptAction.Button = { text: '降级：非焦点窗降频', color: color };
     const b2: promptAction.Button = { text: '降级：关闭非焦点窗', color: color };

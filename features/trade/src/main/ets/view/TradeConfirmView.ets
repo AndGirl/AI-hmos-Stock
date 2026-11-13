@@ -1,6 +1,6 @@
 import { AppColor } from 'commons_ui';
 import { TradeVM } from '../viewmodel/TradeVM';
-import { failText, queryStatusText } from './TradeText';
+import { blockText, failText, queryStatusText } from './TradeText';
 
 /**
  * 确认层（FR-07.7）：四项摘要（账户 / 标的 / 价格 / 数量）与编辑层逐字一致，
@@ -14,7 +14,8 @@ export struct TradeConfirmView {
   @Param keyboardUp: boolean = false;
 
   private ctaEnabled(): boolean {
-    return !this.vm.submitting && !this.vm.unknown;
+    // 断线 / 非交易时段 / 资金不足：确认层与编辑层同口径禁用（FR-07.10）。
+    return !this.vm.submitting && !this.vm.unknown && this.vm.blockCode === '';
   }
 
   @Builder
@@ -112,6 +113,20 @@ export struct TradeConfirmView {
     .alignItems(VerticalAlign.Center)
     .accessibilityGroup(true)
     .accessibilityText(a11y)
+  }
+
+  @Builder
+  blockBanner() {
+    Row() {
+      Text(blockText(this.vm.blockCode, this.vm.canBuyText))
+        .fontSize(13)
+        .fontColor(AppColor.error)
+    }
+    .width('100%')
+    .padding(10)
+    .margin({ top: 12 })
+    .backgroundColor(AppColor.bannerBg)
+    .borderRadius(8)
   }
 
   @Builder
@@ -264,6 +279,10 @@ export struct TradeConfirmView {
     }
     .width('100%')
     .margin({ top: 8 })
+
+    if (this.vm.blockCode !== '') {
+      this.blockBanner()
+    }
 
     if (this.vm.failCode !== '') {
       this.failBanner()

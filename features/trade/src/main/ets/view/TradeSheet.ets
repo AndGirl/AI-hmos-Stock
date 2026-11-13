@@ -27,6 +27,8 @@ export struct TradeSheet {
   @Local windowHeightVp: number = 0;
   private prevAvoidMode: KeyboardAvoidMode = KeyboardAvoidMode.OFFSET;
   private hostWindow: window.Window | undefined = undefined;
+  /** 异步拿到窗口前组件可能已卸载：置位后不再注册监听。 */
+  private detached: boolean = false;
 
   aboutToAppear(): void {
     try {
@@ -36,6 +38,9 @@ export struct TradeSheet {
       // 老版本无该能力时保持系统默认避让。
     }
     window.getLastWindow(getContext(this)).then((win: window.Window): void => {
+      if (this.detached) {
+        return;
+      }
       this.hostWindow = win;
       try {
         this.windowHeightVp = this.getUIContext().px2vp(win.getWindowProperties().windowRect.height);
@@ -54,6 +59,7 @@ export struct TradeSheet {
   }
 
   aboutToDisappear(): void {
+    this.detached = true;
     try {
       this.getUIContext().setKeyboardAvoidMode(this.prevAvoidMode);
     } catch (err) {

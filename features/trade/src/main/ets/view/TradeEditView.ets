@@ -4,9 +4,6 @@ import { DEBUG } from '../../../../BuildProfile';
 import { TradeFaultKind, TradeVM } from '../viewmodel/TradeVM';
 import { blockText, fieldErrorText, hintText } from './TradeText';
 
-/** 调试菜单按钮色（非产品 UI，release 不展示）。 */
-const DEBUG_BTN_COLOR: string = '#E84026';
-
 /**
  * 编辑层（FR-07.4~07.6）：标的/账户上下文、价格与数量（步进 + 手输）、
  * 涨跌停与可买、字段级错误、提示条、三态主按钮（可用/禁用/loading）。
@@ -53,12 +50,12 @@ export struct TradeEditView {
     if (!DEBUG) {
       return;
     }
-    const b0: promptAction.Button = { text: '未登录（登录回流）', color: DEBUG_BTN_COLOR };
-    const b1: promptAction.Button = { text: '未开户（入口禁用）', color: DEBUG_BTN_COLOR };
-    const b2: promptAction.Button = { text: '断线（弹窗内提示）', color: DEBUG_BTN_COLOR };
-    const b3: promptAction.Button = { text: '非交易时段（可填不可提）', color: DEBUG_BTN_COLOR };
-    const b4: promptAction.Button = { text: '更多故障（资金/拒单/超时）', color: DEBUG_BTN_COLOR };
-    const b5: promptAction.Button = { text: '恢复正常', color: DEBUG_BTN_COLOR };
+    const b0: promptAction.Button = { text: '未登录（登录回流）', color: AppColor.debug };
+    const b1: promptAction.Button = { text: '未开户（入口禁用）', color: AppColor.debug };
+    const b2: promptAction.Button = { text: '断线（弹窗内提示）', color: AppColor.debug };
+    const b3: promptAction.Button = { text: '非交易时段（可填不可提）', color: AppColor.debug };
+    const b4: promptAction.Button = { text: '更多故障（资金/拒单/超时）', color: AppColor.debug };
+    const b5: promptAction.Button = { text: '恢复正常', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
       promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4, b5];
     this.getUIContext().getPromptAction().showActionMenu({
@@ -83,10 +80,10 @@ export struct TradeEditView {
   }
 
   private openDebugFaultMenu(): void {
-    const b0: promptAction.Button = { text: '资金不足（可买 0）', color: DEBUG_BTN_COLOR };
-    const b1: promptAction.Button = { text: '拒单（风控拦截）', color: DEBUG_BTN_COLOR };
-    const b2: promptAction.Button = { text: '提交超时（结果未知）', color: DEBUG_BTN_COLOR };
-    const b3: promptAction.Button = { text: '恢复正常', color: DEBUG_BTN_COLOR };
+    const b0: promptAction.Button = { text: '资金不足（可买 0）', color: AppColor.debug };
+    const b1: promptAction.Button = { text: '拒单（风控拦截）', color: AppColor.debug };
+    const b2: promptAction.Button = { text: '提交超时（结果未知）', color: AppColor.debug };
+    const b3: promptAction.Button = { text: '恢复正常', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
       promptAction.Button] = [b0, b1, b2, b3];
     this.getUIContext().getPromptAction().showActionMenu({

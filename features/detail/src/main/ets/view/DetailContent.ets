@@ -87,7 +87,7 @@ export struct DetailContent {
     if (!DEBUG) {
       return;
     }
-    const color: string = '#E84026';
+    const color: Resource = AppColor.debug;
     const b0: promptAction.Button = {
       text: this.perfRunning ? '停止帧率采样' : '开始帧率采样',
       color: color

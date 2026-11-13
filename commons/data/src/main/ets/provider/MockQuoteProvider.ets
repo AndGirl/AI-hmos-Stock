@@ -14,6 +14,11 @@ import { MockFaults, NetFault } from '../mock/MockFaults';
 const PUSH_INTERVAL_MS: number = 1000;
 const LIMIT_RATIO: number = 0.10;
 
+/** 价格 / 涨跌停统一两位小数，与交易侧（MockTradeProvider.round2）同口径。 */
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 /** 可变行情状态：只有 Mock 内部使用，对外只产出快照/patch。 */
 class QuoteState {
   code: string = '';
@@ -47,7 +52,8 @@ class QuoteState {
     }
     const amplitude: number | null = suspended || this.prevClose === 0 ?
       null : (this.high - this.low) / this.prevClose * 100;
-    const turnover: number | null = suspended ? null : this.volume / this.floatShares * 100;
+    // volume 单位为「手」（契约 §4.3）：先折成股再算换手率。
+    const turnover: number | null = suspended ? null : this.volume * 100 / this.floatShares * 100;
     return {
       code: this.code,
       market: this.market,
@@ -69,8 +75,8 @@ class QuoteState {
       open: suspended ? null : this.open,
       high: suspended ? null : this.high,
       low: suspended ? null : this.low,
-      limitUp: suspended ? null : this.prevClose * (1 + LIMIT_RATIO),
-      limitDown: suspended ? null : this.prevClose * (1 - LIMIT_RATIO),
+      limitUp: suspended ? null : round2(this.prevClose * (1 + LIMIT_RATIO)),
+      limitDown: suspended ? null : round2(this.prevClose * (1 - LIMIT_RATIO)),
       volumeRatio: suspended ? null : this.volumeRatio,
       marketCap: suspended ? null : this.last * this.totalShares,
       floatCap: suspended ? null : this.last * this.floatShares
@@ -174,9 +180,10 @@ export class MockQuoteProvider implements QuoteProvider {
       state.low = Math.min(seed.base, state.prevClose, state.open);
       state.floatShares = 800000000 + (i % 7) * 400000000;
       state.totalShares = state.floatShares * (1.2 + (i % 5) * 0.1);
-      state.volume = 1200000 + (i * 37000) % 9000000;
-      state.lastVolume = 1000 + (i * 137) % 20000;
-      state.amount = state.volume * seed.base;
+      // 量以「手」为单位（1 手 = 100 股）：总量 1.2 万~10.2 万手、现量 10~210 手。
+      state.volume = 12000 + (i * 370) % 90000;
+      state.lastVolume = 10 + (i * 137) % 200;
+      state.amount = state.volume * 100 * seed.base;
       state.volumeRatio = 0.6 + (i % 17) / 10;
       state.pe = seed.pe;
       state.pb = seed.pb;
@@ -198,8 +205,8 @@ export class MockQuoteProvider implements QuoteProvider {
       state.high = seed.base * 1.006;
       state.low = seed.base * 0.996;
       state.floatShares = 1000000000000;
-      state.volume = 220000000;
-      state.amount = state.volume * seed.base;
+      state.volume = 2200000;
+      state.amount = state.volume * 100 * seed.base;
       state.snapshotTime = Date.now();
       this.states.set(seed.code, state);
     }
@@ -312,8 +319,8 @@ export class MockQuoteProvider implements QuoteProvider {
   private advance(state: QuoteState): void {
     const drift: number = (Math.random() * 2 - 1) * 0.008 * state.volatility;
     let next: number = state.last * (1 + drift);
-    const upper: number = state.prevClose * (1 + LIMIT_RATIO);
-    const lower: number = state.prevClose * (1 - LIMIT_RATIO);
+    const upper: number = round2(state.prevClose * (1 + LIMIT_RATIO));
+    const lower: number = round2(state.prevClose * (1 - LIMIT_RATIO));
     if (next > upper) {
       next = upper;
     }
@@ -323,10 +330,10 @@ export class MockQuoteProvider implements QuoteProvider {
     state.last = Math.round(next * 100) / 100;
     state.high = Math.max(state.high, state.last);
     state.low = Math.min(state.low, state.last);
-    const addedVolume: number = 1000 + Math.floor(Math.random() * 20000);
+    const addedVolume: number = 10 + Math.floor(Math.random() * 200);
     state.volume += addedVolume;
     state.lastVolume = addedVolume;
-    state.amount += addedVolume * state.last;
+    state.amount += addedVolume * 100 * state.last;
     state.snapshotTime = Date.now();
   }
 

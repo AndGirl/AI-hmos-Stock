@@ -33,6 +33,8 @@ export class AppColor {
   static readonly fieldBg: Resource = $r('app.color.color_field_bg');
   /** 强调色浅底（多选态/当前项）：#FFF0EF。 */
   static readonly accentSoft: Resource = $r('app.color.color_accent_soft');
+  /** 调试菜单按钮色（仅 debug 入口使用）：#E84026。 */
+  static readonly debug: Resource = $r('app.color.color_debug');
 }
 
 export class AppDim {

@@ -81,6 +81,8 @@ export class WatchlistVM {
   private loading: boolean = false;
   private loaded: boolean = false;
   private frozen: boolean = false;
+  /** 加载令牌：页面在 await 期间销毁时，回执不得再建订阅。 */
+  private loadToken: number = 0;
 
   /** 指数条数据源：与 rows 同序、同集合（逐股票）。 */
   indexBarSource(): IndexBarDataSource {
@@ -105,12 +107,19 @@ export class WatchlistVM {
     this.loading = true;
     this.state = 'loading';
     this.dispose();
+    const token: number = this.loadToken;
     try {
       const data: WatchlistData = await this.repo.load();
+      if (token !== this.loadToken) {
+        return;
+      }
       this.applyData(data);
       this.loaded = true;
       this.subscribe();
     } catch (err) {
+      if (token !== this.loadToken) {
+        return;
+      }
       this.state = 'error';
     } finally {
       this.loading = false;
@@ -166,6 +175,7 @@ export class WatchlistVM {
   }
 
   dispose(): void {
+    this.loadToken++;
     if (this.sub !== undefined) {
       this.sub.unsubscribe();
       this.sub = undefined;
