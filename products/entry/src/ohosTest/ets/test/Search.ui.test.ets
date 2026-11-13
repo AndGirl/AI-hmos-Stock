@@ -2,6 +2,7 @@ import { describe, it, expect } from '@ohos/hypium';
 import { abilityDelegatorRegistry, Component, Driver, ON } from '@kit.TestKit';
 import { Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { sharedDriver } from './TestDriver';
 
 const DOMAIN: number = 0x0001;
 const TAG: string = 'SearchUiTest';
@@ -67,7 +68,7 @@ async function clearSearch(driver: Driver): Promise<void> {
  */
 export default function searchUiTest(): void {
   describe('SearchUiTest', () => {
-    const driver: Driver = Driver.create();
+    const driver: Driver = sharedDriver();
 
     it('AC87_search_entry_from_market_tab', 0, async (done: Function) => {
       hilog.info(DOMAIN, TAG, 'start AC87_search_entry_from_market_tab');
