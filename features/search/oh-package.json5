@@ -1,0 +1,17 @@
+{
+  "name": "search",
+  "version": "1.0.0",
+  "description": "基础特性层 · 搜索（M6，含 M7 添加页复用）",
+  "main": "Index.ets",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "detail": "file:../detail",
+    "commons_data": "file:../../commons/data",
+    "commons_ui": "file:../../commons/ui",
+    "commons_basic": "file:../../commons/basic"
+  },
+  "devDependencies": {
+    "@ohos/hypium": "1.0.25"
+  }
+}

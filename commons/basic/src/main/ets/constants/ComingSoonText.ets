@@ -9,5 +9,4 @@ export class ComingSoonText {
   static readonly CARD_VIEW: ResourceStr = $r('app.string.coming_soon_card_view');
   static readonly HOME: ResourceStr = $r('app.string.coming_soon_home');
   static readonly NEWS: ResourceStr = $r('app.string.coming_soon_news');
-  static readonly MARKET: ResourceStr = $r('app.string.coming_soon_market');
 }
