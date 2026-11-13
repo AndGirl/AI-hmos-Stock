@@ -47,15 +47,24 @@ async function ensureListView(driver: Driver): Promise<void> {
   }
 }
 
-/** 点冻结表第一行进入详情（行点击挂在 Row 上；避免点到顶部指数条的同名文本）。 */
+/** 点冻结表第一行进入详情（避开顶部指数条同名文本与 40vp 表头）。 */
 async function openFirstDetail(driver: Driver): Promise<boolean> {
   const table: Component | null = await driver.waitForComponent(ON.id('list_table'), 2500);
   if (table === null) {
     return false;
   }
-  const bounds = await table.getBounds();
-  // list_table 含 40vp 表头 + 56vp 行：+120 落在第二行价格区，避开表头排序。
-  await driver.click(600, bounds.top + 120);
+  // 同名文本在指数条与表格各有一份：取 y 靠下（表格行）的那一份。
+  const candidates: Component[] = await driver.findComponents(ON.text('贵州茅台'));
+  for (const item of candidates) {
+    const bounds = await item.getBounds();
+    if (bounds.top > 500) {
+      await driver.click(600, Math.floor((bounds.top + bounds.bottom) / 2));
+      await driver.delayMs(2000);
+      return true;
+    }
+  }
+  const tableBounds = await table.getBounds();
+  await driver.click(600, tableBounds.top + 120);
   await driver.delayMs(2000);
   return true;
 }
