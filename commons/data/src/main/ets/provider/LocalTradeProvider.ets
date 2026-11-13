@@ -3,6 +3,7 @@ import { QuoteProvider, QuoteSnapshot } from '../model/QuoteModels';
 import {
   AccountInfo,
   CancelResult,
+  isFinalState,
   OpenAccountResult,
   OrderDraft,
   OrderItem,
@@ -72,6 +73,12 @@ export class LocalTradeProvider implements TradeProvider {
   private journal: OrderJournalStore;
   private timer: number = -1;
   private seq: number = 0;
+  /** F2：写操作串行化——提交/撮合/撤单互斥，避免撤单被在途撮合覆盖。 */
+  private queue: Promise<void> = Promise.resolve();
+  /** tick 防重入（队列里已有一次撮合时不再排新的一拍）。 */
+  private ticking: boolean = false;
+  /** F3：委托变化监听（VM 据此就地刷新行，不引入 UI 定时器）。 */
+  private changeListeners: (() => void)[] = [];
 
   constructor(quotes: QuoteProvider, accounts: TradeAccountStore, orders: TradeOrderStore,
     journal: OrderJournalStore) {
@@ -79,6 +86,35 @@ export class LocalTradeProvider implements TradeProvider {
     this.accounts = accounts;
     this.orders = orders;
     this.journal = journal;
+  }
+
+  /** 写操作入队：前一个完成后再执行，保证撤单与撮合并发安全。 */
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const run: Promise<T> = this.queue.then(task, task);
+    this.queue = run.then((): void => {
+    }, (): void => {
+    });
+    return run;
+  }
+
+  /** 订阅委托变化（同实例多订阅者取并集；VM 在页面销毁时退订）。 */
+  subscribeChanges(listener: () => void): void {
+    if (this.changeListeners.indexOf(listener) < 0) {
+      this.changeListeners.push(listener);
+    }
+  }
+
+  unsubscribeChanges(listener: () => void): void {
+    const index: number = this.changeListeners.indexOf(listener);
+    if (index >= 0) {
+      this.changeListeners.splice(index, 1);
+    }
+  }
+
+  private notifyChanged(): void {
+    for (let i = 0; i < this.changeListeners.length; i++) {
+      this.changeListeners[i]();
+    }
   }
 
   async loadContext(code: string, source: TradeSource): Promise<TradeContext> {
@@ -107,7 +143,11 @@ export class LocalTradeProvider implements TradeProvider {
     TradeAuth.loggedIn = true;
   }
 
-  async submit(draft: OrderDraft): Promise<OrderResult> {
+  submit(draft: OrderDraft): Promise<OrderResult> {
+    return this.enqueue((): Promise<OrderResult> => this.doSubmit(draft));
+  }
+
+  private async doSubmit(draft: OrderDraft): Promise<OrderResult> {
     await this.orders.load();
     await this.journal.load();
     await this.accounts.load();
@@ -148,6 +188,7 @@ export class LocalTradeProvider implements TradeProvider {
     if (state === 'pending' || state === 'accepted' || state === 'partial') {
       this.ensureTimer();
     }
+    this.notifyChanged();
     return this.receiptOf(item);
   }
 
@@ -172,7 +213,11 @@ export class LocalTradeProvider implements TradeProvider {
     return this.orders.list(query);
   }
 
-  async cancelOrder(orderId: string, clientOrderId: string): Promise<CancelResult> {
+  cancelOrder(orderId: string, clientOrderId: string): Promise<CancelResult> {
+    return this.enqueue((): Promise<CancelResult> => this.doCancelOrder(orderId, clientOrderId));
+  }
+
+  private async doCancelOrder(orderId: string, clientOrderId: string): Promise<CancelResult> {
     await this.orders.load();
     await this.journal.load();
     const now: number = Date.now();
@@ -197,6 +242,7 @@ export class LocalTradeProvider implements TradeProvider {
     await this.orders.upsert(item);
     await this.journal.mark(item.clientOrderId, 'canceled');
     this.stopTimerIfIdle();
+    this.notifyChanged();
     return new CancelResult(item.clientOrderId, item.orderId, true, 'canceled', '', now);
   }
 
@@ -213,7 +259,20 @@ export class LocalTradeProvider implements TradeProvider {
   }
 
   /** 撮合推进（1s 一拍）：待报 → 已报 → 部成/已成。测试可直接调用。 */
-  async tick(now: number): Promise<void> {
+  tick(now: number): Promise<void> {
+    if (this.ticking) {
+      return Promise.resolve();
+    }
+    this.ticking = true;
+    const run: Promise<void> = this.enqueue((): Promise<void> => this.doTick(now));
+    return run.then((): void => {
+      this.ticking = false;
+    }, (): void => {
+      this.ticking = false;
+    });
+  }
+
+  private async doTick(now: number): Promise<void> {
     await this.orders.load();
     const open: OrderItem[] = this.orders.openOrders();
     if (open.length === 0) {
@@ -221,7 +280,12 @@ export class LocalTradeProvider implements TradeProvider {
       return;
     }
     for (let i = 0; i < open.length; i++) {
-      const item: OrderItem = open[i];
+      // F1：队列里拿到的引用可能已被撤单/成交改过，每拍按最新状态重取一次。
+      const live: OrderItem | undefined = this.orders.get(open[i].clientOrderId);
+      if (live === undefined || isFinalState(live.state)) {
+        continue;
+      }
+      const item: OrderItem = live;
       if (item.state === 'pending') {
         if (now - item.createdAt < ACCEPT_DELAY_MS) {
           continue;
@@ -256,6 +320,7 @@ export class LocalTradeProvider implements TradeProvider {
       await this.journal.mark(item.clientOrderId, item.state);
     }
     this.stopTimerIfIdle();
+    this.notifyChanged();
   }
 
   /** 调试：重置账户与委托（回到种子）。 */

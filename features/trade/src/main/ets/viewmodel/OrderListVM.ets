@@ -1,6 +1,7 @@
 import {
   CancelResult,
   DataServices,
+  isCancelable,
   MockFaults,
   OpenAccountResult,
   ORDER_STATES,
@@ -87,6 +88,8 @@ export class OrderListVM {
 
   private page: number = 0;
   private token: number = 0;
+  /** F3：委托变化监听句柄（事件驱动就地刷新，不引入 UI 定时器）。 */
+  private liveHandler: (() => void) | undefined = undefined;
 
   private provider(): TradeProvider {
     return DataServices.tradeProvider();
@@ -193,6 +196,9 @@ export class OrderListVM {
         row.canceling = false;
         return 'canceled';
       }
+      // F4：失败也要把真实状态写回该行（否则按钮一直可点、用户以为「撤不掉」）。
+      row.state = result.state;
+      row.cancelable = isCancelable(result.state);
       row.canceling = false;
       const reason: string = result.reasonCode.length > 0 ? result.reasonCode : 'not_cancelable';
       return `cancel_failed:${reason}`;
@@ -286,6 +292,42 @@ export class OrderListVM {
     await DataServices.tradeOrders().clear();
     await DataServices.orderJournal().clear();
     await this.load();
+  }
+
+  /**
+   * F3：订阅委托变化（本地网关每次撮合/撤单后回调），把最新状态就地合并到现有行。
+   * 不做整页 `load()`：ForEach 以 clientOrderId 为 key 会复用旧组件，重建反而看不到变化。
+   */
+  attachLive(): void {
+    const trade = DataServices.localTrade();
+    if (trade === undefined || this.liveHandler !== undefined) {
+      return;
+    }
+    const handler: () => void = (): void => {
+      this.syncRows();
+    };
+    this.liveHandler = handler;
+    trade.subscribeChanges(handler);
+  }
+
+  detachLive(): void {
+    const trade = DataServices.localTrade();
+    const handler: (() => void) | undefined = this.liveHandler;
+    this.liveHandler = undefined;
+    if (trade !== undefined && handler !== undefined) {
+      trade.unsubscribeChanges(handler);
+    }
+  }
+
+  private syncRows(): void {
+    const store = DataServices.tradeOrders();
+    for (let i = 0; i < this.rows.length; i++) {
+      const row: OrderRowVM = this.rows[i];
+      const item: OrderItem | undefined = store.get(row.clientOrderId);
+      if (item !== undefined && item.state !== row.state) {
+        row.copy(item);
+      }
+    }
   }
 
   private fetchPage(page: number): Promise<OrderPage> {

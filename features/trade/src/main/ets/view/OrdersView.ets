@@ -27,6 +27,12 @@ export struct OrdersView {
 
   aboutToAppear(): void {
     this.vm.load();
+    // F3：订阅委托变化，撮合推进/撤单后行状态就地刷新。
+    this.vm.attachLive();
+  }
+
+  aboutToDisappear(): void {
+    this.vm.detachLive();
   }
 
   build() {

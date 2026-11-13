@@ -1,4 +1,4 @@
-import { OrderItem, OrderPage, OrderQuery, OrderState } from '../model/TradeModels';
+import { isFinalState, OrderItem, OrderPage, OrderQuery, OrderState } from '../model/TradeModels';
 import { StorageAdapter } from './StorageAdapter';
 
 const KEY: string = 'trade_orders_v1';
@@ -66,12 +66,16 @@ export class TradeOrderStore {
     return result;
   }
 
-  /** 新增或更新（按 clientOrderId 去重）。 */
+  /** 新增或更新（按 clientOrderId 去重；终态一旦写入不再被覆盖，防并发撮合回写）。 */
   async upsert(item: OrderItem): Promise<void> {
     await this.load();
     let replaced: boolean = false;
     for (let i = 0; i < this.orders.length; i++) {
       if (this.orders[i].clientOrderId === item.clientOrderId) {
+        // F1：已成/已撤/废单是终态，晚到的旧状态（如撮合线程手里的 accepted）不得冲掉它。
+        if (isFinalState(this.orders[i].state)) {
+          return;
+        }
         this.orders[i] = item;
         replaced = true;
         break;
