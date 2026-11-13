@@ -27,6 +27,21 @@ export class ConnectionHub {
   private retryIndex: number = 0;
   private retryTimer: number = -1;
   private probe: (() => boolean) | undefined = undefined;
+  /** 非 UI 观察者（M7-1 待同步）：状态迁移时回调，供数据层做一次性补同步。 */
+  private listeners: ((state: NetState) => void)[] = [];
+
+  subscribe(listener: (state: NetState) => void): void {
+    if (this.listeners.indexOf(listener) < 0) {
+      this.listeners.push(listener);
+    }
+  }
+
+  unsubscribe(listener: (state: NetState) => void): void {
+    const index: number = this.listeners.indexOf(listener);
+    if (index >= 0) {
+      this.listeners.splice(index, 1);
+    }
+  }
 
   /** 由数据层注册：一次“探活”是否能连通（Mock 下等价于故障开关已清除）。 */
   setProbe(probe: () => boolean): void {
@@ -95,6 +110,9 @@ export class ConnectionHub {
     this.changeSeq++;
     hilog.info(DOMAIN, TAG, 'net_state=%{public}s retry=%{public}d',
       next, this.retryCount);
+    for (let i = 0; i < this.listeners.length; i++) {
+      this.listeners[i](next);
+    }
   }
 
   private scheduleRetry(): void {
@@ -134,6 +152,9 @@ export class ConnectionHub {
     this.state = 'online';
     this.changeSeq++;
     this.changedAt = Date.now();
+    for (let i = 0; i < this.listeners.length; i++) {
+      this.listeners[i]('online');
+    }
   }
 }
 

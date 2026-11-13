@@ -1,37 +1,15 @@
-import { WatchGroup, WatchItem } from '../entities/WatchEntities';
-import { buildIndexSet, buildStockSeeds, buildWatchGroups, buildWatchItems } from '../mock/MarketSeeds';
-import { MockFaults } from '../mock/MockFaults';
-import { StockSeed } from '../mock/MarketSeeds';
-
-/** 自选列表原始数据（分组 + 条目），由仓储归一化为 VM 实体。 */
-export class WatchlistRaw {
-  groups: WatchGroup[];
-  items: WatchItem[];
-
-  constructor(groups: WatchGroup[], items: WatchItem[]) {
-    this.groups = groups;
-    this.items = items;
-  }
-}
+import { buildIndexSet } from '../mock/MarketSeeds';
 
 /**
- * 自选数据源。M1 全 Mock：启动读一次；增删自选在 FR-04（后续里程碑）。
+ * 自选数据源（M7-1 退化）：自选集合已由 `WatchlistStore` 唯一提供（P0 数据同源），
+ * Provider 只保留「分组 → 指数条配置」这类纯种子数据，不再提供自选集合。
+ * 保留接口是为了将来把指数条配置换成服务端下发（只加不改）。
  */
 export interface WatchlistProvider {
-  load(): Promise<WatchlistRaw>;
-
   indexSet(): Map<string, string[]>;
 }
 
 export class MockWatchlistProvider implements WatchlistProvider {
-  load(): Promise<WatchlistRaw> {
-    if (MockFaults.failWatchlist) {
-      return Promise.reject(new Error('mock watchlist failure'));
-    }
-    const seeds: StockSeed[] = buildStockSeeds();
-    return Promise.resolve(new WatchlistRaw(buildWatchGroups(), buildWatchItems(seeds)));
-  }
-
   indexSet(): Map<string, string[]> {
     return buildIndexSet();
   }

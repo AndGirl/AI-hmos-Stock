@@ -68,7 +68,7 @@ export {
   SinkTier,
   SubscriptionHandle
 } from './src/main/ets/bus/DetailSubscriptionRegistry';
-export { WatchlistProvider, WatchlistRaw } from './src/main/ets/provider/WatchlistProvider';
+export { WatchlistProvider } from './src/main/ets/provider/WatchlistProvider';
 export { MockFaults, NetFault } from './src/main/ets/mock/MockFaults';
 export { DataServices } from './src/main/ets/DataServices';
 export {
@@ -118,11 +118,32 @@ export { buildHotWords, buildSearchEntries } from './src/main/ets/mock/SearchSee
 export { StorageAdapter } from './src/main/ets/store/StorageAdapter';
 export { SearchHistoryStore } from './src/main/ets/store/SearchHistoryStore';
 export {
+  RemoveSnapshot,
+  WatchAddInput,
   WatchlistAddOutcome,
   WatchlistChange,
   WatchlistChangeListener,
+  WatchlistGroupOutcome,
   WatchlistRemoveOutcome,
   WatchlistSnapshot,
   WatchlistStore
 } from './src/main/ets/store/WatchlistStore';
+export { WatchlistSyncService } from './src/main/ets/store/WatchlistSyncService';
+export {
+  charCount,
+  countUserGroups,
+  GroupEditReason,
+  GroupNameIssue,
+  hasEmoji,
+  isSystemGroupId,
+  isVirtualGroupId,
+  normalizeGroupName,
+  resolveGroupMembership,
+  systemGroupsOf,
+  validateGroupName,
+  WATCHLIST_ALL_GROUP,
+  WATCHLIST_GROUP_NAME_MAX,
+  WATCHLIST_MAX_ITEMS,
+  WATCHLIST_MAX_USER_GROUPS
+} from './src/main/ets/rules/WatchlistRules';
 

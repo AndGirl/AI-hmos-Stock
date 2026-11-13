@@ -11,6 +11,7 @@ import { MockSearchProvider } from './provider/MockSearchProvider';
 import { SearchProvider } from './model/SearchModels';
 import { SearchHistoryStore } from './store/SearchHistoryStore';
 import { WatchlistStore } from './store/WatchlistStore';
+import { WatchlistSyncService } from './store/WatchlistSyncService';
 
 /**
  * 数据装配点：全工程唯一允许 `new Mock*` / `new Real*` 的地方（R-05）。
@@ -26,6 +27,7 @@ export class DataServices {
   private static search: SearchProvider | undefined = undefined;
   private static history: SearchHistoryStore | undefined = undefined;
   private static watchStore: WatchlistStore | undefined = undefined;
+  private static pendingSync: WatchlistSyncService | undefined = undefined;
 
   static quoteProvider(): QuoteProvider {
     if (DataServices.quote === undefined) {
@@ -88,11 +90,26 @@ export class DataServices {
     return DataServices.history;
   }
 
-  /** 自选存储（M7-1 最小版）：M6-7 就地加自选写入这里。 */
+  /** 自选存储（M7-1）：自选集合与分组定义的唯一来源，首次访问即挂上待同步服务。 */
   static watchlistStore(): WatchlistStore {
     if (DataServices.watchStore === undefined) {
       DataServices.watchStore = new WatchlistStore();
+      DataServices.pendingSync = new WatchlistSyncService(DataServices.watchStore);
+      DataServices.pendingSync.start();
     }
     return DataServices.watchStore;
+  }
+
+  /** 待同步服务（M7-7）：页面回到前台可主动补一次。 */
+  static watchlistSync(): WatchlistSyncService {
+    const store: WatchlistStore = DataServices.watchlistStore();
+    const existing: WatchlistSyncService | undefined = DataServices.pendingSync;
+    if (existing !== undefined) {
+      return existing;
+    }
+    const created: WatchlistSyncService = new WatchlistSyncService(store);
+    DataServices.pendingSync = created;
+    created.start();
+    return created;
   }
 }

@@ -19,15 +19,20 @@ export class WatchGroup {
   }
 }
 
-/** 自选条目：分组归属独立于 tags 存储（设计 §4.3）。 */
+/**
+ * 自选条目：分组归属独立于 tags 存储（设计 §4.3）。
+ * `pending`（M7-1）：离线加入、尚未与账号同步的标记；联网后由 `WatchlistSyncService` 清零。
+ */
 export class WatchItem {
   code: string;
   groups: string[];
   addedAt: number;
+  pending: boolean;
 
-  constructor(code: string, groups: string[], addedAt: number) {
+  constructor(code: string, groups: string[], addedAt: number, pending: boolean = false) {
     this.code = code;
     this.groups = groups;
     this.addedAt = addedAt;
+    this.pending = pending;
   }
 }
