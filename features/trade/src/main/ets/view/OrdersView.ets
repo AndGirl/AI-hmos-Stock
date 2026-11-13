@@ -330,8 +330,9 @@ export struct OrdersView {
     const b1: promptAction.Button = { text: '恢复开户', color: AppColor.debug };
     const b2: promptAction.Button = { text: '重置账户与委托', color: AppColor.debug };
     const b3: promptAction.Button = { text: '清空委托', color: AppColor.debug };
+    const b4: promptAction.Button = { text: '生成测试委托 25 笔', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
-      promptAction.Button] = [b0, b1, b2, b3];
+      promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4];
     this.getUIContext().getPromptAction().showActionMenu({ title: '委托调试（debug）', buttons: buttons })
       .then((res: promptAction.ActionMenuSuccessResponse): void => {
         if (res.index === 0) {
@@ -342,6 +343,10 @@ export struct OrdersView {
           this.vm.debugResetAll();
         } else if (res.index === 3) {
           this.vm.debugClearOrders();
+        } else if (res.index === 4) {
+          this.vm.debugSeedOrders(25).then((count: number): void => {
+            this.toast(`已生成 ${count} 笔测试委托（不记账）`);
+          });
         }
       }).catch((): void => {
       });

@@ -3,9 +3,11 @@ import {
   DataServices,
   MockFaults,
   OpenAccountResult,
+  ORDER_STATES,
   OrderItem,
   OrderPage,
   OrderQuery,
+  OrderState,
   TradeProvider
 } from 'commons_data';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -184,7 +186,11 @@ export class OrderListVM {
     try {
       const result: CancelResult = await provider.cancelOrder(row.orderId, row.clientOrderId);
       if (result.ok) {
-        await this.load();
+        // 就地更新该行：`load()` 会重建行对象，而 ForEach 以 clientOrderId 为 key 会复用旧组件，
+        // 界面上就会一直停在「撤单中」。这里只改本行字段（与推送式刷新同思路）。
+        row.state = result.state;
+        row.cancelable = false;
+        row.canceling = false;
         return 'canceled';
       }
       row.canceling = false;
@@ -212,6 +218,40 @@ export class OrderListVM {
     } catch (err) {
       return false;
     }
+  }
+
+  /**
+   * 调试（M10）：造 `count` 笔测试委托，覆盖 7 种状态，用于分页与状态筛选取证。
+   * 只写 `trade_orders_v1`，**不改账户资金/持仓**（避免污染可买与持仓数据）；
+   * `clientOrderId` 以 `DBG` 前缀 + 时间戳，正常下单不会撞键；用「清空委托」清理。
+   */
+  async debugSeedOrders(count: number): Promise<number> {
+    const store = DataServices.tradeOrders();
+    await store.load();
+    const now: number = Date.now();
+    for (let i = 0; i < count; i++) {
+      const state: string = ORDER_STATES[i % ORDER_STATES.length];
+      const filledQty: number = state === 'filled' ? 100 : (state === 'partial' ? 50 : 0);
+      const item: OrderItem = new OrderItem(
+        `DBG${now}${i}`,
+        `ODBG${now}${i}`,
+        '50012345',
+        '600519',
+        '贵州茅台',
+        i % 3 === 0 ? 'sell' : 'buy',
+        1683.45,
+        100,
+        filledQty,
+        state as OrderState,
+        now - i * 1000,
+        now - i * 1000,
+        state === 'rejected' ? 'fund_short' : ''
+      );
+      await store.upsert(item);
+    }
+    await store.flush();
+    await this.load();
+    return count;
   }
 
   /**
