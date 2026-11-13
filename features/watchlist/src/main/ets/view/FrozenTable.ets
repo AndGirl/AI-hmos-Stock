@@ -348,10 +348,16 @@ export struct FrozenTable {
     }
     .width('100%')
     .layoutWeight(1)
+    .id('list_table')
     .padding({left:AppDim.gap8,right:AppDim.gap8})
     .alignItems(VerticalAlign.Top)
     .onAppear(() => {
-      if (this.initialVOffset > 0) {
+      // 首帧落位（M8 修 P1）：切回列表时本组件是**重新创建**的，`@Monitor('scrollSeq')` 对初始值
+      // 不触发，所以「切回列表要锚定到卡片当前行」必须在这里按下标还原；
+      // 没有有效下标（冷启/新增行已由 scrollSeq 处理）时才退回上次的像素偏移。
+      if (this.scrollToIndex >= 0 && this.scrollToIndex < this.rows.length) {
+        this.vScroller.scrollToIndex(this.scrollToIndex, false, ScrollAlign.START);
+      } else if (this.initialVOffset > 0) {
         this.vScroller.scrollTo({ xOffset: 0, yOffset: this.initialVOffset, animation: false });
       }
       if (this.initialHOffset > 0) {

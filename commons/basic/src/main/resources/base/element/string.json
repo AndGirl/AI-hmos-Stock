@@ -1,6 +1,5 @@
 {
   "string": [
-    {"name": "coming_soon_card_view", "value": "卡片视图下阶段开放"},
     {"name": "coming_soon_home", "value": "首页下阶段开放"},
     {"name": "coming_soon_news", "value": "最新资讯下阶段开放"},
     {"name": "placeholder_home_title", "value": "首页"},
@@ -44,7 +43,6 @@
     {"name": "watch_sort_desc", "value": "降序"},
     {"name": "watch_recommend", "value": "推荐"},
     {"name": "watch_entry_card", "value": "卡片"},
-    {"name": "watch_entry_sort", "value": "排序"},
     {"name": "watch_empty_title", "value": "还没有自选股"},
     {"name": "watch_empty_desc", "value": "加自选后，这里能看实时行情、分组与比价"},
     {"name": "watch_group_empty_desc", "value": "该分组暂无股票"},
@@ -299,6 +297,10 @@
     {"name": "watch_add_entry", "value": "添加自选"},
     {"name": "watch_pending_tag", "value": "待同步"},
     {"name": "watch_synced_toast", "value": "已同步 %s 只自选"},
-    {"name": "watch_edit_remove_all", "value": "移出"}
+    {"name": "watch_edit_remove_all", "value": "移出"},
+    {"name": "card_view_to_card", "value": "切换为卡片视图"},
+    {"name": "card_view_to_list", "value": "切换为列表视图"},
+    {"name": "card_sort_chip", "value": "按%s%s"},
+    {"name": "card_sort_clear", "value": "清除排序"}
   ]
 }

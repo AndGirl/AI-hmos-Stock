@@ -1,6 +1,8 @@
 import { promptAction } from '@kit.ArkUI';
 import { BottomTabBar, AppColor, AppDim, StateMode, StateView } from 'commons_ui';
 import {
+  BackDispatcher,
+  BackHandler,
   BreakpointHost,
   BreakpointService,
   ConfigHost,
@@ -18,12 +20,17 @@ import { SortKey } from '../viewmodel/WatchlistVM';
 import { IndexStrip } from './IndexStrip';
 import { GroupTabs } from './GroupTabs';
 import { FrozenTable } from './FrozenTable';
+import { CardGrid } from './CardGrid';
+import { ViewSwitch } from './ViewSwitch';
+import { CardSortChip } from './CardSortChip';
 import { EditBar } from './EditBar';
 import { UndoBar } from './UndoBar';
 import { GroupManageSheet } from './GroupManageSheet';
 
 const SKELETON_ROWS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const SKELETON_CELLS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+/** 切换视图的淡入时长（AC-103：150ms，无白屏）。 */
+const VIEW_FADE_MS: number = 150;
 
 /**
  * 窄窗验证开关：>0 时把 xl 右栏宽度压到该 vp，用于复现 FR-06 §2.6 的 pane <360vp 布局。
@@ -64,43 +71,69 @@ export struct WatchlistPage {
   @Local hub: ConnectionHub = ConnectionHost.getService();
   @Local safeArea: SafeAreaService = SafeAreaHost.getService();
   @Local perfRunning: boolean = false;
+  /** 采样时是否让列表/卡片自动滚动（M8-7：静止与滚动两种场景分开采）。 */
+  @Local perfAutoScroll: boolean = false;
   /** xl 分栏右栏当前标的（M2：详情 pane 形态，点行只换 code 不路由）。 */
   @Local paneCode: string = '';
   /** 分组管理浮层（M7-6）：页面内 Stack 承载，避免跨窗弹层（INV-T4）。 */
   @Local groupSheet: boolean = false;
+  /** 视图切换的淡入透明度（150ms，AC-103）；切换期间不出现白屏。 */
+  @Local contentAlpha: number = 1;
+  /** 系统返回键（M8，关闭 M7 遗留）：浮层/编辑/多选态先退一层。 */
+  private backHandler: BackHandler = (): boolean => this.handleBack();
 
   aboutToAppear(): void {
     this.syncLayout();
     this.vm.load();
+    BackDispatcher.register(this.backHandler);
   }
 
   aboutToDisappear(): void {
-    if (this.perfRunning) {
-      this.perfRunning = false;
-      PerfMeter.stop();
-    }
+    this.stopPerf();
+    BackDispatcher.unregister(this.backHandler);
     this.vm.dispose();
   }
 
   /**
+   * 返回键优先级（M8）：分组管理浮层 → 编辑模式 → 比价多选 → 交给系统。
+   * 只在本页所在 Tab 可见时接管（`bottomBarIndex`），否则会吞掉其它 Tab 的返回。
+   */
+  private handleBack(): boolean {
+    if (this.bottomBarIndex !== 2) {
+      return false;
+    }
+    if (this.groupSheet) {
+      this.groupSheet = false;
+      return true;
+    }
+    if (this.vm.editMode) {
+      this.vm.exitEdit();
+      return true;
+    }
+    if (this.vm.selectMode) {
+      this.vm.cancelSelect();
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * 调试面板（仅 debug 构建；长按标题触发）：
-   * 字号档位、空态/失败态注入、帧率采样、填满至 50（AC-96）。
+   * 字号档位、空态/失败态注入、帧率采样、填满至 50（AC-96）、清除视图记忆（M8-4）。
    * release 由 BuildProfile.DEBUG=false 关闭。
    */
   private openDebugMenu(): void {
     if (!DEBUG) {
       return;
     }
-    const b0: promptAction.Button = {
-      text: this.perfRunning ? '停止帧率采样' : '开始帧率采样（自动滚动）',
-      color: AppColor.debug
-    };
+    const b0: promptAction.Button = { text: '帧率采样…（静止/滚动）', color: AppColor.debug };
     const b1: promptAction.Button = { text: '字号…', color: AppColor.debug };
     const b2: promptAction.Button = { text: '网络…', color: AppColor.debug };
     const b3: promptAction.Button = { text: '场景…（空态/失败/填满）', color: AppColor.debug };
     const b4: promptAction.Button = { text: '重置（字号 + 网络 + 数据）', color: AppColor.debug };
+    const b5: promptAction.Button = { text: '清除视图记忆（回列表）', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
-      promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4];
+      promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4, b5];
     this.getUIContext().getPromptAction().showActionMenu({
       title: '调试面板（debug）',
       buttons: buttons
@@ -112,7 +145,7 @@ export struct WatchlistPage {
 
   private onDebugAction(index: number): void {
     if (index === 0) {
-      this.togglePerf();
+      this.openPerfMenu();
     } else if (index === 1) {
       this.openFontMenu();
     } else if (index === 2) {
@@ -124,15 +157,25 @@ export struct WatchlistPage {
       this.vm.applyNetFault('none');
       // 重置：字号/网络恢复，并把自选恢复为 45 只种子
       this.vm.resetAll();
+    } else if (index === 5) {
+      // 清除视图记忆（M8-4）：删 view_pref_v1 并回列表，用于验收「冷启不闪烁」的重复试验。
+      this.vm.debugClearViewPref();
+      this.toast('已清除视图记忆，回到列表视图');
     }
   }
 
-  /** 二级：数据场景（M7 验收：空态、失败态、50 上限）。 */
+  /** 二级：数据场景（M7 验收：空态、失败态、50 上限；M8 追加 200 卡压测）。 */
   private openSceneMenu(): void {
+    const stress: boolean = this.vm.stressActive();
     const b0: promptAction.Button = { text: '清空自选（空态）', color: AppColor.debug };
     const b1: promptAction.Button = { text: '模拟加载失败', color: AppColor.debug };
     const b2: promptAction.Button = { text: '填满至 50（AC-96）', color: AppColor.debug };
-    const buttons: [promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2];
+    const b3: promptAction.Button = {
+      text: stress ? '退出卡片压测（恢复真实数据）' : '卡片压测 200（仅卡片态，不落盘）',
+      color: AppColor.debug
+    };
+    const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
+      promptAction.Button] = [b0, b1, b2, b3];
     this.getUIContext().getPromptAction().showActionMenu({ title: '场景', buttons: buttons })
       .then((res: promptAction.ActionMenuSuccessResponse): void => {
         if (res.index === 0) {
@@ -142,6 +185,17 @@ export struct WatchlistPage {
           this.vm.applyMockFault(true);
         } else if (res.index === 2) {
           this.vm.debugFillToLimit();
+        } else if (res.index === 3) {
+          if (this.vm.stressActive()) {
+            this.vm.debugClearStressRows();
+            return;
+          }
+          if (this.vm.viewMode !== 'card') {
+            this.toast('请先切到卡片视图再做压测');
+            return;
+          }
+          const count: number = this.vm.debugBuildStressRows();
+          this.toast(`已生成 ${count} 张压测卡（不落盘）`);
         }
       }).catch((): void => {
     });
@@ -189,15 +243,48 @@ export struct WatchlistPage {
     });
   }
 
-  private togglePerf(): void {
+  /** 二级：帧率采样（M8-7：静止 / 自动滚动 / 停止三段，便于 50 卡三场景对比）。 */
+  private openPerfMenu(): void {
+    const b0: promptAction.Button = { text: '开始（静止，看空转帧率）', color: AppColor.debug };
+    const b1: promptAction.Button = { text: '开始（自动滚动）', color: AppColor.debug };
+    const b2: promptAction.Button = { text: '停止并输出（PERF_STOP）', color: AppColor.debug };
+    const buttons: [promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2];
+    this.getUIContext().getPromptAction().showActionMenu({ title: '帧率采样', buttons: buttons })
+      .then((res: promptAction.ActionMenuSuccessResponse): void => {
+        if (res.index === 0) {
+          this.startPerf(false);
+        } else if (res.index === 1) {
+          this.startPerf(true);
+        } else if (res.index === 2) {
+          this.stopPerf();
+        }
+      }).catch((): void => {
+    });
+  }
+
+  private startPerf(autoScroll: boolean): void {
     if (this.perfRunning) {
-      this.perfRunning = false;
-      PerfMeter.stop();
+      this.stopPerf();
+    }
+    this.perfAutoScroll = autoScroll;
+    this.perfRunning = true;
+    const view: string = this.vm.stressActive() ? 'card-stress' : this.vm.viewMode;
+    const label: string =
+      `watchlist-${view}-${this.breakpoint.widthBp}-${this.cardRowCount()}rows-${this.config.fontScale}x-${autoScroll ? 'scroll' : 'static'}`;
+    PerfMeter.start(this.getUIContext(), label);
+  }
+
+  private stopPerf(): void {
+    if (!this.perfRunning) {
       return;
     }
-    this.perfRunning = true;
-    const label: string = `watchlist-${this.breakpoint.widthBp}-${this.vm.rowCount}rows-${this.config.fontScale}x`;
-    PerfMeter.start(this.getUIContext(), label);
+    this.perfRunning = false;
+    this.perfAutoScroll = false;
+    PerfMeter.stop();
+  }
+
+  private cardRowCount(): number {
+    return this.vm.viewMode === 'card' ? this.vm.cardRows().length : this.vm.rowCount;
   }
 
   @Monitor('breakpoint.viewportWidth')
@@ -227,11 +314,22 @@ export struct WatchlistPage {
     }
   }
 
-  /** 列表可用宽：sm/md/lg 单列全宽（屏宽 − 32 内边距）；xl 取左栏 523vp（设计 §5.2.9）。 */
+  /** 列表可用宽：sm/md/lg 单列全宽（屏宽 − 32 内边距）；xl 取左栏 523vp（设计 §5.2.9）。
+   * 卡片视图在 xl 走整宽（见 `splitPane`），因此卡片几何按屏宽算、由 `CardMetrics` 自行扣 32 内边距。
+   */
   private syncLayout(): void {
     const screenWidth: number = this.breakpoint.viewportWidth > 0 ? this.breakpoint.viewportWidth : 360;
     const width: number = this.breakpoint.isSplit ? 523 : Math.max(200, screenWidth - 32);
     this.vm.updateLayout(width, this.config.fontScale);
+    this.vm.updateCardLayout(screenWidth, this.breakpoint.widthBp, this.config.fontScale);
+  }
+
+  /**
+   * xl 是否保留右侧详情栏（M8 口径）：只有**列表视图**分栏；
+   * 卡片视图在 xl 需要 5 列（AC-100），左栏 523vp 放不下 → 卡片视图整宽、右栏让位。
+   */
+  private splitPane(): boolean {
+    return this.breakpoint.isSplit && this.vm.viewMode === 'list';
   }
 
   private paneWidth(): number {
@@ -251,7 +349,7 @@ export struct WatchlistPage {
   }
 
   private openRow(code: string): void {
-    if (this.breakpoint.isSplit) {
+    if (this.splitPane()) {
       this.paneCode = code;
       return;
     }
@@ -259,9 +357,28 @@ export struct WatchlistPage {
   }
 
   /**
+   * 视图切换（M8-3 / AC-103）：VM 侧节流 + 保状态，视图侧 150ms 淡入。
+   * 锚点用右栏当前标的（xl），无右栏时 VM 回退到选中项/上次首行。
+   */
+  private toggleView(): void {
+    const ok: boolean = this.vm.toggleViewMode(this.splitPane() ? this.paneCode : '');
+    if (!ok) {
+      return;
+    }
+    this.contentAlpha = 0.05;
+    this.getUIContext().animateTo({ duration: VIEW_FADE_MS, curve: Curve.EaseOut }, () => {
+      this.contentAlpha = 1;
+    });
+  }
+
+  /**
    * 行点击优先级（M7-5）：编辑态 = 勾选（不跳详情）> 比价多选 = 切换选中 > 常规 = 进详情/右栏。
+   * M8：卡片压测期间（合成 code 不在服务端）一律不响应。
    */
   private handleRowTap(code: string): void {
+    if (this.vm.stressActive()) {
+      return;
+    }
     if (this.vm.editMode) {
       this.vm.toggleEditSelect(code);
       return;
@@ -276,12 +393,24 @@ export struct WatchlistPage {
   }
 
   private handleRowLongPress(code: string): void {
+    if (this.vm.stressActive()) {
+      return;
+    }
     // 编辑态里长按与点击等价，避免和「勾选」两套语义打架。
     if (this.vm.editMode) {
       this.vm.toggleEditSelect(code);
       return;
     }
     this.enterSelect(code);
+  }
+
+  /** 排序 chip 点本体：复用列头的循环（降序→升序→取消），不新增排序态（CK-2）。 */
+  private cycleCardSort(): void {
+    const key: SortKey | null = this.vm.sortKey;
+    if (key === null) {
+      return;
+    }
+    this.vm.cycleSort(key);
   }
 
   private enterSelect(code: string): void {
@@ -739,7 +868,7 @@ export struct WatchlistPage {
 
         Row() {
           Column() {
-            // 自选全空时指数条/分组页签/卡片·排序全无意义，整段隐藏，只留引导式空态。
+            // 自选全空时指数条/分组页签/视图切换/排序全无意义，整段隐藏，只留引导式空态。
             if (this.vm.emptyKind !== 'all') {
               // 分组为空时指数条也没有条目，只留「推荐」卡会显得空荡，一并隐藏。
               if (this.vm.rowCount > 0) {
@@ -751,83 +880,144 @@ export struct WatchlistPage {
                 this.hDivider()
               }
 
-              GroupTabs({
-                groups: this.vm.groups,
-                onSelect: (id: string): void => {
-                  this.vm.selectGroup(id);
-                },
-                onLongPress: (id: string): void => {
-                  // 长按分组 = 进分组管理（M7-6），并停在该分组上下文里。
-                  this.groupSheet = true;
-                }
-              })
+              // 分组栏 + 视图切换（M8-3）：切换按钮取代原「卡片」文字占位。
+              Row() {
+                GroupTabs({
+                  groups: this.vm.groups,
+                  onSelect: (id: string): void => {
+                    this.vm.selectGroup(id);
+                  },
+                  onLongPress: (id: string): void => {
+                    // 长按分组 = 进分组管理（M7-6），并停在该分组上下文里。
+                    this.groupSheet = true;
+                  }
+                })
+                  .layoutWeight(1)
+
+                ViewSwitch({
+                  mode: this.vm.viewMode,
+                  onToggle: (): void => {
+                    this.toggleView();
+                  }
+                })
+                  .margin({ right: AppDim.gap8 })
+              }
+              .width('100%')
+              .height(40)
+              .alignItems(VerticalAlign.Center)
 
               this.hDivider()
+
+              // 排序 chip（M8-5 / AC-102）：与列表列头共用同一个 SortState，卡片态才展示；无排序时隐藏。
+              if (this.vm.viewMode === 'card' && this.vm.sortKey !== null && this.vm.sortDir !== 'none') {
+                Row() {
+                  CardSortChip({
+                    sortKey: this.vm.sortKey,
+                    sortDir: this.vm.sortDir,
+                    onCycle: (): void => {
+                      this.cycleCardSort();
+                    },
+                    onClear: (): void => {
+                      this.vm.clearSort();
+                    }
+                  })
+                }
+                .width('100%')
+                .height(34)
+                .alignItems(VerticalAlign.Center)
+              }
             }
 
-            if (this.vm.state === 'loading') {
-              this.skeleton()
-            } else if (this.vm.state === 'error') {
-              StateView({
-                mode: StateMode.ERROR,
-                stateDesc: $r('app.string.watch_list_failed'),
-                showAction: true,
-                actionLabel: $r('app.string.retry'),
-                onAction: (): void => {
-                  this.vm.retry();
-                }
-              })
-                .width('100%')
-                .layoutWeight(1)
-            } else if (this.vm.emptyKind === 'all') {
-              this.emptyGuide()
-            } else if (this.vm.state === 'empty') {
-              // 分组为空但自选有票：只提示换分组，不复用「暂无自选」（2026-11-13）。
-              StateView({
-                mode: StateMode.EMPTY,
-                stateDesc: $r('app.string.watch_group_empty_desc'),
-                showAction: true,
-                actionLabel: $r('app.string.watch_group_empty_action'),
-                iconRes: $r('app.media.ic_tab_watchlist'),
-                onAction: (): void => {
-                  this.vm.selectGroup('all');
-                }
-              })
-                .width('100%')
-                .layoutWeight(1)
-            } else {
-              FrozenTable({
-                rows: this.vm.rows,
-                metrics: this.vm.metrics,
-                sortKey: this.vm.sortKey,
-                sortDir: this.vm.sortDir,
-                initialVOffset: this.vm.vOffset,
-                initialHOffset: this.vm.hOffset,
-                scrollToIndex: this.vm.scrollIndex,
-                scrollSeq: this.vm.scrollSeq,
-                autoScroll: this.perfRunning,
-                selectMode: this.vm.selectMode,
-                editMode: this.vm.editMode,
-                selectedCodes: this.vm.editMode ? this.vm.editSelected : this.vm.selectedCodes,
-                offline: this.hub.state === 'offline',
-                delayed: this.hub.state === 'delayed',
-                onSort: (key: SortKey): void => {
-                  this.vm.cycleSort(key);
-                },
-                onRowTap: (code: string): void => {
-                  this.handleRowTap(code);
-                },
-                onRowLongPress: (code: string): void => {
-                  this.handleRowLongPress(code);
-                },
-                onScrollY: (offset: number): void => {
-                  this.vm.onVerticalOffset(offset);
-                },
-                onScrollX: (offset: number): void => {
-                  this.vm.onHorizontalOffset(offset);
-                }
-              })
+            // 内容区：加载/错误/空态与列表共用；内容分支按视图形态切换（M8-3 淡入）。
+            Column() {
+              if (this.vm.state === 'loading') {
+                this.skeleton()
+              } else if (this.vm.state === 'error') {
+                StateView({
+                  mode: StateMode.ERROR,
+                  stateDesc: $r('app.string.watch_list_failed'),
+                  showAction: true,
+                  actionLabel: $r('app.string.retry'),
+                  onAction: (): void => {
+                    this.vm.retry();
+                  }
+                })
+                  .width('100%')
+                  .layoutWeight(1)
+              } else if (this.vm.emptyKind === 'all') {
+                this.emptyGuide()
+              } else if (this.vm.state === 'empty') {
+                // 分组为空但自选有票：只提示换分组，不复用「暂无自选」（2026-11-13）。
+                StateView({
+                  mode: StateMode.EMPTY,
+                  stateDesc: $r('app.string.watch_group_empty_desc'),
+                  showAction: true,
+                  actionLabel: $r('app.string.watch_group_empty_action'),
+                  iconRes: $r('app.media.ic_tab_watchlist'),
+                  onAction: (): void => {
+                    this.vm.selectGroup('all');
+                  }
+                })
+                  .width('100%')
+                  .layoutWeight(1)
+              } else if (this.vm.viewMode === 'card') {
+                CardGrid({
+                  rows: this.vm.cardRows(),
+                  card: this.vm.card,
+                  scrollToIndex: this.vm.scrollIndex,
+                  scrollSeq: this.vm.scrollSeq,
+                  selectedCodes: this.vm.editMode ? this.vm.editSelected : this.vm.selectedCodes,
+                  selectMode: this.vm.selectMode,
+                  editMode: this.vm.editMode,
+                  offline: this.hub.state === 'offline',
+                  autoScroll: this.perfRunning && this.perfAutoScroll,
+                  onTap: (code: string): void => {
+                    this.handleRowTap(code);
+                  },
+                  onLongPress: (code: string): void => {
+                    this.handleRowLongPress(code);
+                  },
+                  onVisibleIndex: (first: number): void => {
+                    this.vm.onCardIndex(first);
+                  }
+                })
+              } else {
+                FrozenTable({
+                  rows: this.vm.rows,
+                  metrics: this.vm.metrics,
+                  sortKey: this.vm.sortKey,
+                  sortDir: this.vm.sortDir,
+                  initialVOffset: this.vm.vOffset,
+                  initialHOffset: this.vm.hOffset,
+                  scrollToIndex: this.vm.scrollIndex,
+                  scrollSeq: this.vm.scrollSeq,
+                  autoScroll: this.perfRunning && this.perfAutoScroll,
+                  selectMode: this.vm.selectMode,
+                  editMode: this.vm.editMode,
+                  selectedCodes: this.vm.editMode ? this.vm.editSelected : this.vm.selectedCodes,
+                  offline: this.hub.state === 'offline',
+                  delayed: this.hub.state === 'delayed',
+                  onSort: (key: SortKey): void => {
+                    this.vm.cycleSort(key);
+                  },
+                  onRowTap: (code: string): void => {
+                    this.handleRowTap(code);
+                  },
+                  onRowLongPress: (code: string): void => {
+                    this.handleRowLongPress(code);
+                  },
+                  onScrollY: (offset: number): void => {
+                    this.vm.onVerticalOffset(offset);
+                  },
+                  onScrollX: (offset: number): void => {
+                    this.vm.onHorizontalOffset(offset);
+                  }
+                })
+              }
             }
+            .width('100%')
+            .layoutWeight(1)
+            .opacity(this.contentAlpha)
 
             // 底部胶囊（M7-7 E1）：常规态才出现（编辑/多选态有各自的底栏）；
             // 分组空态也保留，便于直接补股票。
@@ -878,10 +1068,10 @@ export struct WatchlistPage {
               })
             }
           }
-          .width(this.breakpoint.isSplit ? 523 : '100%')
+          .width(this.splitPane() ? 523 : '100%')
           .height('100%')
 
-          if (this.breakpoint.isSplit) {
+          if (this.splitPane()) {
             // xl 右栏：详情 pane 形态（与 page 共用 DetailContent，compact 打开）。
             Column() {
               if (this.effectivePaneCode().length > 0) {

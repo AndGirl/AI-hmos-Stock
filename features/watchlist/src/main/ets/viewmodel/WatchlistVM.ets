@@ -11,6 +11,7 @@ import {
   SearchProvider,
   SinkSubscription,
   StockBrowsePage,
+  ViewPrefStore,
   WatchAddInput,
   WatchGroup,
   WatchItem,
@@ -21,15 +22,22 @@ import {
   WatchlistRemoveOutcome,
   WatchlistStore
 } from 'commons_data';
-import { AnalyticsHost, AnalyticsHub, AnalyticsParam, ConnectionHost, ConnectionHub } from 'commons_basic';
+import { AnalyticsHost, AnalyticsHub, AnalyticsParam, ConfigHost, ConnectionHost, ConnectionHub } from 'commons_basic';
+import { nextViewMode, ViewMode } from 'commons_basic';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { compareRows, nextSortDir, SortDir, SortKey } from '../repository/SortRules';
 import { computeTableMetrics, TableMetrics } from '../repository/TableMetrics';
 import { WatchlistData, WatchlistRepository } from '../repository/WatchlistRepository';
 import { IndexBarDataSource } from './IndexBarDataSource';
+import { CardVM } from './CardVM';
 import { WatchRowVM } from './WatchRowVM';
 
 export type WatchPageState = 'loading' | 'content' | 'empty' | 'error';
+
+/** 视图切换节流窗（M8-3：快速连点只生效一次）。 */
+const VIEW_TOGGLE_THROTTLE_MS: number = 200;
+/** 调试 200 卡压测条数（M8-7，超出 50 上限但只活在内存里，不落盘）。 */
+const STRESS_CARD_COUNT: number = 200;
 
 /**
  * 空态范围（M6 追加）：
@@ -108,10 +116,25 @@ export class WatchlistVM {
   @Trace undoLeft: number = 0;
   /** 联网后清零的待同步条数（视图提示一次）。 */
   @Trace syncedCount: number = 0;
+  /** 视图形态（M8-3）：列表 / 卡片；切换不重建 VM，行数据与排序共享（AC-103）。 */
+  @Trace viewMode: ViewMode = 'list';
+  /** 卡片几何与呈现口径（M8-1/M8-2）。 */
+  @Trace card: CardVM = new CardVM();
+  /**
+   * 两个视图各自的首行下标（无选中时切回来恢复原位，M8-3）。
+   * **刻意不加 `@Trace`**：它们随滚动每帧变化，一旦被 build 读到就会让整页反复重渲染；
+   * 只在「切换视图」那一刻被 `anchorIndex` 读取（此时 viewMode 已变，页面本来就要重渲染）。
+   */
+  listIndex: number = 0;
+  cardIndex: number = 0;
+  /** 调试 200 卡压测行（M8-7）：非空时卡片视图渲染它，不写 Store、不订阅行情。 */
+  @Trace stressRows: WatchRowVM[] = [];
 
   private repo: WatchlistRepository = new WatchlistRepository();
   private store: WatchlistStore = DataServices.watchlistStore();
+  private pref: ViewPrefStore = DataServices.viewPref();
   private analytics: AnalyticsHub = AnalyticsHost.get();
+  private lastToggleAt: number = 0;
   private undoSnapshots: RemoveSnapshot[] = [];
   private undoTimer: number = -1;
   private storeListener: WatchlistChangeListener = (change: WatchlistChange): void => {
@@ -150,6 +173,139 @@ export class WatchlistVM {
     this.stripVersion++;
   }
 
+  /**
+   * 卡片几何（M8-1）：容器宽取**页面可用宽**（卡片视图在 xl 走整宽，见 `WatchlistPage.splitPane`），
+   * 与列表的 `TableMetrics` 各自独立计算，互不影响。
+   */
+  updateCardLayout(viewport: number, bp: string, fontScale: number): void {
+    this.card.update(viewport, bp, fontScale);
+  }
+
+  /** 视图形态落定：VM 是唯一持有者，`ConfigService` 只是「首帧预热副本」。 */
+  private applyViewMode(mode: ViewMode): void {
+    const next: ViewMode = mode === 'card' ? 'card' : 'list';
+    if (next !== this.viewMode) {
+      this.viewMode = next;
+    }
+    ConfigHost.getService().applyViewMode(next);
+  }
+
+  /**
+   * 切换视图（AC-103）：不重建 VM、不重新拉数据、不改分组与排序。
+   * 返回 false 表示命中了 200ms 节流（视图无需动画）。
+   * `anchorCode` 为右栏当前标的（页面传入），优先级：右栏标的 → 多选/编辑首项 → 该视图上次首行。
+   */
+  toggleViewMode(anchorCode: string): boolean {
+    const now: number = Date.now();
+    if (now - this.lastToggleAt < VIEW_TOGGLE_THROTTLE_MS) {
+      return false;
+    }
+    this.lastToggleAt = now;
+    const index: number = this.anchorIndex(anchorCode);
+    const next: ViewMode = nextViewMode(this.viewMode);
+    if (next === 'card') {
+      this.cardIndex = index;
+    } else {
+      this.listIndex = index;
+    }
+    this.viewMode = next;
+    // 目标视图按同一位置落位（列表/卡片都以首行 index 对齐）。
+    this.scrollIndex = index;
+    this.scrollSeq++;
+    this.persistViewMode(next);
+    ConfigHost.getService().applyViewMode(next);
+    this.analytics.track('card_view_switch', [new AnalyticsParam('mode', next)]);
+    hilog.info(0x0001, 'WatchLog', 'view_mode=%{public}s anchor=%{public}d', next, index);
+    return true;
+  }
+
+  /** 切换锚点：优先「看得见的那一行」，否则回到该视图上次首行。 */
+  private anchorIndex(anchorCode: string): number {
+    let code: string = anchorCode;
+    if (code.length === 0 && this.editSelected.length > 0) {
+      code = this.editSelected[0];
+    }
+    if (code.length === 0 && this.selectedCodes.length > 0) {
+      code = this.selectedCodes[0];
+    }
+    if (code.length > 0) {
+      for (let i = 0; i < this.rows.length; i++) {
+        if (this.rows[i].code === code) {
+          return i;
+        }
+      }
+    }
+    if (this.rows.length === 0) {
+      return 0;
+    }
+    const last: number = this.viewMode === 'card' ? this.cardIndex : this.listIndex;
+    return Math.min(Math.max(0, last), this.rows.length - 1);
+  }
+
+  private async persistViewMode(mode: ViewMode): Promise<void> {
+    try {
+      await this.pref.setMode(mode);
+    } catch (err) {
+      // 写失败保留内存态，不阻塞切换（下次切换再写）。
+      hilog.warn(0x0001, 'WatchLog', 'view_mode_write_fail');
+    }
+  }
+
+  /** 排序 chip 清除（AC-102）：回到默认序（保持分组与选中不变）。 */
+  clearSort(): void {
+    if (this.sortKey === null && this.sortDir === 'none') {
+      return;
+    }
+    this.sortKey = null;
+    this.sortDir = 'none';
+    this.rebuild();
+    this.analytics.track('card_sort_clear', []);
+    hilog.info(0x0001, 'WatchLog', 'card_sort_clear');
+  }
+
+  /** 卡片视图渲染的行集（压测时用合成行，不影响 Store 与订阅）。 */
+  cardRows(): WatchRowVM[] {
+    return this.stressRows.length > 0 ? this.stressRows : this.rows;
+  }
+
+  stressActive(): boolean {
+    return this.stressRows.length > 0;
+  }
+
+  /** 调试（M8-7）：生成 200 条合成卡（只复制行情，不落盘、不订阅）。 */
+  debugBuildStressRows(): number {
+    if (this.allRows.length === 0) {
+      return 0;
+    }
+    const rows: WatchRowVM[] = [];
+    for (let i = 0; i < STRESS_CARD_COUNT; i++) {
+      const origin: WatchRowVM = this.allRows[i % this.allRows.length];
+      const row: WatchRowVM = new WatchRowVM(`S${i}`, origin.name, origin.groups);
+      row.copyQuoteFrom(origin);
+      rows.push(row);
+    }
+    this.stressRows = rows;
+    hilog.info(0x0001, 'WatchLog', 'card_stress rows=%{public}d', rows.length);
+    return rows.length;
+  }
+
+  debugClearStressRows(): void {
+    if (this.stressRows.length === 0) {
+      return;
+    }
+    this.stressRows = [];
+    hilog.info(0x0001, 'WatchLog', 'card_stress cleared');
+  }
+
+  /** 调试（M8-4）：清除视图记忆并回列表。 */
+  async debugClearViewPref(): Promise<void> {
+    await this.pref.clear();
+    this.applyViewMode('list');
+    this.scrollIndex = 0;
+    this.scrollSeq++;
+    hilog.info(0x0001, 'WatchLog', 'view_pref_cleared');
+  }
+
   async load(): Promise<void> {
     if (this.loading) {
       return;
@@ -159,10 +315,14 @@ export class WatchlistVM {
     this.dispose();
     const token: number = this.loadToken;
     try {
+      // 视图偏好先读（M8-4）：出内容前必须知道列表还是卡片，否则冷启会「先列表后卡片」。
+      const prefTask: Promise<void> = this.pref.load();
       const data: WatchlistData = await this.repo.load();
+      await prefTask;
       if (token !== this.loadToken) {
         return;
       }
+      this.applyViewMode(this.pref.current());
       this.applyData(data);
       this.loaded = true;
       this.subscribe();
@@ -479,11 +639,25 @@ export class WatchlistVM {
     if (this.sortDir === 'none') {
       this.sortKey = null;
     }
+    // 卡片视图的 chip 复用同一套状态（CK-2：不新增第三套排序态），点 chip 本体也走这里。
+    if (this.viewMode === 'card' && this.sortKey !== null) {
+      this.analytics.track('card_sort_by', [
+        new AnalyticsParam('key', `${this.sortKey}`),
+        new AnalyticsParam('dir', this.sortDir)
+      ]);
+    }
     this.rebuild();
   }
 
   onVerticalOffset(offset: number): void {
     this.vOffset = offset;
+    const height: number = this.metrics.rowHeight;
+    this.listIndex = height > 0 ? Math.floor(offset / height) : 0;
+  }
+
+  /** 卡片区首个可见行（M8-3 锚定用）。 */
+  onCardIndex(first: number): void {
+    this.cardIndex = Math.max(0, first);
   }
 
   onHorizontalOffset(offset: number): void {
@@ -809,6 +983,8 @@ export function emptyMetrics(): TableMetrics {
 
 export { SortDir, SortKey } from '../repository/SortRules';
 export { TableMetrics, NUMERIC_SORT_KEYS } from '../repository/TableMetrics';
+export { CardVM } from './CardVM';
+export { ViewMode } from 'commons_basic';
 // 分组容量/组名长度：View 不直接 import commons_data（R-07），由 VM 转出常量与类型。
 export type { GroupEditReason } from 'commons_data';
 export { WATCHLIST_GROUP_NAME_MAX, WATCHLIST_MAX_USER_GROUPS } from 'commons_data';

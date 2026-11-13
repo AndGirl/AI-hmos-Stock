@@ -3,13 +3,12 @@ import { GroupTabVM } from '../viewmodel/WatchlistVM';
 
 /** 分组 Tab 超过 5 个后横向滑动查看（每个 Tab 保持自然宽度，不截断名称）。 */
 const MAX_VISIBLE_GROUPS: number = 5;
-/** 右侧两个占位符（卡片切换 / 排序）的尺寸。 */
-const PLACEHOLDER_SIZE: number = 32;
 
 /**
  * 分组 Tab：全部 + 系统组（融/创）+ 用户组，显示只数，选中红色下划线 3vp（FR-02.5）。
  * - 最多展示 5 个，最少 1 个（「全部」）；可横向滑动，内容始终居左；
- * - 最右侧固定预留两个占位符（卡片切换 / 排序），不随 Tab 横滑移动；
+ * - M8 起右侧不再预留占位：视图切换由 `ViewSwitch`、排序由 `CardSortChip` 承载，
+ *   由 `WatchlistPage` 与本报签在同一行/下一行组装（Tab 栏不耦合视图状态）；
  * - 用户组直接渲染 `name`（M7-6 关闭 T-03），系统组仍走 i18n；长按进入分组管理。
  */
 @ComponentV2
@@ -38,20 +37,6 @@ export struct GroupTabs {
       return $r('app.string.watch_group_kcb');
     }
     return $r('app.string.watch_group_all');
-  }
-
-  @Builder
-  placeholder(label: ResourceStr) {
-    Text(label)
-      .width(PLACEHOLDER_SIZE)
-      .height(PLACEHOLDER_SIZE)
-      .fontSize(11)
-      .textAlign(TextAlign.Center)
-      .fontColor(AppColor.textSecondary)
-      .backgroundColor(AppColor.bgSurface)
-      .borderRadius(AppDim.gap8)
-      .border({ width: 0.5, color: AppColor.divider })
-      .margin({ left: AppDim.gap8 })
   }
 
   build() {
@@ -103,9 +88,6 @@ export struct GroupTabs {
       .edgeEffect(EdgeEffect.None)
       .layoutWeight(1)
       .height(40)
-
-      this.placeholder($r('app.string.watch_entry_card'))
-      this.placeholder($r('app.string.watch_entry_sort'))
     }
     .width('100%')
     .height(40)
