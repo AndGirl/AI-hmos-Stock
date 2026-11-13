@@ -6,6 +6,7 @@ import { RouteName } from '../router/AppRoutes';
 import { DeepLinkHandler } from '../router/DeepLinkHandler';
 import { DetailPage } from './DetailPage';
 import { PkPage } from './PkPage';
+import { SearchRoutePage } from './SearchPage';
 import { NotFoundPage } from './NotFoundPage';
 
 /**
@@ -24,6 +25,8 @@ struct Index {
       DetailPage()
     } else if (name === RouteName.PK) {
       PkPage()
+    } else if (name === RouteName.SEARCH) {
+      SearchRoutePage()
     } else {
       NotFoundPage()
     }

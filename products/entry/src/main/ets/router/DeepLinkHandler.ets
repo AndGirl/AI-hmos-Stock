@@ -38,6 +38,14 @@ export class DeepLinkHandler {
   }
 
   private static apply(result: DeepLinkResult): void {
+    if (result.status === DeepLinkStatus.OK && result.search !== undefined) {
+      hilog.info(DOMAIN, 'DeepLink',
+        'event=deeplink_search q_len=%{public}d from=%{public}s',
+        result.search.q !== undefined ? result.search.q.length : 0,
+        result.search.from !== undefined ? result.search.from : 'deeplink');
+      AppServices.get().pushSearch(result.search.q, 'deeplink');
+      return;
+    }
     if (result.status === DeepLinkStatus.OK && result.detail !== undefined) {
       const rank: number = result.detail.rank !== undefined ? result.detail.rank : -1;
       hilog.info(DOMAIN, 'DeepLink',

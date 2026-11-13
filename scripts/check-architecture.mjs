@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LAYERS = ['products', 'features', 'commons'];
-const ALLOWED_FEATURE_EDGES = new Set(['watchlist->detail', 'detail->trade', 'pk->detail']);
+const ALLOWED_FEATURE_EDGES = new Set(['watchlist->detail', 'detail->trade', 'pk->detail', 'search->detail']);
 const RULE_IDS = ['R-01', 'R-02', 'R-03', 'R-04', 'R-05', 'R-06', 'R-07', 'R-08', 'R-09'];
 
 const norm = (value) => value.replace(/\\/g, '/');

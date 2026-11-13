@@ -21,8 +21,7 @@ const EXPECTED_KEYS = [
   'coming_soon_add_watchlist',
   'coming_soon_card_view',
   'coming_soon_home',
-  'coming_soon_news',
-  'coming_soon_market'
+  'coming_soon_news'
 ];
 
 const FORBIDDEN_WORDS = ['敬请期待', '即将上线', '暂未开放', 'Coming', 'coming soon', '~', '!', '！'];

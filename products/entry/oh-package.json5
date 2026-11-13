@@ -10,6 +10,7 @@
     "detail": "file:../../features/detail",
     "trade": "file:../../features/trade",
     "pk": "file:../../features/pk",
+    "search": "file:../../features/search",
     "commons_ui": "file:../../commons/ui",
     "commons_basic": "file:../../commons/basic",
     "commons_data": "file:../../commons/data"

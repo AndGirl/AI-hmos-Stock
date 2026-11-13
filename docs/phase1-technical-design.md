@@ -236,6 +236,7 @@ V2 只解决一个问题：**让「哪块数据变了」精确到组件**。为�
 | `features/detail` | HAR | `DetailContent`（页 / 右栏 / 紧凑）、图表区、盘口、内容 Tab | `features/trade`、`commons/*` |
 | `features/trade` | HAR | 买入弹窗两层、校验、提交与结果 | `commons/*` |
 | `features/pk` | HAR | 多窗宿主、叠放布局、焦点与换股、订阅编排 | `features/detail`、`commons/*` |
+| `features/search` | HAR | 搜索页（六态、历史/热搜、分段与高亮）、匹配规则与查询编排；M7 的添加页复用 `SearchBody` | `features/detail`、`commons/*` |
 | `commons/ui` | HAR | 设计系统组件：Skeleton、StateView、TagChip、Banner、通用卡片 | `commons/basic` |
 | `commons/basic` | HAR | i18n、常量、格式化、Guard、日志、埋点接口、`RouteService` 接口 | — |
 | `commons/data` | HAR | 三 Provider 契约与 Mock、`QuoteBus`/`QuoteCache`/`SubscriptionRegistry`、`ConnectionHub`、`SortStore`、图表适配、实体（共享内核） | `commons/basic` |
@@ -245,10 +246,11 @@ V2 只解决一个问题：**让「哪块数据变了」精确到组件**。为�
 ```
 watchlist ──► detail ──► trade
                  ▲
-                 └──── pk
+                 ├──── pk
+                 └──── search
 ```
 
-允许这三条的理由：watchlist 在 xl 分栏直接复用 `DetailContent`；detail 的动作栏要打开买入弹窗；pk 的每个窗就是一实例 `DetailContent`。**新增横向依赖必须同时修改本节与 §3.1.10 的白名单**，否则 CI 拦下。
+允许这四条的理由：watchlist 在 xl 分栏直接复用 `DetailContent`；detail 的动作栏要打开买入弹窗；pk 的每个窗就是一实例 `DetailContent`；search 在 lg/xl 用 `DetailContent(mode:'pane')` 做右栏预览（M6-4，`search→detail` 为二期唯一新增白名单）。**新增横向依赖必须同时修改本节与 §3.1.10 的白名单**，否则 CI 拦下。
 
 > **平板右栏的交易入口（§10-83）**：xl 右栏的动作栏「去交易」不新增 `watchlist→trade` 依赖——`WatchlistPage` 只把动作上报为 `onOpenTrade(code)`，由 `products/entry` 的 `TabShell` 用 `bindContentCover` 全屏模态挂载 `TradeSheet`（弹窗归属当前窗口，系统返回/侧滑由系统模态关闭）。
 
@@ -449,7 +451,7 @@ export class AppServices {
 | R-01 | `products/entry` 下若出现多个产品子目录，彼此不得 import（本期只有一个，防未来） |
 | R-02 | `features/*` 不得 import `products/*` |
 | R-03 | `commons/*` 不得 import `features/*`、`products/*` |
-| R-04 | `features/*` 之间的 import 只允许白名单：watchlist→detail、detail→trade、pk→detail |
+| R-04 | `features/*` 之间的 import 只允许白名单：watchlist→detail、detail→trade、pk→detail、search→detail |
 | R-05 | 除 `commons/data/DataServices.ets` 外，`new Mock*` / `new Real*` 一律禁止 |
 | R-06 | 跨模块只允许 `import { X } from 'detail'`（走对方 `Index.ets` 桶导出），禁止深路径 |
 | R-07 | feature 内 `view/` 不得 import `repository/`、`commons/data`；只吃 VM 暴露的类型 |
@@ -1809,7 +1811,7 @@ export class BreakpointService {
 | `placeholder_home_title` | 首页 |
 | `placeholder_news_title` | 最新资讯 |
 | `placeholder_market_title` | 行情 |
-| `retry` / `loading` / `empty_watchlist_desc` | 重试 / 加载中 / 暂无自选，可添加后查看 |
+| `retry` / `loading` / `empty_watchlist_desc` | 重试 / 加载中 / 添加自选后在这里查看详情（2026-11-13 改为自选空态右栏文案） |
 
 **校验测试**（进 CI，防止文案漂移）：
 

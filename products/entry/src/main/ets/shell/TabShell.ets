@@ -93,6 +93,9 @@ export struct TabShell {
               onOpenTrade: (code: string): void => {
                 this.openTrade(code);
               },
+              onOpenSearch: (): void => {
+                AppServices.get().pushSearch(undefined, 'watchlist');
+              },
               bottomBarIndex: this.currentIndex,
               onSelectBottomTab: (index: number): void => {
                 this.tabsController.changeIndex(index);
@@ -102,7 +105,11 @@ export struct TabShell {
           }
 
           TabContent() {
-            MarketPage()
+            MarketPage({
+              onOpenTrade: (code: string): void => {
+                this.openTrade(code);
+              }
+            })
           }
         }
         .barHeight(0)

@@ -5,6 +5,7 @@
 export class RouteName {
   static readonly DETAIL: string = 'detail';
   static readonly PK: string = 'pk';
+  static readonly SEARCH: string = 'search';
   static readonly NOT_FOUND: string = 'notFound';
 }
 
@@ -15,6 +16,15 @@ export interface DetailParam {
   code: string;
   from: DetailFrom;
   rank?: number;
+}
+
+/** 搜索入口来源：行情 Tab / 自选空态 / 深链 / 其它（埋点与返回态用）。 */
+export type SearchFrom = 'tab' | 'watchlist' | 'deeplink' | 'detail';
+
+export interface SearchParam {
+  /** 深链带入的关键词（已截断 20 字）；缺省回落初始态。 */
+  q?: string;
+  from?: SearchFrom;
 }
 
 export interface PkParam {

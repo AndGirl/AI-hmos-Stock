@@ -18,6 +18,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { BreakpointHost, ConfigHost, SafeAreaHost } from 'commons_basic';
+import { StorageAdapter } from 'commons_data';
 import { DeepLinkHandler } from '../router/DeepLinkHandler';
 
 const DOMAIN = 0x0000;
@@ -38,6 +39,8 @@ export default class EntryAbility extends UIAbility {
     } catch (err) {
       hilog.warn(DOMAIN, 'testTag', 'read fontSizeScale failed: %{public}s', JSON.stringify(err));
     }
+    // 存储入口注入（§5.5）：搜索历史 / 自选写盘都在首帧前具备能力。
+    StorageAdapter.init(this.context);
     // 冷启动深链：先暂存，UI 就绪后由 AppRoot 消费（§3.2）。
     DeepLinkHandler.handle(want.uri);
   }

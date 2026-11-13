@@ -1,4 +1,12 @@
-import { DetailFrom, DetailParam, NotFoundParam, PkParam, RouteName } from '../router/AppRoutes';
+import {
+  DetailFrom,
+  DetailParam,
+  NotFoundParam,
+  PkParam,
+  RouteName,
+  SearchFrom,
+  SearchParam
+} from '../router/AppRoutes';
 import { NavigationGuard } from '../router/NavigationGuard';
 
 /**
@@ -34,6 +42,21 @@ export class AppServices {
       param.rank = rank;
     }
     this.stack.pushPathByName(RouteName.DETAIL, param);
+  }
+
+  /** 搜索（M6-6）：深链 / 自选空态 / 其它入口统一走这里。 */
+  pushSearch(q?: string, from?: SearchFrom): void {
+    if (!NavigationGuard.tryNavigate('search:' + (q !== undefined ? q : ''))) {
+      return;
+    }
+    const param: SearchParam = {};
+    if (q !== undefined && q.trim().length > 0) {
+      param.q = q.trim();
+    }
+    if (from !== undefined) {
+      param.from = from;
+    }
+    this.stack.pushPathByName(RouteName.SEARCH, param);
   }
 
   pushPk(codes: string[], focus?: number, from?: string): void {

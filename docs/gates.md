@@ -30,13 +30,15 @@ devecocli check lint
 
 ## 2. 占位文案门禁校验项
 
-- 键集合必须恰好是：`coming_soon_add_watchlist`、`coming_soon_card_view`、`coming_soon_home`、`coming_soon_news`、`coming_soon_market`；
+- 键集合必须恰好是：`coming_soon_add_watchlist`、`coming_soon_card_view`、`coming_soon_home`、`coming_soon_news`；
 - 每条值以「下阶段开放」结尾；
 - 禁止变体：`敬请期待` / `即将上线` / `暂未开放` / `Coming` / `~` / `!` / `！`；
 - 禁止版本号片段：`v1.x` / `一期` / `二期` / `阶段一~三`；
 - 禁止末尾标点、emoji、首尾空白、换行；
-- `ComingSoonText.ets` 必须引用全部 5 条资源；
+- `ComingSoonText.ets` 必须引用全部 4 条资源；
 - `.ets` 源码不得出现硬编码的「…下阶段开放」字符串（注释先剔除）。
+
+> M6 起 `coming_soon_market` 已随行情 Tab 落地移除（CK-4）；`add_watchlist` / `card_view` 分别随 M7、M8 移除。
 
 ## 3. 分层架构红线（R-01~R-09）
 
@@ -45,7 +47,7 @@ devecocli check lint
 | R-01 | `products` → `products` 的跨模块 import 直接失败 |
 | R-02 | `features` → `products` 失败 |
 | R-03 | `commons` → `features` / `products` 失败 |
-| R-04 | 仅允许 `watchlist->detail`、`detail->trade`、`pk->detail`，其余 feature 横向依赖失败 |
+| R-04 | 仅允许 `watchlist->detail`、`detail->trade`、`pk->detail`、`search->detail`，其余 feature 横向依赖失败 |
 | R-05 | 除 `commons/data/src/main/ets/DataServices.ets` 外出现 `new Mock*` / `new Real*` 失败 |
 | R-06 | 跨模块必须用包名（桶导出）；`模块名/深路径`、跨模块相对路径、HAR 缺少根 `Index.ets` 或 `main != Index.ets` 均失败 |
 | R-07 | feature 的 `view/` import `repository/` 或 `commons_data` 失败 |
@@ -63,6 +65,7 @@ devecocli check lint
 - `.github/workflows/gate.yml` 在 push/PR 时只跑第 1、2 道（纯 Node，无 SDK）。
 - 第 3 道 CodeLinter、构建、Hypium 需要 DevEco Studio / Command Line Tools，当前在本地 `scripts/gate.ps1` 执行；后续可接带 SDK 的自托管 runner。
 - 目前没有 Hypium 单元测试工程；占位文案用静态脚本承担「防漂移」职责。M1 起如需纯函数单测（几何/排序/校验），再在 `features/*/src/test` 建 Hypium local test，并纳入 `gate.ps1`。
+  - M6 已在 `features/search/src/test` 落地第一组纯函数单测（`MatchRules` / `SearchQuery`），当前通过 `devecocli local test` 手动执行，尚未并入 `gate.ps1`。
 
 ## 5. 自检记录
 
