@@ -12,6 +12,7 @@ import { SearchProvider } from './model/SearchModels';
 import { SearchHistoryStore } from './store/SearchHistoryStore';
 import { WatchlistStore } from './store/WatchlistStore';
 import { WatchlistSyncService } from './store/WatchlistSyncService';
+import { ViewPrefStore } from './store/ViewPrefStore';
 
 /**
  * 数据装配点：全工程唯一允许 `new Mock*` / `new Real*` 的地方（R-05）。
@@ -28,6 +29,7 @@ export class DataServices {
   private static history: SearchHistoryStore | undefined = undefined;
   private static watchStore: WatchlistStore | undefined = undefined;
   private static pendingSync: WatchlistSyncService | undefined = undefined;
+  private static viewPreferences: ViewPrefStore | undefined = undefined;
 
   static quoteProvider(): QuoteProvider {
     if (DataServices.quote === undefined) {
@@ -111,5 +113,13 @@ export class DataServices {
     DataServices.pendingSync = created;
     created.start();
     return created;
+  }
+
+  /** 视图偏好（M8-4）：`view_pref_v1` 的唯一读写入口，冷启由 EntryAbility 预读。 */
+  static viewPref(): ViewPrefStore {
+    if (DataServices.viewPreferences === undefined) {
+      DataServices.viewPreferences = new ViewPrefStore();
+    }
+    return DataServices.viewPreferences;
   }
 }

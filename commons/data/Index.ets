@@ -129,6 +129,7 @@ export {
   WatchlistStore
 } from './src/main/ets/store/WatchlistStore';
 export { WatchlistSyncService } from './src/main/ets/store/WatchlistSyncService';
+export { ViewPrefStore } from './src/main/ets/store/ViewPrefStore';
 export {
   charCount,
   countUserGroups,

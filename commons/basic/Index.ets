@@ -16,5 +16,13 @@ export {
   trackEvent
 } from './src/main/ets/services/Analytics';
 export { PerfMeter } from './src/main/ets/services/PerfMeter';
+export { BackDispatcher, BackHandler } from './src/main/ets/services/BackDispatcher';
 export { ComingSoonText } from './src/main/ets/constants/ComingSoonText';
 export { LayoutConst } from './src/main/ets/constants/LayoutConst';
+export {
+  nextViewMode,
+  normalizeViewMode,
+  VIEW_MODE_CARD,
+  VIEW_MODE_LIST,
+  ViewMode
+} from './src/main/ets/constants/ViewModes';

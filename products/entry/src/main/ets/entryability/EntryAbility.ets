@@ -17,8 +17,8 @@ import { AbilityConstant, Configuration, ConfigurationConstant, UIAbility, Want 
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { BreakpointHost, ConfigHost, SafeAreaHost } from 'commons_basic';
-import { StorageAdapter } from 'commons_data';
+import { BackDispatcher, BreakpointHost, ConfigHost, SafeAreaHost } from 'commons_basic';
+import { DataServices, StorageAdapter } from 'commons_data';
 import { DeepLinkHandler } from '../router/DeepLinkHandler';
 
 const DOMAIN = 0x0000;
@@ -41,8 +41,30 @@ export default class EntryAbility extends UIAbility {
     }
     // 存储入口注入（§5.5）：搜索历史 / 自选写盘都在首帧前具备能力。
     StorageAdapter.init(this.context);
+    // 视图偏好预热（M8-4）：预读 `view_pref_v1` 写进 ConfigService，
+    // 页面出内容前还会再 await 一次同一个 Promise，因此冷启不会「先列表后卡片」。
+    DataServices.viewPref().load().then((): void => {
+      const mode: string = DataServices.viewPref().current();
+      ConfigHost.getService().applyViewMode(mode);
+      hilog.info(DOMAIN, 'testTag', 'viewMode=%{public}s', mode);
+    }).catch((err: BusinessError): void => {
+      hilog.warn(DOMAIN, 'testTag', 'preheat viewMode failed: %{public}s', JSON.stringify(err));
+    });
     // 冷启动深链：先暂存，UI 就绪后由 AppRoot 消费（§3.2）。
     DeepLinkHandler.handle(want.uri);
+  }
+
+  /**
+   * 系统返回键（M8，关闭 M7 遗留 §9-28⑥）：
+   * 自选页没有 NavDestination 挂点，分组管理浮层 / 编辑态 / 比价多选态通过
+   * `BackDispatcher` 先退一层；没有页面消费时返回 false，交给系统（退出/回桌面）。
+   */
+  onBackPressed(): boolean {
+    if (BackDispatcher.handle()) {
+      hilog.info(DOMAIN, 'testTag', 'back consumed by page');
+      return true;
+    }
+    return false;
   }
 
   onConfigurationUpdate(newConfig: Configuration): void {
