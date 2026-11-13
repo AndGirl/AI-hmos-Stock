@@ -133,6 +133,31 @@
 
 > 调试造数（`OrderListVM.debugSeedOrders(25)`）：循环覆盖 7 种状态（待报/已报/部成/已成/已撤/废单/未知），`clientOrderId` 以 `DBG` 前缀避免与真实下单撞键；**只写 `trade_orders_v1`，不动账户资金与持仓**；用「清空委托」清理。入口：委托页长按标题 → 生成测试委托 25 笔（`DEBUG` 关闭时不可用）。
 
+---
+
+## 11. 撤单失败：原因与修复（2026-11-14）
+
+**现象**：详情「去交易」下单 → 进入当日委托 → 点「撤单」失败（提示「撤单失败：已成」），或提示成功后列表又变回已成。
+
+**两个独立根因**
+
+| # | 根因 | 说明 |
+|---|---|---|
+| A | **撤单与 1s 撮合竞态** | `tick()` 取到订单对象引用后 `await` 让出，撤单把状态置为 `canceled`；tick 回来不校验状态，继续 `bookFill` 并覆盖成 `filled`（还会多记一笔成交） |
+| B | **委托列表不刷新** | 列表只在 `aboutToAppear` 拉一次，行状态是快照；订单在 1s 内被撮合，界面仍显示「已报」+「撤单」，点下去必然失败 |
+
+**修复（按优先级）**
+
+| # | 修复 | 落点 |
+|---|---|---|
+| F1 | tick 每拍按**最新状态**重取并跳过终态；`TradeOrderStore.upsert` 增「终态不被覆盖」保护 | `LocalTradeProvider.doTick` / `TradeOrderStore.upsert` |
+| F4 | 撤单失败时用返回状态**纠正该行**（按钮随之消失，不再假装可点） | `OrderListVM.cancel` |
+| F3 | 委托变化**事件驱动**就地刷新行（provider 变更监听 → VM `syncRows`，不引入 UI 定时器） | `LocalTradeProvider.subscribeChanges` / `OrderListVM.attachLive` |
+| F2 | 提交/撮合/撤单**串行化**（同一 Promise 队列），从根上消除交错 | `LocalTradeProvider.enqueue` |
+
+**复验**：限价 1500 挂单 → 已报 → 撤单 → 等待 5 秒 → 仍为「已撤」、按钮消失（修复前会变回「已成」或停在「撤单中」）。
+证据：[14-cancel-fixed-stays-canceled.png](../shots/phase2/m10/14-cancel-fixed-stays-canceled.png)。
+
 > 撤单取证过程中发现并修复 1 个 P1 级缺陷：撤单成功后 `load()` 重建行对象，而 `ForEach` 以 `clientOrderId` 为 key 复用旧组件 → 界面卡在「撤单中」、按钮不再消失。改为**就地更新该行**（`state/cancelable/canceling`）后再取证。
 
 ---
