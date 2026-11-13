@@ -110,6 +110,9 @@ export struct DetailPage {
             TradeSheet({
               vm: this.tradeVM,
               bottomInset: this.safeArea.bottomInset,
+              onOpenOrders: (): void => {
+                AppServices.get().pushOrders();
+              },
               onClosed: (): void => {
                 this.tradeOpen = false;
                 this.tradeVM.dispose();

@@ -214,6 +214,40 @@ export class OrderListVM {
     }
   }
 
+  /**
+   * 调试（M10）：模拟未开户 / 恢复开户。
+   * 只改本地账户的 `opened` 标记，用于验收「未开户引导」而不必清数据。
+   */
+  async debugSetOpened(opened: boolean): Promise<void> {
+    const store = DataServices.tradeAccount();
+    await store.load();
+    const ids: string[] = store.ids();
+    for (let i = 0; i < ids.length; i++) {
+      await store.setOpened(ids[i], opened);
+    }
+    await this.load();
+  }
+
+  /** 调试（M10）：重置账户与委托（现金/持仓回到种子，委托与流水清空）。 */
+  async debugResetAll(): Promise<void> {
+    const trade = DataServices.localTrade();
+    if (trade !== undefined) {
+      await trade.resetAll();
+    }
+    await this.load();
+  }
+
+  /** 调试（M10）：只清空委托（保留账户与持仓）。 */
+  async debugClearOrders(): Promise<void> {
+    const provider: TradeProvider = this.provider();
+    if (provider.listOrders === undefined) {
+      return;
+    }
+    await DataServices.tradeOrders().clear();
+    await DataServices.orderJournal().clear();
+    await this.load();
+  }
+
   private fetchPage(page: number): Promise<OrderPage> {
     const provider: TradeProvider = this.provider();
     if (provider.listOrders === undefined) {

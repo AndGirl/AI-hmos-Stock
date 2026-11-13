@@ -1,4 +1,4 @@
-import { KeyboardAvoidMode, window } from '@kit.ArkUI';
+import { KeyboardAvoidMode, promptAction, window } from '@kit.ArkUI';
 import { BreakpointHost, BreakpointService, ConnectionHost, ConnectionHub } from 'commons_basic';
 import { AppColor } from 'commons_ui';
 import { TradeVM } from '../viewmodel/TradeVM';
@@ -19,6 +19,9 @@ import { toastText } from './TradeText';
 export struct TradeSheet {
   @Param vm: TradeVM = new TradeVM();
   @Param bottomInset: number = 0;
+  /** M10：结果框「查看委托」跳转（由壳层注入路由）。 */
+  @Event onOpenOrders: () => void = (): void => {
+  };
   @Event onClosed: () => void = (): void => {
   };
   @Local breakpoint: BreakpointService = BreakpointHost.getService();
@@ -93,7 +96,29 @@ export struct TradeSheet {
     if (message === '') {
       return;
     }
+    // M10：下单成功弹结果框，「查看委托」直达委托列表；其余仍用轻提示。
+    if (this.vm.toastCode === 'success') {
+      this.showReceipt(message);
+      return;
+    }
     this.getUIContext().getPromptAction().showToast({ message: message, duration: 1800 });
+  }
+
+  /** 下单结果框（M10）：查看委托 / 知道了。不改 `TradePhase`，对既有买入链路零影响。 */
+  private showReceipt(message: ResourceStr): void {
+    this.getUIContext().getPromptAction().showDialog({
+      title: $r('app.string.trade_receipt_title'),
+      message: message,
+      buttons: [
+        { text: $r('app.string.trade_receipt_ok'), color: AppColor.textSecondary },
+        { text: $r('app.string.trade_receipt_jump'), color: AppColor.accent }
+      ]
+    }).then((result: promptAction.ShowDialogSuccessResponse): void => {
+      if (result.index === 1) {
+        this.onOpenOrders();
+      }
+    }).catch((): void => {
+    });
   }
 
   /** lg/xl 居中模态；sm/md 底部 sheet（设计 §5.4.1）。 */

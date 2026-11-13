@@ -58,6 +58,9 @@ export function blockText(code: TradeBlockCode, canBuyText: string): ResourceStr
   if (code === 'fund_short') {
     return $r('app.string.trade_block_fund_short', canBuyText);
   }
+  if (code === 'no_holding') {
+    return $r('app.string.trade_block_no_holding');
+  }
   return '';
 }
 

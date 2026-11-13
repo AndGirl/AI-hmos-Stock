@@ -59,7 +59,7 @@ export struct TradeConfirmView {
     Row() {
       this.backButton()
       Column() {
-        Text($r('app.string.trade_title_confirm'))
+        Text(this.vm.side === 'sell' ? $r('app.string.trade_title_confirm_sell') : $r('app.string.trade_title_confirm'))
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
           .fontColor(AppColor.textPrimary)
@@ -118,7 +118,7 @@ export struct TradeConfirmView {
   @Builder
   blockBanner() {
     Row() {
-      Text(blockText(this.vm.blockCode, this.vm.canBuyText))
+      Text(blockText(this.vm.blockCode, this.vm.side === 'sell' ? this.vm.canSellText : this.vm.canBuyText))
         .fontSize(13)
         .fontColor(AppColor.error)
     }
@@ -245,7 +245,7 @@ export struct TradeConfirmView {
           .fontColor(AppColor.textOnAccent)
           .margin({ left: 8 })
       } else {
-        Text($r('app.string.trade_confirm_buy'))
+        Text(this.vm.side === 'sell' ? $r('app.string.trade_confirm_sell') : $r('app.string.trade_confirm_buy'))
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.ctaEnabled() ? AppColor.textOnAccent : AppColor.disabledText)
@@ -258,7 +258,7 @@ export struct TradeConfirmView {
     .backgroundColor(this.ctaEnabled() ? AppColor.accentFill : AppColor.disabledBg)
     .margin({ top: this.keyboardUp ? 8 : 16 })
     .accessibilityGroup(true)
-    .accessibilityText($r('app.string.trade_confirm_buy'))
+    .accessibilityText(this.vm.side === 'sell' ? $r('app.string.trade_confirm_sell') : $r('app.string.trade_confirm_buy'))
     .enabled(this.ctaEnabled())
     .onClick(() => {
       this.vm.submit();

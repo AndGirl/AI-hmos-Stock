@@ -339,6 +339,15 @@
     {"name": "trade_reason_risk", "value": "风险控制拒绝"},
     {"name": "trade_reason_busy", "value": "系统繁忙，请稍后重试"},
     {"name": "trade_reason_unknown", "value": "未知原因（已上报）"},
+    {"name": "trade_side_buy", "value": "买入"},
+    {"name": "trade_side_sell", "value": "卖出"},
+    {"name": "trade_title_confirm_sell", "value": "卖出"},
+    {"name": "trade_can_sell_value", "value": "可卖 %s 股"},
+    {"name": "trade_block_no_holding", "value": "无可卖持仓"},
+    {"name": "trade_receipt_title", "value": "委托已提交"},
+    {"name": "trade_receipt_jump", "value": "查看委托"},
+    {"name": "trade_receipt_ok", "value": "知道了"},
+    {"name": "trade_confirm_sell", "value": "确认卖出"},
     {"name": "card_sort_clear", "value": "清除排序"}
   ]
 }

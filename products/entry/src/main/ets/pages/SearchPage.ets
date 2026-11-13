@@ -43,7 +43,10 @@ export struct SearchRoutePage {
     TradeSheet({
       vm: this.tradeVM,
       bottomInset: this.safeArea.bottomInset,
-      onClosed: (): void => {
+      onOpenOrders: (): void => {
+                AppServices.get().pushOrders();
+              },
+              onClosed: (): void => {
         this.closeTrade();
       }
     })

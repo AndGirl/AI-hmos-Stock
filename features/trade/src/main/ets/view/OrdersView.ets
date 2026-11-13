@@ -1,4 +1,5 @@
 import { promptAction } from '@kit.ArkUI';
+import { DEBUG } from '../../../../BuildProfile';
 import { AppColor, AppDim } from 'commons_ui';
 import { OrderListVM, OrderRowVM, ORDER_FILTERS } from '../viewmodel/OrderListVM';
 import {
@@ -60,6 +61,12 @@ export struct OrdersView {
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColor.textPrimary)
         .layoutWeight(1)
+        .gesture(
+          LongPressGesture({ repeat: false })
+            .onAction(() => {
+              this.openDebugMenu();
+            })
+        )
       Text('刷新')
         .fontSize(13)
         .fontColor(AppColor.textSecondary)
@@ -309,6 +316,35 @@ export struct OrdersView {
     })
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(AppColor.bgSurface)
+  }
+
+  /**
+   * 调试菜单（仅 debug，长按标题）：模拟未开户 / 恢复开户 / 重置账户与委托 / 清空委托。
+   * release 由 BuildProfile.DEBUG=false 关闭。
+   */
+  private openDebugMenu(): void {
+    if (!DEBUG) {
+      return;
+    }
+    const b0: promptAction.Button = { text: '模拟未开户', color: AppColor.debug };
+    const b1: promptAction.Button = { text: '恢复开户', color: AppColor.debug };
+    const b2: promptAction.Button = { text: '重置账户与委托', color: AppColor.debug };
+    const b3: promptAction.Button = { text: '清空委托', color: AppColor.debug };
+    const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
+      promptAction.Button] = [b0, b1, b2, b3];
+    this.getUIContext().getPromptAction().showActionMenu({ title: '委托调试（debug）', buttons: buttons })
+      .then((res: promptAction.ActionMenuSuccessResponse): void => {
+        if (res.index === 0) {
+          this.vm.debugSetOpened(false);
+        } else if (res.index === 1) {
+          this.vm.debugSetOpened(true);
+        } else if (res.index === 2) {
+          this.vm.debugResetAll();
+        } else if (res.index === 3) {
+          this.vm.debugClearOrders();
+        }
+      }).catch((): void => {
+      });
   }
 
   /** 撤单二次确认（AC-116）。 */

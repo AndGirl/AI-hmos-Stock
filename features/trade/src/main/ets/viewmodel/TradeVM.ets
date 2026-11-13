@@ -6,6 +6,7 @@ import {
   MockFaults,
   OrderDraft,
   OrderResult,
+  OrderSide,
   TradeAuth,
   TradeContext,
   TradeSource,
@@ -47,7 +48,7 @@ export type TradeFieldErrorCode =
   '' | 'price_empty' | 'price_above' | 'price_below' | 'qty_empty' | 'qty_lot' | 'qty_over';
 
 /** 弹窗内提示条：断线 / 非交易时段 / 资金不足（FR-07.10）。 */
-export type TradeBlockCode = '' | 'offline' | 'closed' | 'fund_short';
+export type TradeBlockCode = '' | 'offline' | 'closed' | 'fund_short' | 'no_holding';
 
 export type TradeHintCode = '' | 'price_up' | 'price_down' | 'qty_can_buy';
 
@@ -89,6 +90,10 @@ export class TradeVM {
   @Trace limitDownText: string = '0.00';
   @Trace limitUpText: string = '0.00';
   @Trace canBuyText: string = '0';
+  /** M10：可卖数量文案（卖出方向生效）。 */
+  @Trace canSellText: string = '0';
+  /** M10：买卖方向（默认买入；切换后上限与默认数量随之变化）。 */
+  @Trace side: OrderSide = 'buy';
   @Trace holdText: string = '0';
   @Trace priceError: TradeFieldErrorCode = '';
   @Trace qtyError: TradeFieldErrorCode = '';
@@ -120,6 +125,7 @@ export class TradeVM {
   private price: number = 0;
   private qty: number = 0;
   private canBuy: number = 0;
+  private canSell: number = 0;
   private clientOrderId: string = '';
   private submitToken: number = 0;
   /** 上下文加载令牌：换标的/关闭后丢弃过期回执，避免旧价格/旧账户回填。 */
@@ -225,7 +231,7 @@ export class TradeVM {
     if (!this.commitPending()) {
       return;
     }
-    this.qty = stepQty(this.qty, delta, this.canBuy);
+    this.qty = stepQty(this.qty, delta, this.maxQty());
     this.clearErrors();
     this.hintCode = '';
     this.syncQty();
@@ -292,7 +298,7 @@ export class TradeVM {
       return;
     }
     this.editing = '';
-    const commit: QtyCommit = commitQtyValue(value, this.canBuy);
+    const commit: QtyCommit = commitQtyValue(value, this.maxQty());
     this.qty = commit.value;
     this.hintCode = commit.corrected ? 'qty_can_buy' : '';
     this.qtyError = '';
@@ -312,7 +318,7 @@ export class TradeVM {
     this.accountText = account.maskNo;
     this.holdText = formatQty(account.holdQty);
     this.recomputeCanBuy();
-    this.qty = this.canBuy >= LOT_SIZE ? Math.min(Math.max(this.qty, LOT_SIZE), this.canBuy) : 0;
+    this.qty = this.maxQty() >= LOT_SIZE ? Math.min(Math.max(this.qty, LOT_SIZE), this.maxQty()) : 0;
     this.syncQty();
     this.hintCode = '';
     this.clearErrors();
@@ -335,7 +341,7 @@ export class TradeVM {
       return false;
     }
     const errors: FieldError[] = validateOrder(this.price, this.qty, this.limitUp(), this.limitDown(),
-      this.canBuy);
+      this.maxQty());
     for (let i = 0; i < errors.length; i++) {
       this.applyFieldError(errors[i]);
     }
@@ -379,7 +385,7 @@ export class TradeVM {
     const token: number = this.submitToken;
     // 提交前再收口一次精度：价格两位小数、数量整股（FR-07.4 / FR-07.5）。
     const draft: OrderDraft = new OrderDraft(this.code, account.id, roundPrice(this.price),
-      Math.round(this.qty), this.clientOrderId);
+      Math.round(this.qty), this.clientOrderId, this.side);
     hilog.info(DOMAIN, 'TradeLog', 'trade_submit clientOrderId=%{public}s', this.clientOrderId);
     this.track('submit', [new AnalyticsParam('code', this.code)]);
     this.submitTimer = setTimeout((): void => {
@@ -487,6 +493,8 @@ export class TradeVM {
     this.qtyError = '';
     this.blockCode = '';
     this.hintCode = '';
+    // M10：每次打开弹窗都从「买入」开始（上次的卖出方向不残留）。
+    this.side = 'buy';
     this.editing = '';
     this.priceInput = '';
     this.qtyInput = '';
@@ -522,7 +530,7 @@ export class TradeVM {
       ctx.tradable.limitUp);
     this.syncPrice();
     this.recomputeCanBuy();
-    this.qty = defaultQty(this.canBuy);
+    this.qty = defaultQty(this.maxQty());
     this.syncQty();
     this.accountLabels = this.buildAccountLabels();
     this.clientOrderIdText = '';
@@ -621,6 +629,29 @@ export class TradeVM {
     const account: AccountInfo | null = this.activeAccount();
     this.canBuy = account === null ? 0 : computeCanBuy(account.available, this.price);
     this.canBuyText = formatQty(this.canBuy);
+    // M10：卖出上限 = 可卖数量向下取整到手（不按资金算）。
+    this.canSell = account === null ? 0 : Math.floor(account.sellableQty / LOT_SIZE) * LOT_SIZE;
+    this.canSellText = formatQty(this.canSell);
+  }
+
+  /** 当前方向下的数量上限（买 = 可买；卖 = 可卖）。 */
+  private maxQty(): number {
+    return this.side === 'sell' ? this.canSell : this.canBuy;
+  }
+
+  /** 切换买卖方向（M10）：重算上限与默认数量，价格保持不变。 */
+  setSide(side: OrderSide): void {
+    if (this.side === side || this.submitting) {
+      return;
+    }
+    this.side = side;
+    this.recomputeCanBuy();
+    this.qty = defaultQty(this.maxQty());
+    this.qtyText = formatQty(this.qty);
+    this.qtyInput = this.qtyText;
+    this.clearErrors();
+    this.refreshBlock();
+    hilog.info(DOMAIN, 'TradeLog', 'trade_side side=%{public}s can=%{public}d', side, this.maxQty());
   }
 
   /** 提示条优先级：断线 → 交易时段 → 资金（与门禁顺序一致，FR-07.10）。 */
@@ -635,6 +666,14 @@ export class TradeVM {
     }
     if (this.baseGate === TradeGate.ClosedSession) {
       this.blockCode = 'closed';
+      return;
+    }
+    if (this.side === 'sell') {
+      if (this.canSell < LOT_SIZE) {
+        this.blockCode = 'no_holding';
+        return;
+      }
+      this.blockCode = '';
       return;
     }
     if (this.canBuy < LOT_SIZE) {

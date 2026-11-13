@@ -276,6 +276,30 @@ export struct TradeEditView {
     .alignItems(VerticalAlign.Center)
   }
 
+  /** M10：买入 / 卖出分段（默认买入；切换后上限与默认数量随之变化）。 */
+  @Builder
+  sideSwitch() {
+    Row() {
+      ForEach(['buy', 'sell'], (item: string) => {
+        Text(item === 'sell' ? $r('app.string.trade_side_sell') : $r('app.string.trade_side_buy'))
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.vm.side === item ? AppColor.textOnAccent : AppColor.textSecondary)
+          .height(28)
+          .padding({ left: 16, right: 16 })
+          .backgroundColor(this.vm.side === item ? AppColor.accentFill : AppColor.bgSurface)
+          .borderRadius(14)
+          .margin({ right: 8 })
+          .onClick(() => {
+            this.vm.setSide(item === 'sell' ? 'sell' : 'buy');
+          })
+      }, (item: string) => item)
+    }
+    .width('100%')
+    .justifyContent(FlexAlign.Start)
+    .margin({ top: 8, bottom: 4 })
+  }
+
   @Builder
   contextRow() {
     Row() {
@@ -351,7 +375,7 @@ export struct TradeEditView {
 
     if (this.vm.priceError !== '') {
       Text(fieldErrorText(this.vm.priceError, this.vm.limitUpText, this.vm.limitDownText,
-        this.vm.canBuyText))
+        this.canText()))
         .fontSize(12)
         .fontColor(AppColor.error)
         .width('100%')
@@ -389,7 +413,9 @@ export struct TradeEditView {
         .fontSize(12)
         .fontColor(AppColor.textSecondary)
       Blank()
-      Text($r('app.string.trade_can_buy_value', this.vm.canBuyText))
+      Text(this.vm.side === 'sell' ?
+        $r('app.string.trade_can_sell_value', this.canText()) :
+        $r('app.string.trade_can_buy_value', this.canText()))
         .fontSize(12)
         .fontColor(AppColor.textSecondary)
     }
@@ -398,7 +424,7 @@ export struct TradeEditView {
 
     if (this.vm.qtyError !== '') {
       Text(fieldErrorText(this.vm.qtyError, this.vm.limitUpText, this.vm.limitDownText,
-        this.vm.canBuyText))
+        this.canText()))
         .fontSize(12)
         .fontColor(AppColor.error)
         .width('100%')
@@ -420,7 +446,7 @@ export struct TradeEditView {
           .fontColor(AppColor.textOnAccent)
           .margin({ left: 8 })
       } else {
-        Text($r('app.string.trade_buy'))
+        Text(this.vm.side === 'sell' ? $r('app.string.trade_side_sell') : $r('app.string.trade_buy'))
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.ctaEnabled() ? AppColor.textOnAccent : AppColor.disabledText)
@@ -443,6 +469,7 @@ export struct TradeEditView {
   @Builder
   contentColumn() {
     this.header()
+    this.sideSwitch()
     this.contextRow()
     this.priceSection()
     Column()
@@ -451,7 +478,7 @@ export struct TradeEditView {
 
     if (this.vm.hintCode !== '') {
       Text(hintText(this.vm.hintCode, this.vm.limitUpText, this.vm.limitDownText,
-        this.vm.canBuyText))
+        this.canText()))
         .fontSize(12)
         .fontColor(AppColor.textSecondary)
         .width('100%')
@@ -460,7 +487,7 @@ export struct TradeEditView {
 
     if (this.vm.blockCode !== '') {
       Row() {
-        Text(blockText(this.vm.blockCode, this.vm.canBuyText))
+        Text(blockText(this.vm.blockCode, this.canText()))
           .fontSize(13)
           .fontColor(AppColor.error)
       }
@@ -470,6 +497,11 @@ export struct TradeEditView {
       .backgroundColor(AppColor.bannerBg)
       .borderRadius(8)
     }
+  }
+
+  /** M10：当前方向下的数量上限文案（买=可买，卖=可卖）。 */
+  private canText(): string {
+    return this.vm.side === 'sell' ? this.vm.canSellText : this.vm.canBuyText;
   }
 
   build() {
