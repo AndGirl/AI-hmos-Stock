@@ -1,8 +1,8 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { promptAction } from '@kit.ArkUI';
 import { accessibility } from '@kit.AccessibilityKit';
-import { AppColor, AppDim, GlobalBanner, showComingSoon } from 'commons_ui';
-import { BreakpointHost, BreakpointService, ComingSoonText } from 'commons_basic';
+import { AppColor, AppDim, GlobalBanner } from 'commons_ui';
+import { BreakpointHost, BreakpointService } from 'commons_basic';
 import { DetailAction, showDetailActionMenu } from 'detail';
 import { DEBUG } from '../../../../BuildProfile';
 import { PkEntrySource, PkVM, PkWindowVM, SlotLayout } from '../viewmodel/PkVM';
@@ -26,6 +26,9 @@ export struct PkHost {
   @Param source: PkEntrySource = 'detail';
   @Param bottomInset: number = 0;
   @Event onExit: () => void = (): void => {
+  };
+  /** 窗内「自选设置」（M7-7）：带上该窗标的打开添加页，路由仍由壳层装配。 */
+  @Event onOpenAddWatchlist: (code: string) => void = (code: string): void => {
   };
   @Local vm: PkVM = new PkVM();
   @Local breakpoint: BreakpointService = BreakpointHost.getService();
@@ -102,7 +105,7 @@ export struct PkHost {
 
   private openWindowAction(index: number, code: string, action: DetailAction): void {
     if (action === 'watchlist') {
-      showComingSoon(this.getUIContext(), ComingSoonText.ADD_WATCHLIST);
+      this.onOpenAddWatchlist(code);
       return;
     }
     if (action === 'pk') {

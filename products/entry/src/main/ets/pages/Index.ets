@@ -7,6 +7,7 @@ import { DeepLinkHandler } from '../router/DeepLinkHandler';
 import { DetailPage } from './DetailPage';
 import { PkPage } from './PkPage';
 import { SearchRoutePage } from './SearchPage';
+import { AddWatchlistPage } from './AddWatchlistPage';
 import { NotFoundPage } from './NotFoundPage';
 
 /**
@@ -27,6 +28,8 @@ struct Index {
       PkPage()
     } else if (name === RouteName.SEARCH) {
       SearchRoutePage()
+    } else if (name === RouteName.ADD_WATCHLIST) {
+      AddWatchlistPage()
     } else {
       NotFoundPage()
     }

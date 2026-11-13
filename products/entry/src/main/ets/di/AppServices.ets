@@ -1,4 +1,6 @@
 import {
+  AddWatchlistFrom,
+  AddWatchlistParam,
   DetailFrom,
   DetailParam,
   NotFoundParam,
@@ -57,6 +59,28 @@ export class AppServices {
       param.from = from;
     }
     this.stack.pushPathByName(RouteName.SEARCH, param);
+  }
+
+  /**
+   * 添加自选（M7-7）：底部胶囊 / 空态按钮 / 卡片虚线卡 / 详情「自选设置」共用。
+   * `code` 为预置标的，`group` 为目标分组默认值；只做栈操作，业务在 VM。
+   */
+  pushAddWatchlist(code?: string, group?: string, from?: AddWatchlistFrom): void {
+    const key: string = 'addWatchlist:' + (code !== undefined ? code : '');
+    if (!NavigationGuard.tryNavigate(key)) {
+      return;
+    }
+    const param: AddWatchlistParam = {};
+    if (code !== undefined && code.trim().length > 0) {
+      param.code = code.trim();
+    }
+    if (group !== undefined && group.trim().length > 0) {
+      param.group = group.trim();
+    }
+    if (from !== undefined) {
+      param.from = from;
+    }
+    this.stack.pushPathByName(RouteName.ADD_WATCHLIST, param);
   }
 
   pushPk(codes: string[], focus?: number, from?: string): void {

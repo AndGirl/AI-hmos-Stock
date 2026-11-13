@@ -6,6 +6,8 @@ export class RouteName {
   static readonly DETAIL: string = 'detail';
   static readonly PK: string = 'pk';
   static readonly SEARCH: string = 'search';
+  /** 添加自选（M7-7）：四入口统一走这一页。 */
+  static readonly ADD_WATCHLIST: string = 'addWatchlist';
   static readonly NOT_FOUND: string = 'notFound';
 }
 
@@ -25,6 +27,17 @@ export interface SearchParam {
   /** 深链带入的关键词（已截断 20 字）；缺省回落初始态。 */
   q?: string;
   from?: SearchFrom;
+}
+
+/** 添加自选入口来源（AC-94 四入口：底部胶囊 / 空态按钮 / 卡片虚线卡 / 详情「自选设置」）。 */
+export type AddWatchlistFrom = 'watchlist' | 'detail' | 'search' | 'pane' | 'card';
+
+export interface AddWatchlistParam {
+  /** 详情 / 右栏 / 搜索页带入的预置标的（"已在自选"直接展示）。 */
+  code?: string;
+  /** 目标分组默认值（当前 Tab）；缺省由板块派生。 */
+  group?: string;
+  from?: AddWatchlistFrom;
 }
 
 export interface PkParam {

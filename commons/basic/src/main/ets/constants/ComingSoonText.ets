@@ -5,7 +5,6 @@
  * 不含版本号片段（v1.x / 一期 / 二期）。
  */
 export class ComingSoonText {
-  static readonly ADD_WATCHLIST: ResourceStr = $r('app.string.coming_soon_add_watchlist');
   static readonly CARD_VIEW: ResourceStr = $r('app.string.coming_soon_card_view');
   static readonly HOME: ResourceStr = $r('app.string.coming_soon_home');
   static readonly NEWS: ResourceStr = $r('app.string.coming_soon_news');

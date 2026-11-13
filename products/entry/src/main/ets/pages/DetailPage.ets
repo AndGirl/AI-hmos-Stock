@@ -1,7 +1,7 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppColor } from 'commons_ui';
-import { BreakpointHost, BreakpointService, ComingSoonText, SafeAreaHost, SafeAreaService } from 'commons_basic';
-import { GlobalBanner, showComingSoon, StateMode, StateView } from 'commons_ui';
+import { BreakpointHost, BreakpointService, SafeAreaHost, SafeAreaService } from 'commons_basic';
+import { GlobalBanner, StateMode, StateView } from 'commons_ui';
 import { DetailAction, DetailContent, showDetailActionMenu } from 'detail';
 import { TradeSheet, TradeVM } from 'trade';
 import { DetailParam } from '../router/AppRoutes';
@@ -34,7 +34,8 @@ export struct DetailPage {
 
   private handleAction(action: DetailAction): void {
     if (action === 'watchlist') {
-      showComingSoon(this.getUIContext(), ComingSoonText.ADD_WATCHLIST);
+      // M7-7 E4：详情「自选设置」→ 添加页（带当前 code，已在自选时直接展示归属）。
+      AppServices.get().pushAddWatchlist(this.detailCode, '', 'detail');
       return;
     }
     if (action === 'pk') {

@@ -18,7 +18,6 @@ const STRINGS_FILE = path.join(ROOT, 'commons/basic/src/main/resources/base/elem
 const CONSTANTS_FILE = path.join(ROOT, 'commons/basic/src/main/ets/constants/ComingSoonText.ets');
 
 const EXPECTED_KEYS = [
-  'coming_soon_add_watchlist',
   'coming_soon_card_view',
   'coming_soon_home',
   'coming_soon_news'

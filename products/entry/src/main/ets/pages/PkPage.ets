@@ -24,6 +24,9 @@ export struct PkPage {
         bottomInset: this.safeArea.bottomInset,
         onExit: (): void => {
           AppServices.get().pop();
+        },
+        onOpenAddWatchlist: (code: string): void => {
+          AppServices.get().pushAddWatchlist(code, '', 'detail');
         }
       })
     }

@@ -1,6 +1,6 @@
 import { AppColor } from 'commons_ui';
-import { ComingSoonText, SafeAreaHost, SafeAreaService } from 'commons_basic';
-import { GlobalBanner, showComingSoon } from 'commons_ui';
+import { SafeAreaHost, SafeAreaService } from 'commons_basic';
+import { GlobalBanner } from 'commons_ui';
 import { SearchPage } from 'search';
 import { TradeSheet, TradeVM } from 'trade';
 import { AppServices } from '../di/AppServices';
@@ -65,8 +65,8 @@ export struct SearchRoutePage {
               this.openTrade(code);
             },
             onOpenAddWatchlist: (code: string): void => {
-              // M7 前：添加页未落地，保持占位提示（T0-2 收敛后仅剩这一处）。
-              showComingSoon(this.getUIContext(), ComingSoonText.ADD_WATCHLIST);
+              // M7-7：右栏「自选设置」→ 添加页（带 code 预置）。
+              AppServices.get().pushAddWatchlist(code, '', 'search');
             },
             onOpenPk: (codes: string[]): void => {
               AppServices.get().pushPk(codes, 0, 'search');

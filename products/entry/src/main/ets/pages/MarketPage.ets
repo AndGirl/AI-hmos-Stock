@@ -1,5 +1,3 @@
-import { ComingSoonText } from 'commons_basic';
-import { showComingSoon } from 'commons_ui';
 import { SearchPage } from 'search';
 import { AppServices } from '../di/AppServices';
 
@@ -22,8 +20,8 @@ export struct MarketPage {
         this.onOpenTrade(code);
       },
       onOpenAddWatchlist: (code: string): void => {
-        // M7 前：添加页未落地（占位提示由 ComingSoonText 统一出口）。
-        showComingSoon(this.getUIContext(), ComingSoonText.ADD_WATCHLIST);
+        // M7-7：右栏「自选设置」→ 添加页（带 code 预置）。
+        AppServices.get().pushAddWatchlist(code, '', 'search');
       },
       onOpenPk: (codes: string[]): void => {
         AppServices.get().pushPk(codes, 0, 'search');
