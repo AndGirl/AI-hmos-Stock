@@ -15,6 +15,23 @@ export struct HotWordsView {
     return `${index + 1}`;
   }
 
+  /** 读屏文案：前 3 名带名次，走资源字符串（M6 评审 P3：不再硬编码中文）。 */
+  private accessibilityLabel(index: number, word: string): string {
+    if (index >= 3) {
+      return word;
+    }
+    try {
+      const ctx = this.getUIContext().getHostContext();
+      if (ctx === undefined) {
+        return word;
+      }
+      const raw: string = ctx.resourceManager.getStringSync($r('app.string.search_hot_rank').id);
+      return `${raw.replace('%s', `${index + 1}`)} ${word}`;
+    } catch (err) {
+      return word;
+    }
+  }
+
   build() {
     Column() {
       if (this.state === 'ready') {
@@ -50,7 +67,7 @@ export struct HotWordsView {
             .height(36)
             .padding({ left: AppDim.gap16, right: AppDim.gap8 })
             .alignItems(VerticalAlign.Center)
-            .accessibilityText(index < 3 ? `第${index + 1}名 ${word}` : word)
+            .accessibilityText(this.accessibilityLabel(index, word))
             .onClick(() => {
               this.onPick(word);
             })

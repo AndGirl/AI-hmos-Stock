@@ -12,6 +12,8 @@ import { HighlightText } from './HighlightText';
 export struct SearchRowView {
   @Param row: SearchRowVM = new SearchRowVM();
   @Param showAdd: boolean = true;
+  /** 添加页多选态（M7-2）：左侧勾选框，行尾不再显示「＋」。 */
+  @Param pickMode: boolean = false;
   @Event onTap: (row: SearchRowVM) => void = (row: SearchRowVM): void => {
   };
   @Event onAdd: (row: SearchRowVM) => void = (row: SearchRowVM): void => {
@@ -58,7 +60,32 @@ export struct SearchRowView {
     if (this.row.added) {
       parts.push('已添加');
     }
+    if (this.pickMode) {
+      parts.push(this.row.picked ? '已选' : '未选');
+    }
     return parts.join('，');
+  }
+
+  /** 添加页勾选框（M7-2）：已添加行置灰不可选（AC-96）。 */
+  @Builder
+  pickMark() {
+    Text(this.row.picked ? '✓' : '')
+      .fontSize(12)
+      .fontColor(AppColor.textOnAccent)
+      .width(20)
+      .height(20)
+      .textAlign(TextAlign.Center)
+      .borderRadius(10)
+      .border({
+        width: this.row.picked ? 0 : 1,
+        color: this.row.picked ? AppColor.accent :
+          (this.row.added ? AppColor.disabledText : AppColor.textSecondary)
+      })
+      .backgroundColor(this.row.picked ? AppColor.accent : AppColor.transparent)
+      .opacity(this.row.added ? 0.5 : 1)
+      .margin({ right: AppDim.gap8 })
+      .accessibilityText(this.row.picked ? $r('app.string.watch_select_a11y') :
+        $r('app.string.watch_select_a11y_off'))
   }
 
   @Builder
@@ -95,6 +122,10 @@ export struct SearchRowView {
 
   build() {
     Row() {
+      if (this.pickMode && this.row.kind === 'stock') {
+        this.pickMark()
+      }
+
       Column() {
         Row() {
           HighlightText({
@@ -161,13 +192,24 @@ export struct SearchRowView {
       .alignItems(HorizontalAlign.End)
       .width(88)
 
-      if (this.showAdd && this.row.kind === 'stock') {
+      if (!this.pickMode && this.showAdd && this.row.kind === 'stock') {
         Row() {
           this.addAction()
         }
         .width(60)
         .justifyContent(FlexAlign.End)
         .alignItems(VerticalAlign.Center)
+      }
+
+      // 添加页：已添加行置灰并标「已添加」，不可再勾选（AC-96 / FR-04.4）。
+      if (this.pickMode && this.row.kind === 'stock' && this.row.added) {
+        Text($r('app.string.search_added'))
+          .fontSize(12)
+          .fontColor(AppColor.textSecondary)
+          .width(52)
+          .height(32)
+          .textAlign(TextAlign.End)
+          .accessibilityText($r('app.string.search_a11y_added'))
       }
     }
     .width('100%')

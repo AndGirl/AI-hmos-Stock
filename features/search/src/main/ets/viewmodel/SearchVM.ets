@@ -84,6 +84,11 @@ export class SearchVM {
   @Trace browseVersion: number = 0;
   @Trace refreshing: boolean = false;
   @Trace loadingMore: boolean = false;
+  /**
+   * 结果集版本（M7-2）：添加页据此把「已勾选」重新刷到新行对象上
+   * （结果/浏览列表重建后行是新的，勾选态不能丢）。
+   */
+  @Trace resultVersion: number = 0;
 
   private query: SearchQuery;
   private store: WatchlistStore;
@@ -183,6 +188,16 @@ export class SearchVM {
     this.term = text;
     this.query.cancelDebounce();
     this.execute(true);
+  }
+
+  /**
+   * 预置查询（M7）：详情「自选设置」带 code 进添加页时使用，
+   * 只查询不写搜索历史（用户并没有主动搜过）。
+   */
+  presetQuery(text: string): void {
+    this.term = text;
+    this.query.cancelDebounce();
+    this.execute(false);
   }
 
   /** 行点击：股票进详情（带 rank），板块按名称二次搜索，指数无动作。 */
@@ -441,6 +456,7 @@ export class SearchVM {
     this.state = 'initial';
     this.sections = [];
     this.items = [];
+    this.resultVersion++;
     this.resultCount = 0;
     this.searching = false;
     this.costMs = 0;
@@ -570,6 +586,7 @@ export class SearchVM {
       this.browseVersion++;
     }
     this.browseState = page.total === 0 ? 'empty' : 'ready';
+    this.resultVersion++;
     this.refreshing = false;
     this.loadingMore = false;
     this.markRowsAdded(rows);
@@ -687,6 +704,7 @@ export class SearchVM {
 
   private applyResult(result: SearchResult): void {
     this.searching = false;
+    this.resultVersion++;
     this.costMs = result.costMs;
     this.offline = result.offline || this.hub.isOffline();
     this.showOfflineBanner = this.offline;

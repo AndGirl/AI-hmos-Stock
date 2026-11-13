@@ -3,6 +3,9 @@
  */
 export { SearchPage } from './src/main/ets/view/SearchPage';
 export type { SearchMode } from './src/main/ets/view/SearchPage';
+export { AddWatchlistPanel } from './src/main/ets/view/AddWatchlistPanel';
+export { AddGroupVM, AddSubmitResult, AddWatchlistVM } from './src/main/ets/viewmodel/AddWatchlistVM';
+export type { AddSubmitReason } from './src/main/ets/viewmodel/AddWatchlistVM';
 export { SearchVM } from './src/main/ets/viewmodel/SearchVM';
 export type { SearchAddResult, SearchHotState, SearchRowAction, SearchState } from './src/main/ets/viewmodel/SearchVM';
 export { SearchRowVM } from './src/main/ets/viewmodel/SearchRowVM';

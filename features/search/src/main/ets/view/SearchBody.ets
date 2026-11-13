@@ -15,6 +15,8 @@ import { SearchStatesView } from './SearchStates';
 export struct SearchBody {
   @Param vm: SearchVM = new SearchVM();
   @Param mode: string = 'search';
+  /** 添加页多选态（M7-2）：行前勾选框，行尾不出现「＋」。 */
+  @Param pickMode: boolean = false;
   @Event onRowTap: (row: SearchRowVM) => void = (row: SearchRowVM): void => {
   };
   @Event onRowAdd: (row: SearchRowVM) => void = (row: SearchRowVM): void => {
@@ -51,7 +53,8 @@ export struct SearchBody {
       } else if (this.vm.items.length > 0) {
         SearchSections({
           items: this.vm.items,
-          showAdd: this.mode === 'search',
+          showAdd: this.mode === 'search' && !this.pickMode,
+          pickMode: this.pickMode,
           onTapRow: (row: SearchRowVM): void => {
             this.onRowTap(row);
           },
@@ -168,7 +171,8 @@ export struct SearchBody {
             ListItem() {
               SearchRowView({
                 row: row,
-                showAdd: this.mode === 'search',
+                showAdd: this.mode === 'search' && !this.pickMode,
+                pickMode: this.pickMode,
                 onTap: (tapped: SearchRowVM): void => {
                   this.onRowTap(tapped);
                 },

@@ -11,6 +11,8 @@ import { SearchRowView } from './SearchRowView';
 export struct SearchSections {
   @Param items: SearchItemVM[] = [];
   @Param showAdd: boolean = true;
+  /** 添加页多选态（M7-2）：透传给行视图。 */
+  @Param pickMode: boolean = false;
   @Event onTapRow: (row: SearchRowVM) => void = (row: SearchRowVM): void => {
   };
   @Event onAddRow: (row: SearchRowVM) => void = (row: SearchRowVM): void => {
@@ -52,6 +54,7 @@ export struct SearchSections {
             SearchRowView({
               row: item.row,
               showAdd: this.showAdd,
+              pickMode: this.pickMode,
               onTap: (tapped: SearchRowVM): void => {
                 this.onTapRow(tapped);
               },

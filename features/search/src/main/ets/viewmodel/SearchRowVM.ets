@@ -34,6 +34,8 @@ export class SearchRowVM {
   @Trace isNew: boolean = false;
   @Trace added: boolean = false;
   @Trace pending: boolean = false;
+  /** 添加页多选态（M7-2）：本行是否被勾选。 */
+  @Trace picked: boolean = false;
   /** 命中位次（详情埋点 from=search&rank=n）。 */
   @Trace rank: number = 0;
   @Trace nameRanges: HitRange[] = [];
@@ -73,6 +75,11 @@ export class SearchRowVM {
   markAdded(): void {
     this.added = true;
     this.pending = false;
+  }
+
+  /** 添加页勾选切换（M7-2）：只改本行，计数由 VM 维护。 */
+  markPicked(on: boolean): void {
+    this.picked = on;
   }
 
   /** 撤出自选（M6 追加）：行回未添加态，恢复可点「＋」。 */
