@@ -256,10 +256,13 @@ export class DataServices {
     return DataServices.stabilityStoreInstance;
   }
 
-  /** 稳定性采集器（M13-3）：`EntryAbility.onCreate` 启动一次（幂等）。 */
+  /**
+   * 稳定性采集器（M13-3）：`EntryAbility.onCreate` 启动一次（幂等）。
+   * 与 `stabilityStore()` 共用同一个 store 实例（唯一数据源）。
+   */
   static stability(): StabilityMonitor {
     if (DataServices.stabilityMonitor === undefined) {
-      DataServices.stabilityMonitor = new StabilityMonitor();
+      DataServices.stabilityMonitor = new StabilityMonitor(DataServices.stabilityStore());
     }
     return DataServices.stabilityMonitor;
   }

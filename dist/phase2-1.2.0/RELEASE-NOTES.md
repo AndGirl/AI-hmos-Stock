@@ -10,8 +10,8 @@
 | 项 | 值 |
 |---|---|
 | 文件 | `entry-default-signed.hap` |
-| 大小 | **2,227,951 bytes ≈ 2.13 MB** |
-| SHA256 | `57A02AB9F7D58844482BAA2A5B6756873D28CFB476320E977B8DD2E4947021A5` |
+| 大小 | **2,228,592 bytes ≈ 2.13 MB** |
+| SHA256 | `D3805A2495A1568D2BF2CE5A3C6E71828A590DDA00BE29F27128C3CF45149D93` |
 | 包名 / 版本 | `com.example.xiaoyangstock` / **1.2.0（1002000）** |
 | 签名 | DevEco 自动生成的**调试证书**（`debugKey`）——**仅内部侧载，未提交 AGC** |
 | 构建 | `devecocli build clean` → `devecocli build --build-mode release` |
@@ -40,7 +40,7 @@ hdc -t 23E0224222002707 install -r dist\phase2-1.2.0\entry-default-signed.hap
 |---|---|
 | 构建 / 门禁 | `build` ✅ + **8 步 gate** 全绿（含合规 X-01~X-04） |
 | Local Test | **237/237**（search 50 / watchlist 21 / commons_data 166） |
-| UiTest | **21/21**（Mate 60 Pro 真机；含同意基线自动处理） |
+| UiTest | **22/22**（Mate 60 Pro 真机；含同意基线与「撤回→重新同意回到四 Tab」回归例） |
 | 冷启 P90 | **241ms**（release，应用内口径，5 次） |
 | 内存峰值 | **154.2MB**（3 窗 + 深色，debug 上界；release 3 窗 123.3MB） |
 | 稳定性 | 崩溃采集链路注入实测 `crash=1 jserr=1`；切网 30 次无崩溃；3 窗深色 5 分钟 soak PSS 135.0→131.4MB |

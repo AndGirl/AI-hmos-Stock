@@ -25,18 +25,33 @@ export function sharedDriver(): Driver {
  * 隐私同意基线（M13-1）：直接把 `privacy_consent_v1` / `trade_risk_v1` 写进被测应用的
  * preferences，让既有 21 例用例在「已同意」基线上跑（否则首启同意页会挡住全部入口）。
  *
- * 说明：写在 `beforeAll` 只对**本次启动**有效——应用若已在运行，内存状态不会回灌，
+ * 写在 `beforeAll` 只对**本次启动**有效——应用若已在运行，内存状态不会回灌，
  * 因此各套件 `startApp` 之后还会调 `dismissConsentIfShown`（同意页可见就点「同意并继续」），
  * 两条路径都保留，既覆盖首启流程，也不让用例依赖安装顺序。
+ *
+ * 评审修复：本方法在每次 `startApp` 都会被调用，**只种一次且仅当键缺失时写**
+ * （测试进程的 preferences 实例可能落后于应用写入，频繁 flush 会把应用新写的键覆盖回旧值）。
  */
+let seeded: boolean = false;
+
 export async function seedCompliance(): Promise<void> {
+  if (seeded) {
+    return;
+  }
   try {
     const context = abilityDelegatorRegistry.getAbilityDelegator().getAppContext();
     const store: preferences.Preferences = await preferences.getPreferences(context, { name: PREF_STORE });
+    const existing: preferences.ValueType = await store.get('privacy_consent_v1', '');
+    if (typeof existing === 'string' && existing.length > 0) {
+      seeded = true;
+      hilog.info(0x0001, 'UiTestSetup', 'seed_compliance skipped (already consented)');
+      return;
+    }
     const record: string = JSON.stringify({ agreed: true, version: POLICY_VERSION, agreedAt: Date.now() });
     await store.put('privacy_consent_v1', record);
     await store.put('trade_risk_v1', 'true');
     await store.flush();
+    seeded = true;
     hilog.info(0x0001, 'UiTestSetup', 'seed_compliance ok');
   } catch (err) {
     hilog.warn(0x0001, 'UiTestSetup', 'seed_compliance fail');

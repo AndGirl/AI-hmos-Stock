@@ -18,7 +18,7 @@
 | deviceTypes | `phone` / `tablet` | ✅ |
 | **权限** | **0 项**（无 `requestPermissions`；`check-compliance` X-02） | ✅ |
 | **第三方 SDK** | **1 个**：`@ohos/mpchart@3.0.31`（Apache-2.0，本地渲染）；清单 [phase2-sdk-list.md](phase2-sdk-list.md) | ✅ X-01 |
-| 签名产物（release） | `entry-default-signed.hap` **2,227,951 bytes ≈ 2.13 MB**（SHA256 `57A02AB9…7021A5`） | ✅（clean 构建，无 `symbolMap.map`） |
+| 签名产物（release） | `entry-default-signed.hap` **2,228,592 bytes ≈ 2.13 MB**（SHA256 `D3805A24…149D93`） | ✅（clean 构建，无 `symbolMap.map`） |
 | 签名证书 | DevEco 自动生成的**调试证书**（`debugKey`）；**上架前必须替换发布证书 + Profile** | ⚠️ 外部待办 |
 | 产物路径 | `dist/phase2-1.2.0/entry-default-signed.hap` | ✅ |
 
@@ -38,7 +38,7 @@
 | 一键门禁 | `powershell -File scripts/gate.ps1` | **8 步 GATE PASS** | ✅ |
 | CodeLinter | `devecocli check lint` | 0 error / 6 warning（阶段一既有 4 + 路由壳 2） | ✅ |
 | Local Test | `hvigor test -p module=search` / `watchlist` / `commons_data` | **50 / 21 / 166**（合计 237） | ✅ |
-| UiTest | `hvigor onDeviceTest -p module=entry` | **21/21**（首启同意基线见 `TestDriver.seedCompliance`） | ✅ |
+| UiTest | `hvigor onDeviceTest -p module=entry` | **22/22**（含 M13 撤回/重新同意回归例；首启同意基线见 `TestDriver.seedCompliance`） | ✅ |
 
 ## 3. 合规（AC-125 / M13-1）
 

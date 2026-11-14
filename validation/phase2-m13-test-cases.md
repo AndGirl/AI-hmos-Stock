@@ -20,6 +20,7 @@
 | 125-1 | 全新安装后首次启动 | 全屏同意页：标题「欢迎使用小杨股票」+ 说明 +「查看《隐私政策》」+「同意并继续」+「不同意」；**不渲染 TabShell** | `m13/01-consent-first-launch.png` |
 | 125-2 | 点「不同意」 | 二次确认「确认不同意」（再想想 / 退出应用）；选「再想想」页面不变 | `m13/03-consent-reject-confirm.png` |
 | 125-3 | 二次确认选「退出应用」 | `terminateSelf()` 退出应用（AC-125「拒绝可退出」）：日志 `consent_page_reject_exit`，**进程消失**（`pidof` 为空） | 真机实测（`hilog -T Consent`） |
+| 125-3b | 系统返回键（同意页） | **返回键＝离开应用**（本机 API 26 实测：`UIAbility.onBackPressed` 返回 true 仍会 `onBackground`，页面级拦截不可靠），口径上等价于「不同意 → 不确认直接离开」；不写任何同意状态，下次启动重新弹 | 真机实测（`hilog -T testTag`：`back consumed by page` → `Ability onBackground`）；已登记 §8-C25 |
 | 125-4 | 点「查看《隐私政策》」 | 页内切到政策全文（8 节 + 版本 1.0 + 更新日期 + 在线地址占位），可返回 | `m13/02-consent-policy-inline.png` |
 | 125-5 | 点「同意并继续」 | 立即写 `privacy_consent_v1` 并进入自选（默认 Tab）；杀进程重启不再弹 | `m13/04-consent-agreed-watchlist.png`；磁盘见 125-9 |
 | 125-6 | 首页 Tab 底部 | 常驻「隐私政策 / 撤回同意」与「版本 1.2.0 · 模拟数据，仅供学习参考」 | `m13/05-home-privacy-entry.png` |
@@ -31,6 +32,7 @@
 | 125-12 | SDK 清单完整 | 清单仅 `@ohos/mpchart@3.0.31`（Apache-2.0，本地渲染）；与依赖双向一致 | [phase2-sdk-list.md](../docs/phase2-sdk-list.md) + X-01 PASS |
 | 125-13 | 首笔风险揭示（M10-7 遗留收口） | 首次提交委托前弹「模拟交易风险揭示」；「我已了解并继续」后成交，写 `trade_risk_v1`；再次提交不再弹 | `m13/09-trade-risk-notice.png`、`m13/10-trade-after-risk-ack.png`、`m13/11-trade-second-submit-no-prompt.png` |
 | 125-14 | 深色/横屏下同意页与隐私页 | 只用 30 个 token、无颜色字面量（D-01~D-03 绿）；**深色同意页可读**（调试切深色后撤回 → 回到深色同意页） | `check-dark-tokens` PASS；`m13/18-consent-dark-after-revoke.png` |
+| 125-15 | **撤回 → 重新同意回到四 Tab**（评审回归） | UiTest `M13UiTest.AC125_revoke_then_reagree_returns_to_tabs`：首页→隐私政策→撤回→确认→同意并继续 → 断言「自选股」可见（修复前会停在残留路由「隐私政策」） | UiTest **22/22**（新增 1 例） |
 
 > **法务逐项签字**：外部待办（AC-125 要求法务签字，本轮只能做到「文案齐备 + 行为可验证」）。
 
@@ -38,7 +40,7 @@
 
 | # | 步骤 | 预期 | 证据 |
 |---|---|---|---|
-| 126-1 | `devecocli build clean` + `build --build-mode release` | signed HAP **2,227,953 bytes ≈ 2.13MB** ≤10MB | `docs/perf/phase2-m13.md` §1 |
+| 126-1 | `devecocli build clean` + `build --build-mode release` | signed HAP **2,228,592 bytes ≈ 2.13MB** ≤10MB | `docs/perf/phase2-m13.md` §1 |
 | 126-2 | 冷启 5 次（force-stop + `aa start`） | P90 **241ms**、中位 225ms、最大 244ms ≤2s | 同上 §2（`StartupPerf` 日志） |
 | 126-3 | 3 窗 PK + 深色，`hidumper --mem` | Total PSS **154.2MB**（debug 上界）/ release 3 窗 123.3MB ≤350MB | 同上 §3；`m13/16-dark-pk3-memory.png` |
 | 126-4 | release 包调试入口 | 长按「自选股」标题无调试面板；`check-compliance` X-03 静态拦截 | `m13/15-release-no-debug-menu.png` |
@@ -83,8 +85,8 @@ StartupPerf: cold_start_ms=225 oncreate_ms=78 phase=tabs
 | 层 | 用例 | 结果 |
 |---|---|---|
 | Local Test（`commons/data`） | `PrivacyConsentStore` 6 例 + `RiskNoticeStore` 2 例 + `StabilityStore` 4 例 | **166/166**（M13 新增 12） |
-| UiTest（`entry`） | 既有 21 例（首启同意基线由 `TestDriver.seedCompliance` + `dismissConsentIfShown` 保证） | **21/21** |
-| 门禁 | `check-compliance` X-01~X-04（SDK 清单/权限白名单/调试守卫/隐私文案） | PASS（gate 8 步全绿） |
+| UiTest（`entry`） | 既有 21 例 + **M13 撤回/重新同意回归 1 例**（首启同意基线由 `TestDriver.seedCompliance` + `dismissConsentIfShown` 保证） | **22/22** |
+| 门禁 | `check-compliance` X-01~X-05（SDK 清单/权限白名单/调试守卫/隐私文案/策略版本） | PASS（gate 8 步全绿；负向探针见 `docs/gates.md` §3.4） |
 
 ## 6. 缺口（登记，不阻塞内测）
 
@@ -95,3 +97,4 @@ StartupPerf: cold_start_ms=225 oncreate_ms=78 phase=tabs
 | 3 | 法务逐项签字 | 外部 | 法务复核隐私政策与免责声明 |
 | 4 | release 证书/Profile、AGC 提审 | 需华为开发者账号 | 见 [release-metadata-phase2.md](../docs/release-metadata-phase2.md) §6 |
 | 5 | 深色冷启下的同意页 | 系统深色冷启未取证（2a 遗留同项） | 与 2a 缺口一并补 |
+| 6 | 返回键拦截（同意页 / M8 浮层） | **平台行为**：本机 API 26 上 `UIAbility.onBackPressed` 返回 `true` 仍会 `onBackground`，页面级返回拦截不可靠（M8 `BackDispatcher` 同样受影响） | 登记 §8-C25；如需拦截需改用系统级方案或等平台版本 |

@@ -43,10 +43,6 @@ export class StabilityStore {
     return this.loading;
   }
 
-  isLoaded(): boolean {
-    return this.loaded;
-  }
-
   /** 快照（调用方先 await load()）。 */
   snapshot(): StabilitySnapshot {
     return this.data;

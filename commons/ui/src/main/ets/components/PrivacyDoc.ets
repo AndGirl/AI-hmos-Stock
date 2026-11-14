@@ -4,7 +4,7 @@ import { AppColor, AppDim } from '../theme/TokenRegistry';
 /**
  * 隐私政策正文（M13-1）：首启同意页内嵌 + 隐私政策页共用同一份渲染。
  * 文案全部走资源（`app.string.privacy_*`），组件内零中文、零颜色字面量（D-03）。
- * 章节数由 `PRIVACY_SECTION_COUNT` 约定（当前 8 节，逐节显式列出，ArkTS 的 `$r` 不支持拼接键名）。
+ * 8 个章节逐节显式列出（ArkTS 的 `$r` 不支持拼接键名）；章节数与文案由门禁 X-04 校验。
  */
 @ComponentV2
 export struct PrivacyDoc {

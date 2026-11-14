@@ -35,11 +35,7 @@ export {
   arrowOfValue
 } from './src/main/ets/constants/QuoteMark';
 export { LayoutConst } from './src/main/ets/constants/LayoutConst';
-export {
-  PRIVACY_POLICY_DATE,
-  PRIVACY_POLICY_VERSION,
-  PRIVACY_SECTION_COUNT
-} from './src/main/ets/constants/PrivacyDoc';
+export { PRIVACY_POLICY_DATE, PRIVACY_POLICY_VERSION } from './src/main/ets/constants/PrivacyDoc';
 export {
   nextViewMode,
   normalizeViewMode,

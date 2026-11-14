@@ -145,11 +145,12 @@ export class TradeVM {
     this.source = source;
     this.reset();
     this.loadToken++;
-    // 首笔风险揭示标记（M13-1）：与上下文并行读，确认层提交前一定有结果。
+    // 首笔风险揭示标记（M13-1）：先用预热好的内存值同步判定，避免异步读竞态
+    // 把「已确认」的用户再弹一次；异步读只作兜底（未预热/调试清空）。
+    this.riskAcked = DataServices.riskNotice().isLoaded() && DataServices.riskNotice().acked();
     this.repo.riskAcked().then((acked: boolean): void => {
       this.riskAcked = acked;
     }).catch((): void => {
-      this.riskAcked = false;
     });
     const token: number = this.loadToken;
     this.phase = 'resolving';

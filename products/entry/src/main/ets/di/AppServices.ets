@@ -109,13 +109,15 @@ export class AppServices {
     this.stack.pushPathByName(RouteName.POSITIONS, param);
   }
 
-  /** 隐私政策（M13-1）：首页底部入口进入（同意后常驻可查）。 */
-  pushPrivacy(from?: string): void {
-    const param: PrivacyParam = {};
-    if (from !== undefined && from.length > 0) {
-      param.from = from;
+  /**
+   * 隐私政策（M13-1）：首页底部入口进入（同意后常驻可查）。
+   * 与其它入口一致走 `NavigationGuard`，避免双击压两个 privacy 页。
+   */
+  pushPrivacy(): void {
+    if (!NavigationGuard.tryNavigate('privacy')) {
+      return;
     }
-    this.stack.pushPathByName(RouteName.PRIVACY, param);
+    this.stack.pushPathByName(RouteName.PRIVACY, new PrivacyParam());
   }
 
   pushNotFound(code?: string): void {

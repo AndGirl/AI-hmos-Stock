@@ -5,6 +5,7 @@ import { promptAction } from '@kit.ArkUI';
 import { ComplianceHost, ComplianceService, SafeAreaHost, SafeAreaService } from 'commons_basic';
 import { DataServices } from 'commons_data';
 import { AppColor, AppDim, PrivacyDoc } from 'commons_ui';
+import { AppServices } from '../di/AppServices';
 
 const DOMAIN: number = 0x0001;
 const TAG: string = 'Consent';
@@ -25,6 +26,11 @@ export struct ConsentView {
   @Local safeArea: SafeAreaService = SafeAreaHost.getService();
   @Local showPolicy: boolean = false;
   @Local agreeing: boolean = false;
+  aboutToAppear(): void {
+    // 评审修复：同意门禁卸载 Navigation 时清掉残留路由，
+    // 否则「撤回 → 重新同意」会回放旧页面（例如停在隐私政策页而不是四 Tab）。
+    AppServices.get().backToTabs();
+  }
 
   /** 同意：写盘（同步回灌 UI 状态，`Index` 据此切到 TabShell）。 */
   private agree(): void {

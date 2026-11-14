@@ -1,13 +1,7 @@
-import { BusinessError } from '@kit.BasicServicesKit';
-import { hilog } from '@kit.PerformanceAnalysisKit';
-import { promptAction } from '@kit.ArkUI';
 import { ComplianceHost, ComplianceService, SafeAreaHost, SafeAreaService } from 'commons_basic';
-import { DataServices } from 'commons_data';
 import { AppColor, AppDim, PrivacyDoc } from 'commons_ui';
 import { AppServices } from '../di/AppServices';
-
-const DOMAIN: number = 0x0001;
-const TAG: string = 'PrivacyPage';
+import { confirmRevokeConsent } from '../service/ConsentActions';
 
 /** `2026-11-14 14:20`（本地时间，仅用于展示同意时间）。 */
 function formatAgreedAt(at: number): string {
@@ -32,27 +26,6 @@ export struct PrivacyPage {
   /** 路由页在 Navigation 内，但 Navigation 未做底部避让（Tab 壳自己吃底栏），这里补上。 */
   @Local safeArea: SafeAreaService = SafeAreaHost.getService();
 
-  private revoke(): void {
-    this.getUIContext().getPromptAction().showDialog({
-      title: $r('app.string.privacy_revoke_confirm_title'),
-      message: $r('app.string.privacy_revoke_confirm_msg'),
-      buttons: [
-        { text: $r('app.string.privacy_revoke_cancel'), color: AppColor.textSecondary },
-        { text: $r('app.string.privacy_revoke_ok'), color: AppColor.accent }
-      ]
-    }).then((result: promptAction.ShowDialogSuccessResponse): void => {
-      if (result.index !== 1) {
-        return;
-      }
-      DataServices.privacyConsent().revoke().then((): void => {
-        hilog.info(DOMAIN, TAG, 'revoke_done');
-      }).catch((err: BusinessError): void => {
-        hilog.warn(DOMAIN, TAG, 'revoke_fail %{public}s', JSON.stringify(err));
-      });
-    }).catch((): void => {
-    });
-  }
-
   @Builder
   footer() {
     Column() {
@@ -75,7 +48,7 @@ export struct PrivacyPage {
             .accessibilityGroup(true)
             .accessibilityText($r('app.string.privacy_revoke'))
             .onClick((): void => {
-              this.revoke();
+              confirmRevokeConsent(this.getUIContext(), 'privacy');
             })
         }
       }

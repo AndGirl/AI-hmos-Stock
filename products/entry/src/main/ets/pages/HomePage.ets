@@ -1,12 +1,10 @@
 import { bundleManager } from '@kit.AbilityKit';
-import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { promptAction } from '@kit.ArkUI';
 import { ComingSoonText } from 'commons_basic';
-import { DataServices } from 'commons_data';
 import { AppColor, AppDim } from 'commons_ui';
 import { AppServices } from '../di/AppServices';
 import { PlaceholderPage } from '../shell/PlaceholderPage';
+import { confirmRevokeConsent } from '../service/ConsentActions';
 
 const DOMAIN: number = 0x0001;
 const TAG: string = 'HomePage';
@@ -31,27 +29,6 @@ export struct HomePage {
     }
   }
 
-  private revoke(): void {
-    this.getUIContext().getPromptAction().showDialog({
-      title: $r('app.string.privacy_revoke_confirm_title'),
-      message: $r('app.string.privacy_revoke_confirm_msg'),
-      buttons: [
-        { text: $r('app.string.privacy_revoke_cancel'), color: AppColor.textSecondary },
-        { text: $r('app.string.privacy_revoke_ok'), color: AppColor.accent }
-      ]
-    }).then((result: promptAction.ShowDialogSuccessResponse): void => {
-      if (result.index !== 1) {
-        return;
-      }
-      DataServices.privacyConsent().revoke().then((): void => {
-        hilog.info(DOMAIN, TAG, 'revoke_from_home');
-      }).catch((err: BusinessError): void => {
-        hilog.warn(DOMAIN, TAG, 'revoke_fail %{public}s', JSON.stringify(err));
-      });
-    }).catch((): void => {
-    });
-  }
-
   @Builder
   footer() {
     Column() {
@@ -64,7 +41,7 @@ export struct HomePage {
           .accessibilityGroup(true)
           .accessibilityText($r('app.string.privacy_entry_policy'))
           .onClick((): void => {
-            AppServices.get().pushPrivacy('home');
+            AppServices.get().pushPrivacy();
           })
 
         Text($r('app.string.privacy_entry_revoke'))
@@ -74,7 +51,7 @@ export struct HomePage {
           .accessibilityGroup(true)
           .accessibilityText($r('app.string.privacy_entry_revoke'))
           .onClick((): void => {
-            this.revoke();
+            confirmRevokeConsent(this.getUIContext(), 'home');
           })
       }
       .width('100%')

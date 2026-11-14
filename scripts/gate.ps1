@@ -28,7 +28,7 @@ try {
   node scripts/check-contrast.mjs
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-  Write-Host '== 7/8 合规门禁（X-01~X-04，M13） ==' -ForegroundColor Cyan
+  Write-Host '== 7/8 合规门禁（X-01~X-05，M13） ==' -ForegroundColor Cyan
   node scripts/check-compliance.mjs
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

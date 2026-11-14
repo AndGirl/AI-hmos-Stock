@@ -1,7 +1,6 @@
 import { errorManager } from '@kit.AbilityKit';
-import { hiAppEvent } from '@kit.PerformanceAnalysisKit';
-import { hilog } from '@kit.PerformanceAnalysisKit';
-import { StabilitySnapshot, StabilityStore } from '../store/StabilityStore';
+import { hiAppEvent, hilog } from '@kit.PerformanceAnalysisKit';
+import { StabilityStore } from '../store/StabilityStore';
 
 const DOMAIN: number = 0x0001;
 const TAG: string = 'Stability';
@@ -20,9 +19,17 @@ const WATCHER: string = 'stability_watcher';
  * 崩溃率/ANR 率的分母是本机会话数；线上口径需 AGC（本轮外部待办）。
  */
 export class StabilityMonitor {
-  private store: StabilityStore = new StabilityStore();
+  private store: StabilityStore;
   private started: boolean = false;
   private watcherAdded: boolean = false;
+
+  /**
+   * @param store 与 `DataServices.stabilityStore()` **同一个实例**（评审修复：避免两份
+   *   `stability_v1` 各自 flush 整份 JSON 互相覆盖计数）。
+   */
+  constructor(store: StabilityStore) {
+    this.store = store;
+  }
 
   /** 幂等启动：`EntryAbility.onCreate` 调用一次。 */
   start(): void {
@@ -40,11 +47,7 @@ export class StabilityMonitor {
     });
   }
 
-  /** 当前计数快照（UI/调试面板用）。 */
-  snapshot(): StabilitySnapshot {
-    return this.store.snapshot();
-  }
-
+  /** 当前计数摘要（debug 面板用；与 `describe()` 同源）。 */
   describe(): string {
     return this.store.describe();
   }

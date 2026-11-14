@@ -27,5 +27,5 @@ jobs:
         run: node scripts/check-dark-tokens.mjs
       - name: 对比度门禁（C-01~C-04）
         run: node scripts/check-contrast.mjs
-      - name: 合规门禁（X-01~X-04，M13）
+      - name: 合规门禁（X-01~X-05，M13）
         run: node scripts/check-compliance.mjs

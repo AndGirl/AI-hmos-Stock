@@ -57,9 +57,4 @@ export class StartupMeter {
       hilog.warn(DOMAIN, TAG, 'startup_report_fail');
     }
   }
-
-  /** 仅用于调试面板/单测断言（是否已打过点）。 */
-  static isReported(): boolean {
-    return StartupMeter.reported;
-  }
 }

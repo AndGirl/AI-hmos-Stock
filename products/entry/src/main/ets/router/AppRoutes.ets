@@ -67,7 +67,6 @@ export interface PositionsParam {
   accountId?: string;
 }
 
-/** 隐私政策参数（M13-1）：当前无入参，保留结构便于后续「从 AGC 内测/深链」只加不改。 */
-export interface PrivacyParam {
-  from?: string;
+/** 隐私政策参数（M13-1）：当前无入参；保留类结构便于后续「来源/深链」只加不改。 */
+export class PrivacyParam {
 }

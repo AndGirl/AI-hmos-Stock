@@ -33,11 +33,6 @@ export class ComplianceService {
     this.agreedAt = valid ? agreedAt : 0;
     this.policyVersion = valid ? version : '';
   }
-
-  /** 门禁判定：未读盘时按「未同意」处理，但 UI 用 `ready` 区分骨架。 */
-  needsConsent(): boolean {
-    return !this.consented;
-  }
 }
 
 /** 全局唯一实例（与 ConnectionHub/QuoteHealth 同构）。 */

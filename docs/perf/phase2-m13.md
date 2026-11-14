@@ -9,8 +9,8 @@
 
 | 项 | 值 | 结论 |
 |---|---|---|
-| release signed HAP | **2,227,951 bytes ≈ 2.13 MB**（`dist/phase2-1.2.0/`，SHA256 `57A02AB9…7021A5`） | ✅ 远低于 10MB（阈值的 21%） |
-| unsigned HAP | 2,172,430 bytes | — |
+| release signed HAP | **2,228,592 bytes ≈ 2.13 MB**（`dist/phase2-1.2.0/`，SHA256 `D3805A24…149D93`） | ✅ 远低于 10MB（阈值的 21%） |
+| unsigned HAP | 2,171,790 bytes | — |
 | 最大内部文件 | `ets/modules.abc` 2,005,188 bytes | 业务代码本体 |
 | 资源 | `resources.index` 36,897 + 图片合计 ~0.15MB | — |
 | 混淆 | **未启用**（`products/entry/build-profile.json5` 的 `obfuscation.enable=false`） | 见 §7-1 偏差登记 |

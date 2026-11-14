@@ -46,15 +46,10 @@ export class PrivacyConsentStore {
     return this.loading;
   }
 
-  isLoaded(): boolean {
-    return this.loaded;
-  }
-
   /** 当前策略版本下是否已同意（版本不一致按未同意处理）。 */
   consented(): boolean {
     return this.record.agreed && this.record.version === PRIVACY_POLICY_VERSION;
   }
-
   agreedAt(): number {
     return this.consented() ? this.record.agreedAt : 0;
   }
