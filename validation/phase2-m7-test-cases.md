@@ -15,7 +15,7 @@
 | Local Test | `features/search` **48/48**（M6 26 + M7 新增 22：规则 14 + Store 8） |
 | UiTest | **14/14**（M6 `SearchUiTest` 8 + M7 `AddWatchlistUiTest` 6，真机 Mate 60 Pro）；评审修复后（2 P1 + 9 P3）全量复跑仍 **14/14** |
 | 真机截图 | **23 张**（添加页 4 形态、多选、上限、离线待同步、编辑/撤销、分组管理、空态、目标分组预置、撤销保序复验） |
-| 未取证 | lg/xl 居中模态（无平板真机）、卡片虚线卡入口（属 M8）、Toast 逐条截帧（部分只有页内提示） |
+| 未取证 | lg（940vp）居中模态、Toast 逐条截帧（部分成功只有页内状态 `27`） |
 
 ### 0.1 证据文件
 
@@ -44,6 +44,8 @@
 | `24-target-group.png` | 从「创业板」Tab 进入：目标分组 chips 默认选中创业板（AC-95） |
 | `25-undo-order-before.png` | 编辑态勾选第 2~4 行（平安银行/宁德时代/中芯国际），移出前顺序 |
 | `26-undo-order-after.png` | 撤销后三行原位恢复，顺序与移出前完全一致（P1 顺序修复真机复验） |
+| `27-partial-limit-names.png` | 部分成功（48/50 选 3 只）：2 只变「已添加」、1 只保留勾选，页内「已达上限」+ 按钮变「加入自选（1）」 |
+| `28-add-modal-xl.png` | xl（1280vp）居中模态：560vp 卡片 + 全屏遮罩，45/50、分组 chips 与结果完整 |
 
 ---
 
@@ -59,7 +61,7 @@
 | 4 | 自选页右栏（xl）「自选设置」/ 行情右栏「自选设置」 | 同上（代码同走 `AppServices.pushAddWatchlist(code)`） | — |
 | 5 | 卡片尾部虚线卡（E3） | **M8 落地**（卡片本体属 M8-2），M7 不在范围内 | — |
 | 6 | sm/md 形态 | 全屏页（Mate 60 Pro 388vp 实测） | `01` |
-| 7 | lg/xl 形态 | 居中模态 560vp、高 82%（代码路径 `AddWatchlistPage.isWide()`）；**无真机平板，未截图取证** | — |
+| 7 | lg/xl 形态 | 居中模态 560vp、高 82%（`AddWatchlistPage.isWide()`） | **xl 已取证**：平板模拟器 1280vp，560vp 居中卡片 + 全屏遮罩（[28](../shots/phase2/m7/28-add-modal-xl.png)）；lg（940vp）未取 |
 
 > 入口实现：胶囊/空态 → `onOpenAdd(groupId)`；详情/右栏/搜索页 → `onOpenAddWatchlist(code)`；统一 `AppServices.pushAddWatchlist(code?, group?, from?)`。
 
@@ -79,7 +81,7 @@
 |---|---|---|---|
 | 1 | 搜索已在自选的 `600519` | 行尾「已添加」、勾选框禁用；点行不计数 | `02` + UiTest `AC96_added_row_not_selectable` |
 | 2 | 调试「场景…→填满至 50」后再加 1 只 | 页头 50/50 +「最多添加 50 只，已达上限」；提交被拒、勾选保留 | `21` |
-| 3 | 批量中部分超限 | 成功项生效并摘勾、超限项保留；提示「已加入 N 只，M 只超限：名称…」（**2026-11-14 起带名称**，最多 3 个、超出接「等」） | 单测 `case_limit_name_summary` / `case_limit_name_summary_truncates`；真机 Toast 需构造 48/50 场景，未截图 |
+| 3 | 批量中部分超限 | 成功项生效并摘勾、超限项保留；提示「已加入 N 只，M 只超限：名称…」（**2026-11-14 起带名称**，最多 3 个、超出接「等」） | 单测 `case_limit_name_summary` / `case_limit_name_summary_truncates`；真机 `27`：48/50 时选 3 只 → 2 只变「已添加」、1 只保留勾选（Toast 1.8s 未截到） |
 | 4 | 断线态加入 | 页内「当前离线，加入后将标记待同步」；提交后行标「待同步」 | `19` |
 | 5 | 恢复在线 | 同步服务清零标记 + Toast「已同步 1 只自选」，行标记消失 | `20` |
 | 6 | 50 只上限在 Store 判定 | `WATCHLIST_MAX_ITEMS=50`，UI 与 Store 双保险 | 单测 `case_count_user_groups` |
@@ -181,7 +183,7 @@ $env:DEVECO_SDK_HOME='D:\Huawei\DevEcoStudioRelease\DevEcoStudioTools\DevEco Stu
 
 | # | 项 | 说明 |
 |---|---|---|
-| 1 | lg/xl 居中模态未截图 | 本机无平板/阔折叠真机；代码按 `lg||xl` 渲染 560vp 居中卡片，待设备补齐 |
+| 1 | ~~lg/xl 居中模态~~ | ✅ xl 已补（`28-add-modal-xl.png`，M1 Tablet 模拟器）；lg（940vp）仍缺设备 |
 | 2 | E3 卡片虚线卡 | 属 M8-2 卡片本体，M7 只做 E1/E2/E4 + 搜索/右栏入口 |
 | 3 | Toast 逐条截帧 | 部分 Toast（加入成功/部分成功/上限）未在 1.8s 内抓到，页内提示与状态已截图；行为由代码路径 + UiTest 覆盖 |
 | 4 | 「部分成功」文案 | 全量超限时提示「最多添加 50 只，已达上限」；真部分成功提示「已加入 N 只，M 只超限：名称…」，**已补逐条名单（2026-11-14）**：`limitNameSummary` 最多列 3 个名称，超出接「等」 |
