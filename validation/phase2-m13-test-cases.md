@@ -3,7 +3,7 @@
 > 版本：v1.0 · 日期：2026-11-14 · 适用：小杨股票 **2b / 1.2.0 / 1002000**
 > 执行环境：HUAWEI Mate 60 Pro（`23E0224222002707`，HarmonyOS 7.0 / API 26）
 > 证据目录：[shots/phase2/m13](../shots/phase2/m13)；性能/包体数据：[docs/perf/phase2-m13.md](../docs/perf/phase2-m13.md)
-> 门禁：[scripts/check-compliance.mjs](../scripts/check-compliance.mjs)（X-01~X-04，`gate.ps1` 第 7 步）
+> 门禁：[scripts/check-compliance.mjs](../scripts/check-compliance.mjs)（X-01~X-05，`gate.ps1` 第 7 步）
 
 ## 0. 逐条结果总览
 

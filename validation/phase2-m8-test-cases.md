@@ -1,8 +1,10 @@
-﻿# 阶段二 · M8 卡片视图验收用例（AC-100~105）
+# 阶段二 · M8 卡片视图验收用例（AC-100~105）
+
+> 时点快照：本文记录 2a 收口时点（2026-11-14）的门禁与用例，当时 `gate.ps1` 为 6 步；当前为 8 步（含合规 X-01~X-05），以 [docs/gates.md](../docs/gates.md) 为准。
 
 > 版本：v1.0 · 日期：2026-11-13 · 状态：**代码完成，待入库（只改未提交）**
 > 范围：M8-1~M8-7（计划 §7.4），规格依据 §4.4-G4 兜底（设计稿 G-4 未到）。
-> 证据目录：[shots/phase2/m8](../../shots/phase2/m8)；性能数据见 [docs/perf/phase2-m8.md](../docs/perf/phase2-m8.md)。
+> 证据目录：[shots/phase2/m8](../shots/phase2/m8)；性能数据见 [docs/perf/phase2-m8.md](../docs/perf/phase2-m8.md)。
 
 ---
 

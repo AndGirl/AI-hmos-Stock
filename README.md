@@ -1,12 +1,12 @@
 # 小杨股票 · AIStock
 
 [![gate](https://github.com/AndGirl/AI-hmos-Stock/actions/workflows/gate.yml/badge.svg?branch=main)](https://github.com/AndGirl/AI-hmos-Stock/actions/workflows/gate.yml)
-![version](https://img.shields.io/badge/version-1.0.0-blue)
+![version](https://img.shields.io/badge/version-1.2.0-blue)
 ![HarmonyOS](https://img.shields.io/badge/HarmonyOS-API%2020-0aa1ff)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
-> 面向 HarmonyOS 6.x（API 20）的个人股票行情与交易客户端演示工程：**自选列表 → 个股详情 → 买入委托 → 折叠屏/平板多窗比价**。
-> 当前为**阶段一（可演示）**，版本 `1.0.0`；行情、盘口、资讯与交易**全部为 Mock 数据**，未接入真实行情源与交易通道。
+> 面向 HarmonyOS 6.x（API 20）的个人股票学习工具演示工程：**自选/搜索 → 个股详情 → 模拟买卖 → 委托/持仓 → 折叠屏/平板多窗比价**。
+> 当前为**阶段二收口**，版本 `1.2.0 / 1002000`；行情、盘口、交易与持仓**全部为本地模拟数据**（不联网、0 权限），未接入真实行情源与券商通道，仅供学习参考。
 
 > [!WARNING]
 > **合规声明**：本项目仅用于技术验证与团队内部演示，**不构成任何投资建议**，不可用于实盘交易或对外提供证券服务。界面中的标的名称、代码、价格、盘口、资讯与委托回执均为**虚构的演示数据**（如「示例科技01/602000」），与任何真实证券无关。
@@ -22,9 +22,9 @@
 | 平台 | HarmonyOS 6.x（API 20），`phone` / `tablet` 设备类型 |
 | 开发语言 | ArkTS（严格模式），UI 为 ArkUI 声明式 + **V2 状态管理** |
 | 架构 | `products → features → commons` 三层单向依赖，HAR 桶导出 |
-| 数据 | 4 个 Provider 全 Mock（行情 / 详情 / 自选 / 交易），契约与真实同形 |
-| 当前阶段 | 阶段一（M0~M5）已验收：四 Tab、自选、详情、买入、多窗、断线/字号/埋点 |
-| 后续阶段 | 阶段二（搜索、添加自选、卡片视图、横屏深色、真实行情/交易）不在本文范围 |
+| 数据 | 6 个 Provider（行情/详情/自选/交易/搜索/持仓）全本地模拟，契约与真实同形；无网络请求 |
+| 当前阶段 | **阶段二 M13 完成（`1.2.0 / 1002000`）**：搜索/添加自选/卡片/横屏深色/模拟行情/模拟交易/持仓/合规上架 |
+| 后续阶段 | 阶段三（本地后端，见 `docs/阶段三开发计划.md`）；真实行情/交易不在范围 |
 
 ## 功能总览
 
@@ -32,7 +32,12 @@
 - **个股详情**：报价头（含行情时间与闪烁）、12 项指标（6/9/12 随断点展开）、8 个周期 Tab（分时/五日/日K/周K/月K/季K/半年K/年K）、图表（十字光标/缩放）、五档行情 + 成交明细、资讯条、内容 Tab、通栏动作栏；支持 page / pane / window 三种形态。
 - **买入委托**：登录层 → 编辑层 → 确认层单容器切换；价格/数量步进与手输；提交成功 / 失败 / 结果未知三态；遮罩、关闭按钮与系统返回统一关闭矩阵。
 - **多窗比价**：1~3 窗、禁止同标的（冲突则两窗交换）、一次性同步周期、非焦点窗降频、关窗焦点移交、冷启恢复上次对比。
-- **占位与暂不实现**：首页 / 最新资讯 / 行情 Tab、搜索、添加自选、卡片视图为占位页或占位文案；真实数据、开户/KYC、持仓、资讯内容、深色模式、横屏重排不在阶段一范围。
+- **搜索**：代码/名称/拼音首字母六级匹配 + 历史与热搜 + 空词浏览全部股票（分页 20、下拉刷新、分组头吸顶）。
+- **卡片视图**：2/3/4/5 列自适应（按断点与字号只降列）、固定 6 项指标、排序 chip 与列表共用同一排序态。
+- **委托与持仓**：模拟交易的委托列表（7 状态筛选/分页/撤单/回执）与持仓收益页（汇总/排序/三项盈亏口径明示）。
+- **深色与横屏**：跟随系统深浅色（30 个 token，文本对比度 ≥4.5:1）；详情页 62/38 横屏双栏。
+- **合规**：首启隐私同意（同意/拒绝/查看/撤回）、隐私政策与 SDK/权限清单、0 权限、首笔风险揭示。
+- **占位与暂不实现**：首页 / 最新资讯仍为占位页（下阶段开放）；真实行情、真实交易、开户/KYC、资讯内容不在范围。
 
 ### 自选列表（折叠 460vp）
 
@@ -66,7 +71,7 @@
 | 状态管理 | ArkUI **V2**（`@ComponentV2` / `@ObservedV2` / `@Local` / `@Param` / `@Event`） | 不保留 V1 备选 |
 | 图表 | `@ohos/mpchart 3.0.31`（分时 / K 线 / 量能） | 图表 model 只在 `commons/data/chart` 创建 |
 | 构建 | DevEco Studio + hvigor + ohpm（`devecocli` 封装） | debug / release 两套构建模式 |
-| 测试 | Hypium 依赖已预留 | 当前仓库**暂无自动化用例**，以验证件 + 手工走查为主 |
+| 测试 | Hypium Local Test + ohosTest UiTest（真机） | **Local 237 例 / UiTest 22 例**；`gate.ps1` 8 步含静态门禁与 lint |
 | 权限 | 无 | `module.json5` 未申请任何 `requestPermissions` |
 
 ## 架构设计
@@ -81,9 +86,9 @@ products/entry  (Entry HAP：路由 / Tab 壳 / 页面装配)
         └── commons/{ui, basic, data}   (设计系统 / 基础服务 / 数据与 Mock)
 ```
 
-- **单向依赖**：`products → features → commons`；features 横向仅允许 `watchlist→detail`、`detail→trade`、`pk→detail`，由 `scripts/check-architecture.mjs` 的 R-01~R-09 静态拦截。
+- **单向依赖**：`products → features → commons`；features 横向仅允许 `watchlist→detail`、`detail→trade`、`pk→detail`、`search→detail`，由 `scripts/check-architecture.mjs` 的 R-01~R-09 静态拦截。
 - **壳 / 内容分离**：`DetailPage` 负责路由、返回栈、沉浸式与动作栏，`DetailContent` 是唯一内容实现（page / pane / window 三形态复用）；多窗由 `PkHost` 编排，独立订阅与持久化归 `features/pk`。
-- **数据装配单点**：`commons/data/DataServices.ets` 是全工程唯一允许 `new Mock*` 的位置，上层只依赖 `QuoteProvider` / `DetailProvider` / `WatchlistProvider` / `TradeProvider` 接口。
+- **数据装配单点**：`commons/data/DataServices.ets` 是全工程唯一允许 `new Mock*` 的位置，上层只依赖 `QuoteProvider` / `DetailProvider` / `WatchlistProvider` / `TradeProvider` / `SearchProvider` / `PositionProvider` 接口。
 - **状态管理**：视图层 `@Local` 持有 VM，VM 按业务 key 缓存；跨页共享服务（断点、安全区、字号、连接状态）用 `AppStorageV2` 单例。
 - **订阅合并**：`DetailSubscriptionRegistry` 对同 code 合并一路订阅并多播，焦点窗 1s、非焦点窗 5s 降频。
 
@@ -97,13 +102,15 @@ xiaoyang-stock/
 │   ├── watchlist/             # 自选：FrozenTable / IndexStrip / GroupTabs / WatchlistVM
 │   ├── detail/                # 详情：DetailContent / ChartArea / OrderBookPanel / MetricPanel
 │   ├── trade/                 # 交易：TradeSheet / 编辑层 / 确认层 / TradeVM
-│   └── pk/                    # 多窗：PkHost / 窗卡 / 换股 / 同步 / 持久化
+│   ├── pk/                    # 多窗：PkHost / 窗卡 / 换股 / 同步 / 持久化
+│   ├── search/                # 搜索：SearchPage / SearchVM / AddWatchlistPanel / 本地索引
+│   └── account/               # 持仓：PositionsView / PositionVM / PositionRules（只依赖 commons）
 ├── commons/
 │   ├── ui/                    # 设计系统：token、StateView、GlobalBanner、BottomTabBar
 │   ├── basic/                 # 断点、安全区、字号、连接状态、埋点、性能采样
 │   └── data/                  # 模型、Mock Provider、行情总线、图表引擎、DataServices
-├── scripts/                   # 门禁脚本（版本 / 文案 / 分层 / gate.ps1）
-├── docs/                      # 技术设计、进度文档、门禁说明（README 只引用其中两项）
+├── scripts/                   # 门禁脚本（版本/文案/分层/契约/深色/对比度/合规 + gate.ps1 8 步）
+├── docs/                      # 计划/进度/契约/门禁/合规/性能/发布；入口见 docs/阶段二文档索引.md
 ├── design/                    # 16 张设计稿（内部资产，不在 README 展示）
 ├── requirements/              # 需求基线、横切规范、FR 子需求
 ├── validation/                # HTML 交互验证件与用例
@@ -122,8 +129,8 @@ xiaoyang-stock/
 
 ```powershell
 devecocli build                              # 全量构建（debug）
-powershell -File scripts/gate.ps1            # 版本 + 文案 + 分层 + lint 四道门禁
-devecocli build --build-mode release         # release 包（signed HAP 约 1.5 MB）
+powershell -File scripts/gate.ps1            # 8 道门禁（版本/文案/分层/契约/深色/对比度/合规/lint）
+devecocli build clean; devecocli build --build-mode release   # release（signed HAP ≈ 2.13 MB）
 ```
 
 ### 运行
@@ -190,22 +197,28 @@ hdc -t 127.0.0.1:5555 shell "aa start -U 'zixuangu://detail?code=600519'"
 | 自选列表 | 50 行滚动 60~62 fps，p95 16ms |
 | 3 窗比价 | 60.8 fps（1.0×）/ 57.4 fps（1.45×），jank ≈ 2.6% |
 | 内存 | 3 窗 320.3 MB → 退出后 293.7 MB，订阅 3→1，无持续增长 |
-| 包体 | debug ≈ 4.3 MB / release ≈ 1.5 MB |
+| 包体 | **release signed HAP 2.13 MB**（1.2.0，clean 构建；debug 约 4 MB） |
 
-> 以上为模拟器 `PerfMeter` 采样（p95 / jank 由帧回调统计），**非系统 RenderService FPS**；真机建议用 SmartPerf / Profiler 复测。
+> 表内为**阶段一**模拟器 `PerfMeter` 采样（非系统 RenderService FPS）；阶段二实测（冷启 P90 241ms / 3 窗+深色内存 154.2MB）见 [docs/perf/phase2-m13.md](docs/perf/phase2-m13.md)。
 
 质量门禁：
 
-- `scripts/check-version.mjs`：版本一致性与 `versionCode` 规则（V-01~V-03）；
-- `scripts/check-coming-soon.mjs`：5 条占位文案的格式与硬编码检查；
+- `scripts/check-version.mjs`：版本一致性与 `versionCode` 规则（V-01~V-03，10 模块）；
+- `scripts/check-coming-soon.mjs`：**2 条**占位文案的格式与硬编码检查；
 - `scripts/check-architecture.mjs`：三层依赖、桶导出、`new Mock*` 单点等 R-01~R-09；
-- `devecocli check lint`：CodeLinter（当前 0 error / 5 warning）；
-- CI：`.github/workflows/gate.yml` 仅跑不依赖 SDK 的三项静态门禁。
+- `scripts/check-contracts.mjs`：契约完整性 K-01~K-04（6 个 Provider）；
+- `scripts/check-dark-tokens.mjs` / `check-contrast.mjs`：深色 token 完整性与对比度（深色文本 ≥4.5:1）；
+- `scripts/check-compliance.mjs`：合规 X-01~X-05（SDK 清单/权限/调试守卫/隐私文案/策略版本）；
+- `devecocli check lint`：CodeLinter（当前 0 error / 6 warning）；`scripts/gate.ps1` 串起以上 **8 步**；CI 只跑不依赖 SDK 的第 1~7 步。
 
 ## 文档
 
-- [阶段一技术设计](docs/phase1-technical-design.md)：架构、模块、路由、数据契约、适配与门禁设计。
-- [一阶段进度文档](docs/一阶段进度文档.md)：当前状态、运行命令、验收证据、已知限制与已确认口径。
+- [**阶段二文档索引**](docs/阶段二文档索引.md)：28 份阶段二文档的唯一总目录（状态/AC 速查/维护规则）——**先看这个**。
+- [阶段二进度文档](docs/阶段二进度文档.md)：当前状态、进度、AC 覆盖、门禁、偏差与坑、下一步（新会话入口）。
+- [阶段二开发计划](docs/阶段二开发计划.md)：任务与人日、AC-87~127 定义、风险与发布口径。
+- [发版清单](docs/release-checklist-phase2.md) / [AGC 上架材料](docs/release-metadata-phase2.md)：发版与提审逐项打勾。
+- [隐私政策](docs/privacy-policy.md) / [SDK 与权限清单](docs/phase2-sdk-list.md) / [门禁说明](docs/gates.md)：合规与工程红线。
+- [阶段一技术设计](docs/phase1-technical-design.md) / [一阶段进度文档](docs/一阶段进度文档.md)：阶段一架构与历史（阶段二增量见索引 §2.7）。
 
 ## 已知限制
 
@@ -213,8 +226,8 @@ hdc -t 127.0.0.1:5555 shell "aa start -U 'zixuangu://detail?code=600519'"
 2. **签名**：仓库仍是调试证书，未上架 AGC；发布前需替换发布证书与 Profile。
 3. **设备覆盖**：折叠屏仅有模拟器证据（460 / 940vp），折叠真机与悬停态未回归。
 4. **性能口径**：系统级 FPS 未取到，现有数字来自 `PerfMeter`。
-5. **测试**：暂无 Hypium 自动化用例，验收以截图与验证件为主。
-6. **语言**：仅中文资源（`base`），未提供英文 / 深色主题。
+5. **测试**：Local Test **237/237**、UiTest **22/22**（真机）；无覆盖率统计。
+6. **语言 / 主题**：仅中文资源（`base`），无英文；深浅色已支持（跟随系统，30 个 token）。
 
 ## 合规声明
 

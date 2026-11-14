@@ -1,9 +1,11 @@
 # 阶段二 · M12 横屏与深色验收用例（AC-122~124）
 
+> 时点快照：本文记录 2a 收口时点（2026-11-14）的门禁与用例，当时 `gate.ps1` 为 6 步；当前为 8 步（含合规 X-01~X-05），以 [docs/gates.md](../docs/gates.md) 为准。
+
 > 版本：v1.0（代码完成，待入库） · 日期：2026-11-14
 > 范围：M12-1 横屏详情、M12-2 深色色板与接线、M12-3 对比度与红绿可辨、M12-4 全站扫色与图表重着色、M12-5 切换不丢状态与证据。
 > 规格依据：计划 §4.4-G7 兜底（设计稿 G-6/G-7 未到）；色值见 [docs/phase2-tokens.md](../docs/phase2-tokens.md)。
-> 证据目录：[shots/phase2/m12](../../shots/phase2/m12)；性能/设备记录见 [docs/perf/phase2-m12.md](../docs/perf/phase2-m12.md)。
+> 证据目录：[shots/phase2/m12](../shots/phase2/m12)；性能/设备记录见 [docs/perf/phase2-m12.md](../docs/perf/phase2-m12.md)。
 
 ---
 

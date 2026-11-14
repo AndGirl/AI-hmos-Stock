@@ -31,10 +31,10 @@
 | 版本一致性 | `node scripts/check-version.mjs` | V-01~V-03 | ✅ |
 | 占位文案 | `node scripts/check-coming-soon.mjs` | 2 条（home/news） | ✅ |
 | 分层红线 | `node scripts/check-architecture.mjs` | R-01~R-09 | ✅ |
-| 契约完整性 | `node scripts/check-contracts.mjs` | K-01~K-04（7 个 Provider） | ✅ |
+| 契约完整性 | `node scripts/check-contracts.mjs` | K-01~K-04（6 个 Provider） | ✅ |
 | 深色 token | `node scripts/check-dark-tokens.mjs` | base/dark 30 键一致；0 字面量 | ✅ |
 | 对比度 | `node scripts/check-contrast.mjs` | dark 文本 23/23、非文本 5/5 | ✅ |
-| **合规（M13）** | `node scripts/check-compliance.mjs` | X-01~X-04 | ✅ |
+| **合规（M13）** | `node scripts/check-compliance.mjs` | X-01~X-05 | ✅ |
 | 一键门禁 | `powershell -File scripts/gate.ps1` | **8 步 GATE PASS** | ✅ |
 | CodeLinter | `devecocli check lint` | 0 error / 6 warning（阶段一既有 4 + 路由壳 2） | ✅ |
 | Local Test | `hvigor test -p module=search` / `watchlist` / `commons_data` | **50 / 21 / 166**（合计 237） | ✅ |

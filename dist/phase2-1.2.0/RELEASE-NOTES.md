@@ -38,7 +38,7 @@ hdc -t 23E0224222002707 install -r dist\phase2-1.2.0\entry-default-signed.hap
 
 | 项 | 结果 |
 |---|---|
-| 构建 / 门禁 | `build` ✅ + **8 步 gate** 全绿（含合规 X-01~X-04） |
+| 构建 / 门禁 | `build` ✅ + **8 步 gate** 全绿（含合规 X-01~X-05） |
 | Local Test | **237/237**（search 50 / watchlist 21 / commons_data 166） |
 | UiTest | **22/22**（Mate 60 Pro 真机；含同意基线与「撤回→重新同意回到四 Tab」回归例） |
 | 冷启 P90 | **241ms**（release，应用内口径，5 次） |

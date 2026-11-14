@@ -3,7 +3,7 @@
 > 版本：v1.0 · 日期：2026-11-14 · 版本：`1.1.0`（versionCode `1001000`）
 > 范围：计划 §7.6 P2-A1——搜索→添加→列表/卡片→详情→交易主链路 3 遍；深色/横屏/字号交叉；断线/弱网注入。
 > 设备：Mate 60 Pro 真机（388vp / HarmonyOS 7.0 / API 26）、Pura X Max 阔折叠（折 460vp / 展 940vp）、M1 Tablet（1280vp）。
-> 证据：[shots/phase2/acceptance](../../shots/phase2/acceptance)。
+> 证据：[shots/phase2/acceptance](../shots/phase2/acceptance)。
 
 ---
 
