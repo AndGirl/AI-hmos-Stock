@@ -3,7 +3,7 @@
 > 对应设计 §3.1.10（分层校验 R-01~R-09）、§6.3（占位文案校验）、§6.6（工程红线与 CI 门禁）。
 > 目标：让「分层被破坏 / 占位文案漂移 / 硬编码」在提交前失败，而不是靠评审记忆。
 
-## 1. 七道门禁
+## 1. 八道门禁
 
 | # | 门禁 | 脚本 | 运行位置 | 说明 |
 |---|---|---|---|---|
@@ -13,7 +13,8 @@
 | 4 | 契约完整性 | `scripts/check-contracts.mjs` | CI + 本地 | K-01~K-04：Provider 接口有实现、必需方法齐备、装配点覆盖、M9 可选成员不得写成必需 |
 | 5 | 深色 token 完整性 | `scripts/check-dark-tokens.mjs` | CI + 本地 | D-01~D-03：base/dark 键集合一致、`TokenRegistry` 全量、`.ets` 无颜色字面量 |
 | 6 | 对比度与红绿可辨 | `scripts/check-contrast.mjs` | CI + 本地 | C-01~C-04：dark 文本 ≥4.5、非文本 ≥3、涨跌 ΔE ≥20 且亮度差 ≥15%；base 只报告 |
-| 7 | CodeLinter | `devecocli check lint` | 本地 `scripts/gate.ps1` | 依赖 HarmonyOS SDK，GitHub 托管 runner 无 SDK |
+| 7 | 合规（M13） | `scripts/check-compliance.mjs` | CI + 本地 | X-01~X-04：SDK 清单双向一致、权限白名单与清单一致、调试入口 DEBUG 守卫、隐私文案齐备 |
+| 8 | CodeLinter | `devecocli check lint` | 本地 `scripts/gate.ps1` | 依赖 HarmonyOS SDK，GitHub 托管 runner 无 SDK |
 
 一键本地执行：
 
@@ -31,6 +32,7 @@ node scripts/check-architecture.mjs
 node scripts/check-contracts.mjs
 node scripts/check-dark-tokens.mjs
 node scripts/check-contrast.mjs
+node scripts/check-compliance.mjs
 devecocli check lint
 ```
 
@@ -105,10 +107,27 @@ devecocli check lint
 
 半透明色（`bar_shadow`/`scrim`/`transparent`）与 `disabled_text`、装饰性 `divider*` 不参与断言，详见 [phase2-tokens.md](phase2-tokens.md)。
 
+## 3.4 合规门禁（X-01~X-04，M13 起）
+
+| 规则 | 脚本判定 |
+|---|---|
+| X-01 | SDK 清单 [phase2-sdk-list.md](phase2-sdk-list.md) 的 `<!-- SDK-LIST -->` 块与所有 `oh-package.json5` 的**第三方运行期依赖**双向一致（名称 + 版本）；本地 HAR 与 `devDependencies` 不计 |
+| X-02 | 所有 `module.json5` 的 `requestPermissions` ⊆ 白名单（当前策略：**0 权限**），且与清单 `<!-- PERMISSIONS -->` 块双向一致 |
+| X-03 | 引用 `BuildProfile.DEBUG` 的文件必须有 `if (!DEBUG)` / `if (DEBUG)` 守卫；出现 `showActionMenu` + 「调试」但没引用 DEBUG = 漏守卫（release 会露出） |
+| X-04 | 隐私政策/同意必需文案键齐备（`privacy_title`、`privacy_consent_title`、`consent_agree/reject`、`privacy_revoke`、`privacy_section_1..8_title/body` 等） |
+
+负向探针（已验证，验证后还原）：
+
+- 删掉清单里的 `@ohos/mpchart` 一行 → **X-01 FAIL**（实际依赖未登记）；
+- 清单写 `@ohos/mpchart@3.0.30` → **X-01 FAIL**（版本不一致）；
+- `module.json5` 加一条 `ohos.permission.CAMERA` → **X-02 FAIL**（不在白名单）；
+- 把 `WatchlistPage` 的 `if (!DEBUG)` 删掉 → **X-03 FAIL**（引用 DEBUG 无守卫）；
+- 删 `consent_agree` 文案键 → **X-04 FAIL**。
+
 ## 4. CI 现状与边界
 
-- `.github/workflows/gate.yml` 在 push/PR 时只跑第 1~6 道（纯 Node，无 SDK）。
-- 第 7 道 CodeLinter、构建、Hypium 需要 DevEco Studio / Command Line Tools，当前在本地 `scripts/gate.ps1` 执行；后续可接带 SDK 的自托管 runner。
+- `.github/workflows/gate.yml` 在 push/PR 时只跑第 1~7 道（纯 Node，无 SDK）。
+- 第 8 道 CodeLinter、构建、Hypium 需要 DevEco Studio / Command Line Tools，当前在本地 `scripts/gate.ps1` 执行；后续可接带 SDK 的自托管 runner。
 - 目前没有 Hypium 单元测试工程；占位文案用静态脚本承担「防漂移」职责。M1 起如需纯函数单测（几何/排序/校验），再在 `features/*/src/test` 建 Hypium local test，并纳入 `gate.ps1`。
   - M6 已在 `features/search/src/test` 落地第一组纯函数单测（`MatchRules` / `SearchQuery`），当前通过 `devecocli local test` 手动执行，尚未并入 `gate.ps1`。
   - **M9 在 `commons/data/src/test` 增加行情通道单测**（涨跌停/帧序号/帧校验/限流降级/缓存规则/契约），运行：`hvigor test -p module=commons_data -p coverage=false`。
