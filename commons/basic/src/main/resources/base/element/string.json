@@ -260,6 +260,7 @@
     {"name": "add_all_existed", "value": "所选股票已在自选中"},
     {"name": "add_pending_toast", "value": "离线加入（%s 只），联网后自动同步"},
     {"name": "add_partial_hint", "value": "已加入 %s 只，%s 只因超过上限未加入"},
+    {"name": "add_partial_hint_names", "value": "已加入 %s 只，%s 只超限：%s"},
     {"name": "add_limit_hint", "value": "最多添加 %s 只，已达上限"},
     {"name": "add_offline_hint", "value": "当前离线，加入后将标记待同步"},
     {"name": "add_preset_added_groups", "value": "已在自选 · 已属 %s 个分组"},

@@ -505,8 +505,9 @@ export struct PositionsView {
     const b1: promptAction.Button = { text: '恢复加载', color: AppColor.debug };
     const b2: promptAction.Button = { text: '重置账户与委托（回种子）', color: AppColor.debug };
     const b3: promptAction.Button = { text: '清空持仓（空态）', color: AppColor.debug };
+    const b4: promptAction.Button = { text: '加停牌持仓（600000）', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
-      promptAction.Button] = [b0, b1, b2, b3];
+      promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4];
     this.getUIContext().getPromptAction().showActionMenu({ title: '持仓调试（debug）', buttons: buttons })
       .then((res: promptAction.ActionMenuSuccessResponse): void => {
         if (res.index === 0) {
@@ -521,6 +522,11 @@ export struct PositionsView {
         } else if (res.index === 3) {
           this.vm.debugClearHoldings().then((): void => {
             this.toast('已清空持仓，可用「重置账户」恢复');
+          }).catch((): void => {
+          });
+        } else if (res.index === 4) {
+          this.vm.debugAddSuspended().then((): void => {
+            this.toast('已加 600000 停牌持仓（1000 股 @9.80）');
           }).catch((): void => {
           });
         }

@@ -143,6 +143,26 @@ export function hasEmoji(text: string): boolean {
 }
 
 /**
+ * 部分成功名单（AC-96 · M7 缺口 C7）：把超限项名称压成一行提示，最多 `max` 个，
+ * 超出接「等」。空名单返回空串，由调用方决定是否退化为计数提示。
+ */
+export function limitNameSummary(names: string[], max: number = 3): string {
+  const clean: string[] = [];
+  for (let i = 0; i < names.length; i++) {
+    const name: string = names[i] !== undefined && names[i] !== null ? names[i].trim() : '';
+    if (name.length > 0) {
+      clean.push(name);
+    }
+  }
+  if (clean.length === 0) {
+    return '';
+  }
+  const shown: string[] = clean.length > max ? clean.slice(0, max) : clean;
+  const text: string = shown.join('、');
+  return clean.length > max ? `${text} 等` : text;
+}
+
+/**
  * 组名校验（M7-6）：非空、≤8 字、禁 emoji、与其它组重名（大小写不敏感）。
  * `excludeName` 为重命名时的原名，避免自己和自己判重。
  */

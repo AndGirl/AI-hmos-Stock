@@ -5,6 +5,7 @@ import {
   hasEmoji,
   isSystemGroupId,
   isVirtualGroupId,
+  limitNameSummary,
   normalizeGroupName,
   resolveGroupMembership,
   systemGroupsOf,
@@ -118,6 +119,24 @@ export default function watchlistRulesTest(): void {
       expect(isSystemGroupId('ug1')).assertFalse();
       expect(isVirtualGroupId(WATCHLIST_ALL_GROUP)).assertTrue();
       expect(isVirtualGroupId('user')).assertFalse();
+    });
+
+    // AC-96 / C7：部分成功提示要能列出超限标的名称。
+    it('case_limit_name_summary', 0, () => {
+      expect(limitNameSummary(['贵州茅台'])).assertEqual('贵州茅台');
+      expect(limitNameSummary(['贵州茅台', '五粮液'])).assertEqual('贵州茅台、五粮液');
+      // 空项被过滤，不出现「、、」
+      expect(limitNameSummary(['', '   ', '招商银行'])).assertEqual('招商银行');
+      expect(limitNameSummary([])).assertEqual('');
+    });
+
+    it('case_limit_name_summary_truncates', 0, () => {
+      const names: string[] = ['A股一', 'A股二', 'A股三', 'A股四'];
+      expect(limitNameSummary(names)).assertEqual('A股一、A股二、A股三 等');
+      // 恰好 3 个不接「等」
+      expect(limitNameSummary(['一', '二', '三'])).assertEqual('一、二、三');
+      // 自定义上限
+      expect(limitNameSummary(names, 2)).assertEqual('A股一、A股二 等');
     });
   });
 }

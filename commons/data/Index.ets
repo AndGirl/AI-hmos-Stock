@@ -194,6 +194,7 @@ export {
   hasEmoji,
   isSystemGroupId,
   isVirtualGroupId,
+  limitNameSummary,
   normalizeGroupName,
   resolveGroupMembership,
   systemGroupsOf,

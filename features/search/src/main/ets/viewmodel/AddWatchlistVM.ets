@@ -1,5 +1,6 @@
 import {
   DataServices,
+  limitNameSummary,
   WATCHLIST_ALL_GROUP,
   WATCHLIST_MAX_ITEMS,
   WatchAddInput,
@@ -22,6 +23,8 @@ export class AddSubmitResult {
   added: number = 0;
   existed: number = 0;
   limit: number = 0;
+  /** 超限项 code（按勾选顺序），供 View 列名称提示（C7 部分成功名单）。 */
+  limitCodes: string[] = [];
   pending: number = 0;
   /** 全部处理完（可关闭添加页）；有超限项时为 false，停留页内可重试。 */
   done: boolean = false;
@@ -197,6 +200,7 @@ export class AddWatchlistVM {
       result.added = outcome.added.length;
       result.existed = outcome.existed.length;
       result.limit = outcome.rejectedLimit.length;
+      result.limitCodes = outcome.rejectedLimit;
       result.pending = outcome.pending.length;
       const settled: string[] = outcome.added.concat(outcome.existed);
       this.removePicks(settled);
@@ -281,6 +285,37 @@ export class AddWatchlistVM {
       this.applyPicked(codes[i], false);
     }
     this.pickedCount = this.pickedCodes.length;
+  }
+
+  /** code → 展示名（结果行里取；取不到回落 code，AC-96 名单不出现空项）。 */
+  namesOf(codes: string[]): string[] {
+    const names: string[] = [];
+    for (let i = 0; i < codes.length; i++) {
+      names.push(this.nameOf(codes[i]));
+    }
+    return names;
+  }
+
+  /** 超限项名称压成一行（最多 3 个，超出接「等」）；空串表示无名单。 */
+  limitSummary(codes: string[]): string {
+    return limitNameSummary(this.namesOf(codes));
+  }
+
+  private nameOf(code: string): string {
+    for (let i = 0; i < this.search.sections.length; i++) {
+      const rows: SearchRowVM[] = this.search.sections[i].rows;
+      for (let j = 0; j < rows.length; j++) {
+        if (rows[j].code === code && rows[j].name.length > 0) {
+          return rows[j].name;
+        }
+      }
+    }
+    for (let i = 0; i < this.search.browseRows.length; i++) {
+      if (this.search.browseRows[i].code === code && this.search.browseRows[i].name.length > 0) {
+        return this.search.browseRows[i].name;
+      }
+    }
+    return code;
   }
 
   private markAdded(codes: string[]): void {

@@ -217,6 +217,20 @@ export class PositionVM {
     await this.load();
   }
 
+  /**
+   * 调试（C16）：给主账户造一笔停牌持仓（600000 浦发银行，Mock 快照无价格），
+   * 用于真机验证「停牌按 lastPrice 估值、当日盈亏计 0」。成本 9.80、最近有效价 10.44。
+   */
+  async debugAddSuspended(): Promise<void> {
+    const store = DataServices.tradeAccount();
+    await store.load();
+    const id: string = store.primaryId();
+    await store.applyFill(id, 'buy', '600000', 9.8, 1000);
+    store.noteLastPrice(id, '600000', 10.44);
+    await store.flush();
+    await this.load();
+  }
+
   // ---------- 私有 ----------
 
   private basisOf(item: Position): PositionBasis {

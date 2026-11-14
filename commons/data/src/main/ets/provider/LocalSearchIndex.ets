@@ -1,6 +1,10 @@
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { HitRange, SEARCH_LEVEL_NONE, SearchEntry } from '../model/SearchModels';
 import { buildSearchEntries } from '../mock/SearchSeeds';
 import { hitRanges, matchLevel } from '../rules/SearchRules';
+
+const DOMAIN: number = 0x0001;
+const TAG: string = 'SearchIndex';
 
 /** 命中候选：条目 + 层级 + 高亮区间（已算好，上层不再重算）。 */
 export class SearchMatch {
@@ -28,6 +32,8 @@ export class LocalSearchIndex {
     const started: number = Date.now();
     this.entries = buildSearchEntries();
     this.costMs = Date.now() - started;
+    // AC-93 / C4：构建耗时打点（真机冷启后首次搜索可在 hilog 采样）。
+    hilog.info(DOMAIN, TAG, 'build_cost_ms=%{public}d size=%{public}d', this.costMs, this.entries.length);
   }
 
   isBuilt(): boolean {

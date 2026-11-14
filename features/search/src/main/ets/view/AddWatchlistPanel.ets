@@ -119,6 +119,12 @@ export struct AddWatchlistPanel {
       this.toast($r('app.string.add_limit_hint', `${this.vm.maxItems}`));
       return;
     }
+    // AC-96 / C7：部分成功时列出超限标的名称（最多 3 个），不再只报个数。
+    const names: string = this.vm.limitSummary(result.limitCodes);
+    if (names.length > 0) {
+      this.toast($r('app.string.add_partial_hint_names', `${result.added}`, `${result.limit}`, names));
+      return;
+    }
     this.toast($r('app.string.add_partial_hint', `${result.added}`, `${result.limit}`));
   }
 
