@@ -17,7 +17,7 @@ import { AbilityConstant, Configuration, ConfigurationConstant, UIAbility, Want 
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { BackDispatcher, BreakpointHost, ConfigHost, OrientationHost, SafeAreaHost } from 'commons_basic';
+import { BackDispatcher, BreakpointHost, ConfigHost, OrientationHost, SafeAreaHost, StartupMeter } from 'commons_basic';
 import { DataServices, StorageAdapter } from 'commons_data';
 import { DeepLinkHandler } from '../router/DeepLinkHandler';
 
@@ -30,6 +30,8 @@ function colorModeName(mode: ConfigurationConstant.ColorMode | undefined): strin
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    // 冷启打点起点（M13-2）：进程启动时刻与 onCreate 时刻都取同一时钟（ms since boot）。
+    StartupMeter.markProcessStart();
     try {
       // M12-2：不再强制浅色，跟随系统深/浅色（深色资源见 commons/ui/resources/dark）。
       this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
@@ -69,6 +71,21 @@ export default class EntryAbility extends UIAbility {
     }).catch((err: BusinessError): void => {
       hilog.warn(DOMAIN, 'testTag', 'preheat quoteCache failed: %{public}s', JSON.stringify(err));
     });
+    // 隐私同意预热（M13-1）：首帧前读 `privacy_consent_v1`，`Index` 只等同一个 Promise，
+    // 已同意则不出现骨架闪烁，未同意则直接落到同意页（不渲染 TabShell）。
+    DataServices.privacyConsent().load().then((): void => {
+      hilog.info(DOMAIN, 'testTag', 'consent ready=%{public}s',
+        DataServices.privacyConsent().consented() ? 'true' : 'false');
+    }).catch((err: BusinessError): void => {
+      hilog.warn(DOMAIN, 'testTag', 'preheat consent failed: %{public}s', JSON.stringify(err));
+    });
+    // 首笔风险揭示标记（M13-1）：与本机其它偏好一样在首帧前就绪，交易确认层直接读内存。
+    DataServices.riskNotice().load().catch((err: BusinessError): void => {
+      hilog.warn(DOMAIN, 'testTag', 'preheat risk failed: %{public}s', JSON.stringify(err));
+    });
+    // 稳定性采集（M13-3）：会话 +1、挂 HiAppEvent（崩溃/冻屏）与 errorManager（JS 异常/拒绝）。
+    // 只记本机计数，不上报、不采集任何个人信息。
+    DataServices.stability().start();
     // 冷启动深链：先暂存，UI 就绪后由 AppRoot 消费（§3.2）。
     DeepLinkHandler.handle(want.uri);
   }

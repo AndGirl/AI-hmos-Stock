@@ -171,6 +171,12 @@ export {
 export { LocalSearchIndex, SearchMatch } from './src/main/ets/provider/LocalSearchIndex';
 export { buildHotWords, buildSearchEntries } from './src/main/ets/mock/SearchSeeds';
 export { StorageAdapter } from './src/main/ets/store/StorageAdapter';
+export { PrivacyConsentStore, RiskNoticeStore } from './src/main/ets/store/ComplianceStore';
+export {
+  StabilitySnapshot,
+  StabilityStore
+} from './src/main/ets/store/StabilityStore';
+export { StabilityMonitor } from './src/main/ets/services/StabilityMonitor';
 export { QuoteCacheStore } from './src/main/ets/store/QuoteCacheStore';
 export { SearchHistoryStore } from './src/main/ets/store/SearchHistoryStore';
 export {

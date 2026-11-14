@@ -21,6 +21,9 @@ import { LocalPositionProvider } from './provider/LocalPositionProvider';
 import { TradeAccountStore } from './store/TradeAccountStore';
 import { TradeOrderStore } from './store/TradeOrderStore';
 import { OrderJournalStore } from './store/OrderJournalStore';
+import { PrivacyConsentStore, RiskNoticeStore } from './store/ComplianceStore';
+import { StabilityStore } from './store/StabilityStore';
+import { StabilityMonitor } from './services/StabilityMonitor';
 
 /**
  * 数据装配点：全工程唯一允许 `new Mock*` / `new Real*` 的地方（R-05）。
@@ -46,6 +49,10 @@ export class DataServices {
   private static accountStore: TradeAccountStore | undefined = undefined;
   private static orderStore: TradeOrderStore | undefined = undefined;
   private static journalStore: OrderJournalStore | undefined = undefined;
+  private static consentStore: PrivacyConsentStore | undefined = undefined;
+  private static riskStore: RiskNoticeStore | undefined = undefined;
+  private static stabilityStoreInstance: StabilityStore | undefined = undefined;
+  private static stabilityMonitor: StabilityMonitor | undefined = undefined;
 
   /**
    * 行情源（M9-2）：按 `AppConfig.quoteSource` 装配。
@@ -220,5 +227,40 @@ export class DataServices {
       DataServices.quoteCacheStore = new QuoteCacheStore();
     }
     return DataServices.quoteCacheStore;
+  }
+
+  /**
+   * 隐私同意（M13-1）：`privacy_consent_v1` 的唯一入口。
+   * 冷启由 EntryAbility 预热，`Index` 首帧前 await（未同意时不渲染 TabShell）。
+   */
+  static privacyConsent(): PrivacyConsentStore {
+    if (DataServices.consentStore === undefined) {
+      DataServices.consentStore = new PrivacyConsentStore();
+    }
+    return DataServices.consentStore;
+  }
+
+  /** 首笔风险揭示（M13-1，`trade_risk_v1`）：交易确认层提交前读一次。 */
+  static riskNotice(): RiskNoticeStore {
+    if (DataServices.riskStore === undefined) {
+      DataServices.riskStore = new RiskNoticeStore();
+    }
+    return DataServices.riskStore;
+  }
+
+  /** 稳定性计数（M13-3，`stability_v1`）：会话/崩溃/冻屏/JS 异常，只本机。 */
+  static stabilityStore(): StabilityStore {
+    if (DataServices.stabilityStoreInstance === undefined) {
+      DataServices.stabilityStoreInstance = new StabilityStore();
+    }
+    return DataServices.stabilityStoreInstance;
+  }
+
+  /** 稳定性采集器（M13-3）：`EntryAbility.onCreate` 启动一次（幂等）。 */
+  static stability(): StabilityMonitor {
+    if (DataServices.stabilityMonitor === undefined) {
+      DataServices.stabilityMonitor = new StabilityMonitor();
+    }
+    return DataServices.stabilityMonitor;
   }
 }

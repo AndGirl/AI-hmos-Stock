@@ -1,4 +1,5 @@
 import authClientTest from './AuthClient.test';
+import complianceStoreTest from './ComplianceStore.test';
 import contractTest from './ContractTest.test';
 import frameValidatorTest from './FrameValidator.test';
 import limitRulesTest from './LimitRules.test';
@@ -36,4 +37,5 @@ export default function testsuite(): void {
   localTradeProviderTest();
   positionRulesTest();
   localPositionProviderTest();
+  complianceStoreTest();
 }

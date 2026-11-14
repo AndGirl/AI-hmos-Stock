@@ -506,8 +506,9 @@ export struct PositionsView {
     const b2: promptAction.Button = { text: '重置账户与委托（回种子）', color: AppColor.debug };
     const b3: promptAction.Button = { text: '清空持仓（空态）', color: AppColor.debug };
     const b4: promptAction.Button = { text: '加停牌持仓（600000）', color: AppColor.debug };
+    const b5: promptAction.Button = { text: '稳定性…（采集/压测）', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
-      promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4];
+      promptAction.Button, promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4, b5];
     this.getUIContext().getPromptAction().showActionMenu({ title: '持仓调试（debug）', buttons: buttons })
       .then((res: promptAction.ActionMenuSuccessResponse): void => {
         if (res.index === 0) {
@@ -529,6 +530,43 @@ export struct PositionsView {
             this.toast('已加 600000 停牌持仓（1000 股 @9.80）');
           }).catch((): void => {
           });
+        } else if (res.index === 5) {
+          this.openStabilityMenu();
+        }
+      }).catch((): void => {
+      });
+  }
+
+  /**
+   * M13-3 稳定性子菜单（仅 debug）：查看计数 / 触发一次异常 / 切网 30 次压测 / 清空计数。
+   * 采集只在本机（`stability_v1`），不上报、不接三方 SDK；release 由 `DEBUG` 守卫关闭。
+   */
+  private openStabilityMenu(): void {
+    const b0: promptAction.Button = { text: '查看稳定性计数', color: AppColor.debug };
+    const b1: promptAction.Button = { text: '触发一次异常（验证采集）', color: AppColor.debug };
+    const b2: promptAction.Button = { text: '切网 30 次压测', color: AppColor.debug };
+    const b3: promptAction.Button = { text: '清空计数', color: AppColor.debug };
+    const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
+      promptAction.Button] = [b0, b1, b2, b3];
+    this.getUIContext().getPromptAction().showActionMenu({ title: '稳定性（debug）', buttons: buttons })
+      .then((res: promptAction.ActionMenuSuccessResponse): void => {
+        if (res.index === 0) {
+          this.getUIContext().getPromptAction().showDialog({
+            title: '稳定性计数',
+            message: this.vm.debugStabilityText(),
+            buttons: [{ text: '知道了', color: AppColor.accent }]
+          }).catch((): void => {
+          });
+        } else if (res.index === 1) {
+          this.vm.debugStabilityRaise();
+        } else if (res.index === 2) {
+          this.vm.debugNetStress(30).then((done: number): void => {
+            this.toast(`已切换网络 ${done} 次，未崩溃`);
+          }).catch((): void => {
+          });
+        } else if (res.index === 3) {
+          this.vm.debugStabilityClear();
+          this.toast('已清空稳定性计数');
         }
       }).catch((): void => {
       });

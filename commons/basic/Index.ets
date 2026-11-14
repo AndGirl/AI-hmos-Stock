@@ -23,6 +23,8 @@ export {
   trackEvent
 } from './src/main/ets/services/Analytics';
 export { PerfMeter } from './src/main/ets/services/PerfMeter';
+export { ComplianceHost, ComplianceService } from './src/main/ets/services/ComplianceService';
+export { StartupMeter } from './src/main/ets/services/StartupMeter';
 export { BackDispatcher, BackHandler } from './src/main/ets/services/BackDispatcher';
 export { ComingSoonText } from './src/main/ets/constants/ComingSoonText';
 export {
@@ -33,6 +35,11 @@ export {
   arrowOfValue
 } from './src/main/ets/constants/QuoteMark';
 export { LayoutConst } from './src/main/ets/constants/LayoutConst';
+export {
+  PRIVACY_POLICY_DATE,
+  PRIVACY_POLICY_VERSION,
+  PRIVACY_SECTION_COUNT
+} from './src/main/ets/constants/PrivacyDoc';
 export {
   nextViewMode,
   normalizeViewMode,

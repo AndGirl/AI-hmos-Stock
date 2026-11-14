@@ -104,6 +104,33 @@ export struct TradeSheet {
     this.getUIContext().getPromptAction().showToast({ message: message, duration: 1800 });
   }
 
+  /**
+   * 首笔风险揭示（M13-1，收口 M10-7 遗留）：确认层点提交时由 VM 置 `riskPrompt`。
+   * 「我已了解并继续」→ `vm.confirmRisk()`（写 `trade_risk_v1` 后续提交）；「取消」→ 留在确认层。
+   */
+  @Monitor('vm.riskPrompt')
+  onRiskPrompt(): void {
+    if (!this.vm.riskPrompt) {
+      return;
+    }
+    this.getUIContext().getPromptAction().showDialog({
+      title: $r('app.string.trade_risk_title'),
+      message: $r('app.string.trade_risk_body'),
+      buttons: [
+        { text: $r('app.string.trade_risk_cancel'), color: AppColor.textSecondary },
+        { text: $r('app.string.trade_risk_ack'), color: AppColor.accent }
+      ]
+    }).then((result: promptAction.ShowDialogSuccessResponse): void => {
+      if (result.index === 1) {
+        this.vm.confirmRisk();
+      } else {
+        this.vm.cancelRisk();
+      }
+    }).catch((): void => {
+      this.vm.cancelRisk();
+    });
+  }
+
   /** 下单结果框（M10）：查看委托 / 知道了。不改 `TradePhase`，对既有买入链路零影响。 */
   private showReceipt(message: ResourceStr): void {
     this.getUIContext().getPromptAction().showDialog({

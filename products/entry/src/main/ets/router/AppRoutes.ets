@@ -12,6 +12,8 @@ export class RouteName {
   static readonly ORDERS: string = 'orders';
   /** 持仓与收益（M11-2）：委托页「持仓」互跳进入。 */
   static readonly POSITIONS: string = 'positions';
+  /** 隐私政策（M13-1）：首页底部入口进入；撤回同意后回到首启同意页。 */
+  static readonly PRIVACY: string = 'privacy';
   static readonly NOT_FOUND: string = 'notFound';
 }
 
@@ -63,4 +65,9 @@ export interface OrdersParam {
 /** 持仓参数（M11-2）：当前无入参，保留结构便于后续「按账户/分组」只加不改。 */
 export interface PositionsParam {
   accountId?: string;
+}
+
+/** 隐私政策参数（M13-1）：当前无入参，保留结构便于后续「从 AGC 内测/深链」只加不改。 */
+export interface PrivacyParam {
+  from?: string;
 }

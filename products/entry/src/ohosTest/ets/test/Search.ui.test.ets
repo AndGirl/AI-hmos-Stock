@@ -2,7 +2,7 @@ import { describe, it, expect } from '@ohos/hypium';
 import { abilityDelegatorRegistry, Component, Driver, ON } from '@kit.TestKit';
 import { Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { sharedDriver } from './TestDriver';
+import { dismissConsentIfShown, seedCompliance, sharedDriver } from './TestDriver';
 
 const DOMAIN: number = 0x0001;
 const TAG: string = 'SearchUiTest';
@@ -11,9 +11,12 @@ const ABILITY: string = 'EntryAbility';
 
 /** 启动被测应用（AbilityDelegator 拉起 EntryAbility；已在前台时等价于 bringToFront）。 */
 async function startApp(driver: Driver): Promise<void> {
+  // M13-1：隐私同意基线（首启同意页会挡住全部入口；已同意时是空操作）。
+  await seedCompliance();
   const want: Want = { bundleName: BUNDLE, abilityName: ABILITY };
   await abilityDelegatorRegistry.getAbilityDelegator().startAbility(want);
   await driver.delayMs(1200);
+  await dismissConsentIfShown(driver);
 }
 
 /** 保证停在「行情」Tab 的搜索页：最多重试 3 次（详情页 → 返回；其它 Tab → 点行情）。 */

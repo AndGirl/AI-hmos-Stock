@@ -7,6 +7,7 @@ import {
   OrdersParam,
   PkParam,
   PositionsParam,
+  PrivacyParam,
   RouteName,
   SearchFrom,
   SearchParam
@@ -106,6 +107,15 @@ export class AppServices {
   pushPositions(): void {
     const param: PositionsParam = {};
     this.stack.pushPathByName(RouteName.POSITIONS, param);
+  }
+
+  /** 隐私政策（M13-1）：首页底部入口进入（同意后常驻可查）。 */
+  pushPrivacy(from?: string): void {
+    const param: PrivacyParam = {};
+    if (from !== undefined && from.length > 0) {
+      param.from = from;
+    }
+    this.stack.pushPathByName(RouteName.PRIVACY, param);
   }
 
   pushNotFound(code?: string): void {

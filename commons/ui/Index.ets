@@ -3,3 +3,4 @@ export { StateMode, StateView } from './src/main/ets/components/StateView';
 export { showComingSoon } from './src/main/ets/components/ComingSoon';
 export { GlobalBanner } from './src/main/ets/components/GlobalBanner';
 export { BottomTabBar } from './src/main/ets/components/BottomTabBar';
+export { PrivacyDoc } from './src/main/ets/components/PrivacyDoc';

@@ -25,4 +25,16 @@ export class TradeRepository {
   query(clientOrderId: string): Promise<OrderResult> {
     return this.provider().query(clientOrderId);
   }
+
+  /** 首笔风险揭示是否已确认（M13-1，`trade_risk_v1`）。 */
+  riskAcked(): Promise<boolean> {
+    return DataServices.riskNotice().load().then((): boolean => {
+      return DataServices.riskNotice().acked();
+    });
+  }
+
+  /** 记下「已了解风险」，之后不再弹（本地布尔，不采集任何信息）。 */
+  ackRisk(): Promise<void> {
+    return DataServices.riskNotice().ack();
+  }
 }

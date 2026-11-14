@@ -83,16 +83,22 @@ export struct TradeEditView {
     const b0: promptAction.Button = { text: '资金不足（可买 0）', color: AppColor.debug };
     const b1: promptAction.Button = { text: '拒单（风控拦截）', color: AppColor.debug };
     const b2: promptAction.Button = { text: '提交超时（结果未知）', color: AppColor.debug };
-    const b3: promptAction.Button = { text: '恢复正常', color: AppColor.debug };
+    const b3: promptAction.Button = { text: '重置风险提示（首笔揭示）', color: AppColor.debug };
+    const b4: promptAction.Button = { text: '恢复正常', color: AppColor.debug };
     const buttons: [promptAction.Button, promptAction.Button, promptAction.Button,
-      promptAction.Button] = [b0, b1, b2, b3];
+      promptAction.Button, promptAction.Button] = [b0, b1, b2, b3, b4];
     this.getUIContext().getPromptAction().showActionMenu({
       title: '提交类故障（debug）',
       buttons: buttons
     }).then((res: promptAction.ActionMenuSuccessResponse): void => {
-      const kinds: TradeFaultKind[] = ['fund', 'reject', 'timeout', 'reset'];
+      const kinds: TradeFaultKind[] = ['fund', 'reject', 'timeout'];
       if (res.index >= 0 && res.index < kinds.length) {
         this.vm.applyMockFault(kinds[res.index]);
+      } else if (res.index === kinds.length) {
+        // M13-1：清掉 `trade_risk_v1`，重放首笔风险揭示（验收用，release 不可达）。
+        this.vm.resetRiskNotice();
+      } else {
+        this.vm.applyMockFault('reset');
       }
     }).catch((): void => {
     });

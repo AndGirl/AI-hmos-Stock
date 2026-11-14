@@ -19,7 +19,7 @@ import {
   WatchlistChangeListener,
   WatchlistStore
 } from 'commons_data';
-import { AnalyticsHost, AnalyticsParam } from 'commons_basic';
+import { AnalyticsHost, AnalyticsParam, ConnectionHost, ConnectionHub } from 'commons_basic';
 import { PositionRowVM } from './PositionRowVM';
 
 /** 持仓页状态：加载 / 有内容 / 空（无持仓）/ 失败可重试（AC-119）。 */
@@ -365,5 +365,47 @@ export class PositionVM {
   private track(event: string, value: string): void {
     const key: string = event === 'position_open' ? 'count' : 'code';
     AnalyticsHost.get().track(event, [new AnalyticsParam(key, value)]);
+  }
+
+  // ---------------------------------------------------------------- M13-3 调试通道
+  // 稳定性采集与弱网压测只在 debug 面板可达（View 不直接 import commons_data，R-07）。
+
+  /** 稳定性计数摘要（会话/崩溃/冻屏/JS 异常/最近事件）。 */
+  debugStabilityText(): string {
+    return DataServices.stability().describe();
+  }
+
+  /** 清空稳定性计数（保留会话数）。 */
+  debugStabilityClear(): void {
+    DataServices.stability().clear();
+  }
+
+  /** 主动抛一个未捕获异常，验证 `errorManager` 兜底 + 下次启动采集（会崩，仅 debug 用）。 */
+  debugStabilityRaise(): void {
+    DataServices.stability().raiseForTest();
+  }
+
+  /**
+   * 弱网/切网压测（AC-127）：断网→恢复循环 N 次，返回实际完成次数。
+   * 走全局 `ConnectionHub`（与真实链路同一个状态机），不另造一套定时器。
+   */
+  async debugNetStress(cycles: number): Promise<number> {
+    const hub: ConnectionHub = ConnectionHost.getService();
+    let done: number = 0;
+    for (let i = 0; i < cycles; i++) {
+      hub.force('offline');
+      await PositionVM.sleep(150);
+      hub.force('online');
+      await PositionVM.sleep(150);
+      done++;
+    }
+    hub.reset();
+    return done;
+  }
+
+  private static sleep(ms: number): Promise<void> {
+    return new Promise<void>((resolve: () => void): void => {
+      setTimeout(resolve, ms);
+    });
   }
 }

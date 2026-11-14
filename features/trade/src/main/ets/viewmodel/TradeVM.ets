@@ -114,6 +114,8 @@ export class TradeVM {
   @Trace querying: boolean = false;
   @Trace loggingIn: boolean = false;
   @Trace clientOrderIdText: string = '';
+  /** 首笔风险揭示（M13-1）：确认层提交前弹一次，视图监听本字段出对话框。 */
+  @Trace riskPrompt: boolean = false;
 
   code: string = '';
   private source: TradeSource = 'detail';
@@ -134,6 +136,8 @@ export class TradeVM {
   private submitTimer: number = -1;
   private closeTimer: number = -1;
   private openStartMs: number = 0;
+  /** 风险揭示是否已确认（进程内缓存；落盘状态在 `trade_risk_v1`）。 */
+  private riskAcked: boolean = false;
 
   /** 打开弹窗：加载上下文 → 门禁 → 登录层 / 编辑层 / 入口拦截。 */
   attach(code: string, source: TradeSource): void {
@@ -141,6 +145,12 @@ export class TradeVM {
     this.source = source;
     this.reset();
     this.loadToken++;
+    // 首笔风险揭示标记（M13-1）：与上下文并行读，确认层提交前一定有结果。
+    this.repo.riskAcked().then((acked: boolean): void => {
+      this.riskAcked = acked;
+    }).catch((): void => {
+      this.riskAcked = false;
+    });
     const token: number = this.loadToken;
     this.phase = 'resolving';
     this.openStartMs = Date.now();
@@ -368,6 +378,13 @@ export class TradeVM {
       hilog.info(DOMAIN, 'TradeLog', 'trade_submit_blocked block=%{public}s', this.blockCode);
       return;
     }
+    // M13-1 首笔风险揭示（收口 M10-7 遗留）：未确认前不提交，由视图弹对话框；
+    // 确认后写 `trade_risk_v1`，之后按正常链路提交（不改变幂等键与超时逻辑）。
+    if (!this.riskAcked) {
+      this.riskPrompt = true;
+      hilog.info(DOMAIN, 'TradeLog', 'trade_risk_prompt');
+      return;
+    }
     const account: AccountInfo | null = this.activeAccount();
     if (account === null) {
       this.raiseToast('no_account');
@@ -450,12 +467,45 @@ export class TradeVM {
     });
   }
 
+  /**
+   * 风险揭示「我已了解并继续」（M13-1）：写盘 + 继续本次提交。
+   * 只置本地标记，不改幂等键（`clientOrderId` 仍在首次真正提交时生成）。
+   */
+  confirmRisk(): void {
+    if (!this.riskPrompt) {
+      return;
+    }
+    this.riskPrompt = false;
+    this.riskAcked = true;
+    this.repo.ackRisk().then((): void => {
+      this.track('risk_ack', []);
+    }).catch((): void => {
+    });
+    this.submit();
+  }
+
+  /** 风险揭示「取消」：不提交，留在确认层。 */
+  cancelRisk(): void {
+    this.riskPrompt = false;
+    hilog.info(DOMAIN, 'TradeLog', 'trade_risk_cancel');
+  }
+
+  /** 调试：清除「已了解风险」标记，重放首笔揭示（仅 debug 面板调用，不参与业务）。 */
+  resetRiskNotice(): void {
+    this.riskAcked = false;
+    this.riskPrompt = false;
+    DataServices.riskNotice().clear().catch((): void => {
+    });
+    hilog.info(DOMAIN, 'TradeLog', 'risk_reset');
+  }
+
   /** 关闭 / 页面销毁：释放计时器（FR-07.14：不残留定时器）。 */
   dispose(): void {
     this.clearSubmitTimer();
     this.clearCloseTimer();
     this.submitToken++;
     this.loadToken++;
+    this.riskPrompt = false;
   }
 
   /**
